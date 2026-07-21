@@ -1,0 +1,95 @@
+plugins {
+    id 'java'
+    id 'war'
+}
+
+group 'org.kkobi'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+// 1. springSecurityVersion을 추가하여 변수 미정의 오류를 해결했습니다.
+ext {
+    junitVersion = '5.11.0-M2'
+    springVersion = '5.3.37'
+    springSecurityVersion = '5.8.13' // 스프링 5.3.x와 호환되는 안정적인 보안 버전
+    lombokVersion = '1.18.30'
+}
+
+sourceCompatibility = '1.17'
+targetCompatibility = '1.17'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    // 스프링 핵심
+    implementation ("org.springframework:spring-context:${springVersion}") {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+    implementation "org.springframework:spring-webmvc:${springVersion}"
+    implementation 'javax.inject:javax.inject:1'
+
+    // 스프링 시큐리티 (이제 정상적으로 변수를 인식합니다)
+    implementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-config:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-core:${springSecurityVersion}"
+    implementation "org.springframework.security:spring-security-taglibs:${springSecurityVersion}"
+
+    //JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
+
+    // AOP
+    implementation 'org.aspectj:aspectjrt:1.9.20'
+    implementation 'org.aspectj:aspectjweaver:1.9.20'
+
+    // JSP, SERVLET, JSTL
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
+    compileOnly 'javax.servlet.jsp:javax.servlet.jsp-api:2.3.3'
+    implementation 'javax.servlet:jstl:1.2'
+
+    // Log4j2 Logging (2.18.0 버전 하나로 통합 및 중복 제거)
+    implementation 'org.apache.logging.log4j:log4j-api:2.18.0'
+    implementation 'org.apache.logging.log4j:log4j-core:2.18.0'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.18.0'
+
+    // xml내 한글 처리
+    implementation 'xerces:xercesImpl:2.12.2'
+
+    // Lombok
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    // Jackson - Json 처리 (스프링 5.3에 맞춰 버전 업그레이드)
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.5'
+
+    // MySQL & Connection Pool (스프링 5.3에 맞춰 HikariCP 버전 업그레이드)
+    implementation 'com.mysql:mysql-connector-j:8.1.0'
+    implementation 'com.zaxxer:HikariCP:4.0.3'
+
+    // MyBatis & Spring JDBC
+    implementation "org.springframework:spring-tx:${springVersion}"
+    implementation "org.springframework:spring-jdbc:${springVersion}"
+    implementation 'org.mybatis:mybatis:3.5.13' // 안정적인 버전으로 업그레이드
+    implementation 'org.mybatis:mybatis-spring:2.1.1' // 스프링 5와 호환되는 버전
+
+    // SQL 로그 정렬을 위한 툴
+    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+
+    // 테스트 관련 설정
+    testImplementation "org.springframework:spring-test:${springVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+}
+
+test {
+    useJUnitPlatform()
+}
