@@ -93,3 +93,12 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+// 커밋 메시지 검증 git hook 자동 설정
+tasks.register('installGitHooks', Exec) {
+    commandLine 'git', 'config', 'core.hooksPath', '.githooks'
+}
+
+tasks.named('compileJava') {
+    dependsOn 'installGitHooks'
+}

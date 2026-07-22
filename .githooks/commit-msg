@@ -1,0 +1,22 @@
+#!/bin/sh
+# 커밋 메시지 형식 검증: "#{이슈번호} {Type} : {작업 내용}"
+# 허용 Type: Feat, Fix, Refactor, Design, Style, Docs, Test, Chore, Comment, Rename, Remove
+
+MSG_FILE="$1"
+FIRST_LINE=$(head -n 1 "$MSG_FILE")
+
+PATTERN="^#[0-9]+ (Feat|Fix|Refactor|Design|Style|Docs|Test|Chore|Comment|Rename|Remove) : .+"
+
+if ! echo "$FIRST_LINE" | grep -Eq "$PATTERN"; then
+  echo "커밋이 거부되었습니다. 커밋 메시지 형식을 확인하세요."
+  echo ""
+  echo "  올바른 형식: #{이슈번호} {Type} : {작업 내용}"
+  echo "  예:          #1 Feat : 회원가입 시 이메일 중복 검증 로직 추가"
+  echo ""
+  echo "  허용 Type: Feat, Fix, Refactor, Design, Style, Docs, Test, Chore, Comment, Rename, Remove"
+  echo ""
+  echo "  현재 첫 줄: $FIRST_LINE"
+  exit 1
+fi
+
+exit 0

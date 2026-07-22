@@ -1,0 +1,21 @@
+name: Commit Message Lint
+on:
+  pull_request:
+    branches: [develop, main]
+jobs:
+  commit-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 커밋 메시지 형식 검사
+        run: |
+          PATTERN="^#[0-9]+ (Feat|Fix|Refactor|Design|Style|Docs|Test|Chore|Comment|Rename|Remove) : .+"
+          git log --pretty=format:"%H %s" origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }} | while read -r HASH SUBJECT; do
+            if ! echo "$SUBJECT" | grep -Eq "$PATTERN"; then
+              echo "형식에 맞지 않는 커밋: $HASH  \"$SUBJECT\""
+              echo "올바른 형식: #{이슈번호} {Type} : {작업 내용} (Type: Feat, Fix, Refactor, Design, Style, Docs, Test, Chore, Comment, Rename, Remove)"
+              exit 1
+            fi
+          done
