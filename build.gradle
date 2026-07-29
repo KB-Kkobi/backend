@@ -18,8 +18,11 @@ ext {
     lombokVersion = '1.18.30'
 }
 
-sourceCompatibility = '1.17'
-targetCompatibility = '1.17'
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
