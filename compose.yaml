@@ -1,0 +1,44 @@
+services:
+  mysql:
+    image: mysql:8.0.46
+    container_name: kkobi-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:12.10.0
+    container_name: kkobi-flyway
+
+    command:
+      - "-url=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED"
+      - "-user=${MYSQL_USER}"
+      - "-password=${MYSQL_PASSWORD}"
+      - "-connectRetries=60"
+      - "migrate"
+
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
