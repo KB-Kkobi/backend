@@ -56,7 +56,7 @@ Windows PowerShell:
 
 WSL 또는 Linux:
 
-```shg
+```sh
 ./gradlew clean war
 ./gradlew test
 ```
