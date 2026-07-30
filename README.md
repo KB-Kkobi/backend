@@ -10,19 +10,19 @@ Spring Security, JWT, MyBatis를 사용합니다.
 
 ## 기술 환경
 
-| 구분 | 버전 또는 구성 |
-| --- | --- |
-| 운영체제 | 버전 고정 없음 |
-| Java | Eclipse Temurin OpenJDK 17 |
-| 프레임워크 | Spring Framework 5.3.37 |
-| 보안 | Spring Security 5.8.13, JWT 0.11.5 |
-| 빌드 | 프로젝트 Gradle Wrapper 8.8 |
-| 데이터 접근 | MyBatis 3.5.13, MyBatis-Spring 2.1.1 |
-| 데이터베이스 | MySQL Server 8.0.46 |
-| JDBC 드라이버 | MySQL Connector/J 8.1.0 |
-| 서블릿 컨테이너 | 외부 Tomcat 9.0.120, Temurin 17 |
-| 캐시 | Docker `redis:7` |
-| 배포 환경 | Docker, Nginx, EC2 |
+| 구분            | 버전 또는 구성                       |
+| --------------- | ------------------------------------ |
+| 운영체제        | 버전 고정 없음                       |
+| Java            | Eclipse Temurin OpenJDK 17           |
+| 프레임워크      | Spring Framework 5.3.37              |
+| 보안            | Spring Security 5.8.13, JWT 0.11.5   |
+| 빌드            | 프로젝트 Gradle Wrapper 8.8          |
+| 데이터 접근     | MyBatis 3.5.13, MyBatis-Spring 2.1.1 |
+| 데이터베이스    | MySQL Server 8.0.46                  |
+| JDBC 드라이버   | MySQL Connector/J 8.1.0              |
+| 서블릿 컨테이너 | 외부 Tomcat 9.0.120, Temurin 17      |
+| 캐시            | Docker `redis:7`                     |
+| 배포 환경       | Docker, Nginx, EC2                   |
 
 Java 빌드에는 시스템에 별도로 설치한 Gradle 대신 저장소의 Gradle Wrapper를
 사용합니다.
@@ -34,12 +34,12 @@ Java 빌드에는 시스템에 별도로 설치한 Gradle 대신 저장소의 Gr
 MySQL Server 8.0.46을 준비한 뒤 필요에 따라 다음 환경 변수를 설정합니다.
 환경 변수를 지정하지 않으면 표의 기본값을 사용합니다.
 
-| 환경 변수 | 기본값 |
-| --- | --- |
-| `JDBC_DRIVER` | `net.sf.log4jdbc.sql.jdbcapi.DriverSpy` |
-| `JDBC_URL` | `jdbc:log4jdbc:mysql://localhost:3306/scoula_db` |
-| `JDBC_USERNAME` | `scoula` |
-| `JDBC_PASSWORD` | `1234` |
+| 환경 변수       | 기본값                                           |
+| --------------- | ------------------------------------------------ |
+| `JDBC_DRIVER`   | `net.sf.log4jdbc.sql.jdbcapi.DriverSpy`          |
+| `JDBC_URL`      | `jdbc:log4jdbc:mysql://localhost:3306/scoula_db` |
+| `JDBC_USERNAME` | `scoula`                                         |
+| `JDBC_PASSWORD` | `1234`                                           |
 
 공용 또는 운영 환경에서는 기본 비밀번호를 사용하지 말고 환경 변수나 배포
 환경의 Secret으로 주입합니다. 데이터베이스 연결 테스트를 실행하려면 해당
@@ -89,12 +89,12 @@ docker compose up --build
 기본 서비스 포트는 다음과 같습니다. `.env`의 포트 값을 수정하면 호스트
 포트를 변경할 수 있습니다.
 
-| 서비스 | 기본 포트 |
-| --- | --- |
-| 프론트엔드 | `80` |
-| 백엔드 Tomcat | `8080` |
-| MySQL | `3306` |
-| Redis | `6379` |
+| 서비스        | 기본 포트 |
+| ------------- | --------- |
+| 프론트엔드    | `80`      |
+| 백엔드 Tomcat | `8080`    |
+| MySQL         | `3306`    |
+| Redis         | `6379`    |
 
 컨테이너를 종료하려면 통합 프로젝트 루트에서 다음 명령을 실행합니다.
 
@@ -195,19 +195,19 @@ git config core.hooksPath .githooks
 
 ### 커밋 규칙
 
-| Type | 설명 |
-| --- | --- |
-| `Feat` | 새로운 기능 추가 |
-| `Fix` | 버그 수정 |
-| `Refactor` | 기능 변화가 없는 코드 개선 |
-| `Design` | CSS 등 UI 또는 디자인 변경 |
-| `Style` | 포맷팅 등 기능에 영향이 없는 변경 |
-| `Docs` | 문서 추가 또는 수정 |
-| `Test` | 테스트 코드 추가 또는 수정 |
-| `Chore` | 빌드, 설정, 패키지 관리 변경 |
-| `Comment` | 주석 추가 또는 수정 |
-| `Rename` | 파일이나 디렉터리 이름 변경 또는 이동 |
-| `Remove` | 파일 삭제 |
+| Type       | 설명                                  |
+| ---------- | ------------------------------------- |
+| `Feat`     | 새로운 기능 추가                      |
+| `Fix`      | 버그 수정                             |
+| `Refactor` | 기능 변화가 없는 코드 개선            |
+| `Design`   | CSS 등 UI 또는 디자인 변경            |
+| `Style`    | 포맷팅 등 기능에 영향이 없는 변경     |
+| `Docs`     | 문서 추가 또는 수정                   |
+| `Test`     | 테스트 코드 추가 또는 수정            |
+| `Chore`    | 빌드, 설정, 패키지 관리 변경          |
+| `Comment`  | 주석 추가 또는 수정                   |
+| `Rename`   | 파일이나 디렉터리 이름 변경 또는 이동 |
+| `Remove`   | 파일 삭제                             |
 
 - 커밋은 하나의 논리적 작업 단위로 작게 나눕니다.
 - 메시지는 한글로 작성하고 무엇을 변경했는지 명확하게 표현합니다.
