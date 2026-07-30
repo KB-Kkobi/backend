@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
@@ -54,5 +55,11 @@ public class RootConfig {
         DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSource());
 
         return manager;
+    }
+
+    // 금융감독원 등 외부 API 호출에 사용하는 RestTemplate Bean 등록
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
     }
 }
