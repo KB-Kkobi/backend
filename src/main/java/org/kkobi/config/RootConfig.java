@@ -13,11 +13,13 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
 @Configuration
+@EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
         "org.kkobi.product.service"

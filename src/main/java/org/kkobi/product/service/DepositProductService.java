@@ -7,6 +7,7 @@ import org.kkobi.product.dto.DepositProductOptionDto;
 import org.kkobi.product.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -53,10 +54,11 @@ public class DepositProductService {
 
 
     // 금감원에서 예금 상품 데이터를 조회한 후 DB에 저장
+    @Transactional
     public void collectDepositProducts() {
 
         DepositApiResponse response = getDepositProducts(1);
-        DepositApiResponse.Result result = response.getResult();
+        DepositApiResponse.Result result = validateDepositApiResponse(response);
 
         saveDepositProducts(result);
 
@@ -64,7 +66,7 @@ public class DepositProductService {
 
         for(int pageNumber= 2; pageNumber <= maxPageNo; pageNumber++){
             response = getDepositProducts(pageNumber);
-            result = response.getResult();
+            result = validateDepositApiResponse(response);
 
             saveDepositProducts(result);
         }
@@ -85,5 +87,30 @@ public class DepositProductService {
 
             productMapper.saveDepositProductOption(productId, option);
         }
+    }
+
+    // 금융감독원 API 응답이 정상인지 확인
+    private DepositApiResponse.Result validateDepositApiResponse(
+            DepositApiResponse response){
+
+        if(response == null || response.getResult() == null){
+            throw new IllegalStateException("금융감독원 예금 상품 API 응답이 없습니다.");
+        }
+
+        DepositApiResponse.Result result = response.getResult();
+
+        if(!"000".equals(result.getErrCd())){
+            throw new IllegalStateException(
+                    "금융감독원 예금 상품 API 호출에 실패했습니다. "
+                    + "오류 코드: " + result.getErrCd()
+                    + ", 오류 메시지: " + result.getErrMsg()
+            );
+        }
+
+        if(result.getBaseList() == null || result.getOptionList() == null){
+            throw new IllegalStateException("금융감독원 예금 상품 데이터가 없습니다.");
+        }
+
+        return result;
     }
 }
