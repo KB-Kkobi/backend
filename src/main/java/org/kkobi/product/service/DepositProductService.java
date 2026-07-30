@@ -18,7 +18,7 @@ public class DepositProductService {
 
     // 금융감독원 금융상품통합비교공시 API 기본 주소
     @Value("${finlife.api.base-url}")
-    private String apiBaseurl;
+    private String apiBaseUrl;
 
     // 금융감독원 Open API 인증키
     @Value("${finlife.api.key}")
@@ -31,8 +31,8 @@ public class DepositProductService {
     public DepositApiResponse getDepositProducts(int pageNumber){
 
         URI uri = UriComponentsBuilder
-                .fromHttpUrl(apiBaseurl)
-                .path("/depositProductSearch.json")
+                .fromHttpUrl(apiBaseUrl)
+                .path("/depositProductsSearch.json")
                 .queryParam("auth", apiKey)
                 .queryParam("topFinGrpNo", BANK_GROUP_CODE)
                 .queryParam("pageNo", pageNumber)
@@ -40,6 +40,9 @@ public class DepositProductService {
                 .encode()
                 .toUri();
 
-        return restTemplate.getForObject(uri, DepositApiResponse.class);
+        DepositApiResponse response =
+                restTemplate.getForObject(uri, DepositApiResponse.class);
+
+        return response;
     }
 }
