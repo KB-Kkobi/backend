@@ -22,7 +22,9 @@ import javax.sql.DataSource;
 @ComponentScan(basePackages = {
         "org.kkobi.product.service"
 })
-//@MapperScan(basePackages = {"org.kkobi.mapper"})
+@MapperScan(basePackages = {
+        "org.kkobi.product.mapper"
+})
 public class RootConfig {
     @Value("${jdbc.driver}") String driver;
     @Value("${jdbc.url}") String url;
