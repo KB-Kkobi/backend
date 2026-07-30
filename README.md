@@ -2,9 +2,10 @@
 
 ## 프로젝트 소개
 
-꼬비는 사용자의 금융 성향을 분석하고 맞춤형 금융 정보를 제공하는 KB 금융
-프로젝트입니다. 이 저장소는 Spring Framework 기반의 백엔드로, Spring MVC,
-Spring Security, JWT, MyBatis를 사용합니다.
+꼬비는 사용자의 금융 성향을 분석하고 맞춤형 금융 정보를 제공하는 KB 금융 프로젝트입니다.
+
+이 저장소는 Spring Framework 기반의 백엔드 프로젝트로,
+Spring MVC, Spring Security, JWT, MyBatis를 사용합니다.
 
 애플리케이션은 WAR 파일로 빌드하며 외부 Tomcat에 배포해 실행합니다.
 
@@ -12,38 +13,46 @@ Spring Security, JWT, MyBatis를 사용합니다.
 
 | 구분 | 버전 또는 구성 |
 | --- | --- |
-| 운영체제 | 버전 고정 없음 |
 | Java | Eclipse Temurin OpenJDK 17 |
 | 프레임워크 | Spring Framework 5.3.37 |
-| 보안 | Spring Security 5.8.13, JWT 0.11.5 |
-| 빌드 | 프로젝트 Gradle Wrapper 8.8 |
+| 보안 | Spring Security 5.8.13 |
+| JWT | JJWT 0.11.5 |
+| 빌드 | Gradle Wrapper 8.8 |
 | 데이터 접근 | MyBatis 3.5.13, MyBatis-Spring 2.1.1 |
 | 데이터베이스 | MySQL Server 8.0.46 |
 | JDBC 드라이버 | MySQL Connector/J 8.1.0 |
-| 서블릿 컨테이너 | 외부 Tomcat 9.0.120, Temurin 17 |
-| 캐시 | Docker `redis:7` |
-| 배포 환경 | Docker, Nginx, EC2 |
+| Connection Pool | HikariCP 4.0.3 |
+| JSON 처리 | Jackson Databind 2.13.5 |
+| 서블릿 컨테이너 | Apache Tomcat 9.0.120 |
+| Redis | Docker `redis:7` |
+| DB Migration | Flyway 12.10.0 |
+| 컨테이너 환경 | Docker, Docker Compose |
 
-Java 빌드에는 시스템에 별도로 설치한 Gradle 대신 저장소의 Gradle Wrapper를
-사용합니다.
+Java 빌드에는 시스템에 별도로 설치한 Gradle 대신
+저장소의 Gradle Wrapper를 사용합니다.
 
 ## 로컬 실행 방법
 
 ### 데이터베이스 설정
 
-MySQL Server 8.0.46을 준비한 뒤 필요에 따라 다음 환경 변수를 설정합니다.
-환경 변수를 지정하지 않으면 표의 기본값을 사용합니다.
+로컬 개발에서는 Docker MySQL을 사용합니다.
 
-| 환경 변수 | 기본값 |
+MySQL은 호스트의 `3307` 포트를 컨테이너의 `3306` 포트에 연결하며,
+IntelliJ Tomcat 등 호스트 환경에서 실행되는 백엔드는
+`localhost:3307`을 통해 MySQL에 연결합니다.
+
+| 환경 변수 | 기본값 또는 설명 |
 | --- | --- |
 | `JDBC_DRIVER` | `net.sf.log4jdbc.sql.jdbcapi.DriverSpy` |
-| `JDBC_URL` | `jdbc:log4jdbc:mysql://localhost:3306/scoula_db` |
-| `JDBC_USERNAME` | `scoula` |
-| `JDBC_PASSWORD` | `1234` |
+| `JDBC_URL` | `jdbc:log4jdbc:mysql://localhost:3307/kkobi?allowPublicKeyRetrieval=true&sslMode=DISABLED` |
+| `JDBC_USERNAME` | `kkobi` |
+| `JDBC_PASSWORD` | 필수 설정 |
+| `FINLIFE_API_KEY` | 금융감독원 금융상품 API Key |
 
-공용 또는 운영 환경에서는 기본 비밀번호를 사용하지 말고 환경 변수나 배포
-환경의 Secret으로 주입합니다. 데이터베이스 연결 테스트를 실행하려면 해당
-데이터베이스와 계정이 먼저 준비되어 있어야 합니다.
+비밀번호와 API Key 등의 민감한 값은 저장소에 커밋하지 않습니다.
+
+IntelliJ Tomcat으로 실행하는 경우 필요한 값은
+Run/Debug Configuration의 환경 변수에 설정합니다.
 
 ### 빌드 및 테스트
 
@@ -54,53 +63,74 @@ Windows PowerShell:
 .\gradlew.bat test
 ```
 
-WSL 또는 Linux:
+Git Bash / WSL / Linux:
 
 ```sh
 ./gradlew clean war
 ./gradlew test
 ```
 
-WAR 파일은 `build/libs/backend-1.0-SNAPSHOT.war`에 생성됩니다. 로컬 서버를
-실행하려면 생성된 WAR 파일을 Tomcat의 `webapps` 디렉터리에 배포합니다.
+WAR 파일은 다음 경로에 생성됩니다.
 
-## Docker 통합 실행
-
-백엔드와 프론트엔드의 상위 디렉터리인 `C:\KB`에서 `compose.yaml`을
-사용합니다. `.env.example`을 `.env`로 복사하고 예시 비밀번호를 변경한 뒤
-실행합니다.
-
-Windows PowerShell:
-
-```powershell
-Set-Location C:\KB
-Copy-Item .env.example .env
-docker compose up --build
+```text
+build/libs/backend-1.0-SNAPSHOT.war
 ```
 
-WSL 또는 Linux:
+로컬 서버 실행 시 IntelliJ의 Tomcat 설정을 사용하거나
+생성된 WAR 파일을 외부 Tomcat에 배포합니다.
+
+## 백엔드 Docker 실행
+
+프로젝트 루트의 `.env.example`을 참고해 `.env` 파일을 생성하고
+필요한 환경변수를 설정합니다.
+
+Docker Compose에서는 다음 서비스를 실행합니다.
+
+| 서비스 | 역할 | 호스트 포트 |
+| --- | --- | --- |
+| Backend | Tomcat + Spring WAR 실행 | `8080` |
+| MySQL | 애플리케이션 데이터베이스 | `3307` |
+| Redis | Redis 서버 | `6379` |
+| Flyway | DB 마이그레이션 | 포트 없음 |
+
+### 전체 실행
 
 ```sh
-cd /path/to/KB
-cp .env.example .env
-docker compose up --build
+docker compose up -d --build
 ```
 
-기본 서비스 포트는 다음과 같습니다. `.env`의 포트 값을 수정하면 호스트
-포트를 변경할 수 있습니다.
+### 백엔드 다시 빌드 및 실행
 
-| 서비스 | 기본 포트 |
-| --- | --- |
-| 프론트엔드 | `80` |
-| 백엔드 Tomcat | `8080` |
-| MySQL | `3306` |
-| Redis | `6379` |
+```sh
+docker compose up -d --build backend
+```
 
-컨테이너를 종료하려면 통합 프로젝트 루트에서 다음 명령을 실행합니다.
+### 실행 상태 확인
+
+```sh
+docker compose ps -a
+```
+
+### 백엔드 로그 확인
+
+```sh
+docker compose logs backend --tail=100
+```
+
+### 전체 종료
 
 ```sh
 docker compose down
 ```
+
+### 백엔드만 종료
+
+```sh
+docker compose stop backend
+```
+
+로컬 개발을 IntelliJ Tomcat으로 진행할 경우
+Docker Backend만 중지하고 MySQL과 Redis는 계속 사용할 수 있습니다.
 
 ## 프로젝트 구조
 
@@ -111,28 +141,43 @@ backend/
 ├── src/
 │   ├── main/
 │   │   ├── java/org/kkobi/
-│   │   │   ├── config/            # Spring MVC 및 루트 설정
-│   │   │   ├── controller/        # 요청 처리 컨트롤러
+│   │   │   ├── config/            # Spring 설정
+│   │   │   ├── controller/        # 요청 처리 Controller
 │   │   │   ├── exception/         # 공통 예외 처리
 │   │   │   └── security/          # Spring Security 및 JWT 인증
-│   │   ├── resources/             # 설정, MyBatis Mapper, 로그 설정
-│   │   └── webapp/                # JSP 및 웹 애플리케이션 리소스
+│   │   ├── resources/
+│   │   │   ├── db/
+│   │   │   │   └── migration/     # Flyway 마이그레이션 SQL
+│   │   │   └── mapper/            # MyBatis Mapper XML
+│   │   └── webapp/                # 웹 애플리케이션 리소스
 │   └── test/                       # 테스트 코드
-├── build.gradle                    # 의존성, Java Toolchain, WAR 빌드 설정
-├── Dockerfile                      # Gradle 빌드 및 Tomcat 배포 이미지
+├── .dockerignore
+├── .env.example
+├── build.gradle
+├── compose.yaml
+├── Dockerfile
 ├── gradlew
-└── gradlew.bat
+├── gradlew.bat
+└── README.md
 ```
 
 기능 개발에 따라 `member`, `assessment`, `game`, `backtest`, `product`,
-`leaderboard`, `tracking`, `external` 등의 도메인 패키지를 추가합니다.
+`leaderboard`, `tracking`, `external` 등의 도메인 패키지를 사용합니다.
 
 ## Git Hook 설정
 
-저장소를 처음 받은 뒤 저장소 루트에서 다음 명령을 한 번 실행합니다.
+커밋 메시지 검증을 위해 `.githooks/commit-msg` Hook을 사용합니다.
+
+저장소 루트에서 다음 명령을 실행합니다.
 
 ```sh
 git config core.hooksPath .githooks
+```
+
+현재 설정은 다음 명령으로 확인할 수 있습니다.
+
+```sh
+git config core.hooksPath
 ```
 
 커밋 메시지는 다음 형식을 사용합니다.
@@ -141,25 +186,59 @@ git config core.hooksPath .githooks
 #{이슈번호} {Type} : {작업 내용}
 ```
 
+예:
+
+```text
+#3 Chore : 백엔드 Docker 실행 환경 구성
+```
+
 ## 협업 규칙
 
 ### 브랜치 규칙
 
-- `main`: 운영 브랜치입니다. 항상 배포 가능한 상태를 유지하며 직접 push하지
-  않고 PR을 통해 병합합니다.
-- `develop`: 개발 통합 브랜치입니다. 기능 브랜치는 이 브랜치에서 분기하고
-  작업 완료 후 이 브랜치로 PR을 보냅니다.
-- `feature/{도메인}-{작업내용}`: 기능 개발 브랜치입니다.
-  - 예: `feature/member-login`, `feature/game-event-generation`
-- `fix/{도메인}-{작업내용}`: 버그 수정 브랜치입니다.
-  - 예: `fix/assessment-score-calculation`
-- `refactor/{도메인}-{작업내용}`: 기능 변화가 없는 리팩터링 브랜치입니다.
-- `chore/{작업내용}`: 빌드 및 설정 변경 브랜치입니다.
-- `docs/{작업내용}`: 문서 변경 브랜치입니다.
+- `main`
+  - 운영 브랜치
+  - 항상 배포 가능한 상태 유지
+  - 직접 push하지 않고 PR을 통해 병합
 
-도메인 접두어는 프로젝트 패키지 구조에 맞춰 `member`, `assessment`, `game`,
-`backtest`, `product`, `leaderboard`, `tracking`, `security`, `common` 등을
-사용합니다. 병합이 끝난 작업 브랜치는 삭제합니다.
+- `develop`
+  - 개발 통합 브랜치
+  - 작업 브랜치는 `develop`에서 분기
+  - 작업 완료 후 `develop`으로 PR 생성
+
+- `feature/{도메인}-{작업내용}`
+  - 새로운 기능 개발
+  - 예: `feature/member-login`
+  - 예: `feature/game-event-generation`
+
+- `fix/{도메인}-{작업내용}`
+  - 버그 수정
+  - 예: `fix/assessment-score-calculation`
+
+- `refactor/{도메인}-{작업내용}`
+  - 기능 변화가 없는 코드 개선
+
+- `chore/{작업내용}`
+  - 빌드 및 설정 변경
+
+- `docs/{작업내용}`
+  - 문서 추가 또는 수정
+
+도메인 접두어는 프로젝트 패키지 구조에 맞춰 다음과 같이 사용합니다.
+
+```text
+member
+assessment
+game
+backtest
+product
+leaderboard
+tracking
+security
+common
+```
+
+병합이 끝난 작업 브랜치는 삭제합니다.
 
 ### 이슈 규칙
 
