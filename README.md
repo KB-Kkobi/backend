@@ -216,4 +216,3 @@ git config core.hooksPath .githooks
 ```text
 #1 Feat : 회원가입 시 이메일 중복 검증 로직 추가
 ```
-test
