@@ -1,18 +1,26 @@
-FROM eclipse-temurin:17-jdk-noble AS build
+# 1단계: Java 17 환경에서 WAR 빌드
+FROM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /app
 
+COPY gradlew .
 COPY gradle gradle
-COPY gradlew gradlew.bat build.gradle settings.gradle ./
-RUN chmod +x gradlew
-
+COPY build.gradle .
+COPY settings.gradle .
 COPY src src
-RUN ./gradlew clean war -x test -x installGitHooks --no-daemon
 
-FROM tomcat:9.0.120-jre17-temurin-noble
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
+RUN ./gradlew clean war -x installGitHooks --no-daemon
 
+
+# 2단계: Tomcat 9에서 WAR 실행
+FROM tomcat:9-jdk17-temurin
+
+# Tomcat 기본 애플리케이션 제거
 RUN rm -rf /usr/local/tomcat/webapps/*
-COPY --from=build /app/build/libs/*.war /usr/local/tomcat/webapps/ROOT.war
+
+# 빌드된 WAR를 ROOT.war로 배포
+COPY --from=builder /app/build/libs/*.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 

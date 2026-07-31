@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.product.mapper.ProductMapper">
+
+    <!-- 예금 상품 저장 / 기존 상품 정보 갱신 -->
+    <insert id="saveDepositProduct">
+        INSERT INTO products (
+            product_type,
+            fin_co_no,
+            fin_prdt_cd,
+            kor_co_nm,
+            fin_prdt_nm,
+            join_way,
+            mtrt_int,
+            spcl_cnd,
+            join_member,
+            etc_note,
+            max_limit
+        )
+        VALUES (
+                   'DEPOSIT',
+                   #{financialCompanyNumber},
+                   #{productCode},
+                   #{financialCompanyName},
+                   #{productName},
+                   #{joinWay},
+                   #{maturityInterestDescription},
+                   #{preferentialConditions},
+                   #{joinMember},
+                   #{additionalNote},
+                   #{maxLimit}
+               )
+        ON DUPLICATE KEY UPDATE
+                             kor_co_nm = #{financialCompanyName},
+                             fin_prdt_nm = #{productName},
+                             join_way = #{joinWay},
+                             mtrt_int = #{maturityInterestDescription},
+                             spcl_cnd = #{preferentialConditions},
+                             join_member = #{joinMember},
+                             etc_note = #{additionalNote},
+                             max_limit = #{maxLimit},
+                             updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 금융회사 번호와 상품 코드로 저장된 예금 상품의 PK 조회 -->
+    <select id="getDepositProductId" resultType="java.lang.Long">
+        SELECT product_id
+        FROM products
+        WHERE product_type = 'DEPOSIT'
+          AND fin_co_no = #{financialCompanyNumber}
+          AND fin_prdt_cd = #{productCode}
+    </select>
+
+    <!-- 예금 상품 옵션 저장 / 기존 옵션 정보 갱신 -->
+    <insert id="saveDepositProductOption">
+        INSERT INTO product_options (
+            product_id,
+            intr_rate_type,
+            intr_rate_type_nm,
+            rsrv_type,
+            rsrv_type_nm,
+            save_trm,
+            intr_rate,
+            intr_rate2
+        )
+        VALUES (
+                   #{productId},
+                   #{option.interestRateType},
+                   #{option.interestRateTypeName},
+                   'NONE',
+                   NULL,
+                   #{option.savingTerm},
+                   #{option.interestRate},
+                   #{option.maximumInterestRate}
+               )
+        ON DUPLICATE KEY UPDATE
+                             intr_rate_type_nm = #{option.interestRateTypeName},
+                             intr_rate = #{option.interestRate},
+                             intr_rate2 = #{option.maximumInterestRate},
+                             updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 적금 상품 저장 / 기존 상품 정보 갱신 -->
+    <insert id="saveSavingProduct">
+        INSERT INTO products (
+            product_type,
+            fin_co_no,
+            fin_prdt_cd,
+            kor_co_nm,
+            fin_prdt_nm,
+            join_way,
+            mtrt_int,
+            spcl_cnd,
+            join_member,
+            etc_note,
+            max_limit
+        )
+        VALUES (
+                   'SAVING',
+                   #{financialCompanyNumber},
+                   #{productCode},
+                   #{financialCompanyName},
+                   #{productName},
+                   #{joinWay},
+                   #{maturityInterestDescription},
+                   #{preferentialConditions},
+                   #{joinMember},
+                   #{additionalNote},
+                   #{maxLimit}
+               )
+        ON DUPLICATE KEY UPDATE
+                             kor_co_nm = #{financialCompanyName},
+                             fin_prdt_nm = #{productName},
+                             join_way = #{joinWay},
+                             mtrt_int = #{maturityInterestDescription},
+                             spcl_cnd = #{preferentialConditions},
+                             join_member = #{joinMember},
+                             etc_note = #{additionalNote},
+                             max_limit = #{maxLimit},
+                             updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <!-- 금융회사 번호와 상품 코드로 저장된 적금 상품의 PK 조회 -->
+    <select id="getSavingProductId" resultType="java.lang.Long">
+        SELECT product_id
+        FROM products
+        WHERE product_type = 'SAVING'
+          AND fin_co_no = #{financialCompanyNumber}
+          AND fin_prdt_cd = #{productCode}
+    </select>
+
+    <!-- 적금 상품 옵션 저장 / 기존 옵션 정보 갱신 -->
+    <insert id="saveSavingProductOption">
+        INSERT INTO product_options (
+            product_id,
+            intr_rate_type,
+            intr_rate_type_nm,
+            rsrv_type,
+            rsrv_type_nm,
+            save_trm,
+            intr_rate,
+            intr_rate2
+        )
+        VALUES (
+                   #{productId},
+                   #{option.interestRateType},
+                   #{option.interestRateTypeName},
+                   #{option.reserveType},
+                   #{option.reserveTypeName},
+                   #{option.savingTerm},
+                   #{option.interestRate},
+                   #{option.maximumInterestRate}
+               )
+        ON DUPLICATE KEY UPDATE
+                             intr_rate_type_nm = #{option.interestRateTypeName},
+                             rsrv_type_nm = #{option.reserveTypeName},
+                             intr_rate = #{option.interestRate},
+                             intr_rate2 = #{option.maximumInterestRate},
+                             updated_at = CURRENT_TIMESTAMP
+    </insert>
+</mapper>

@@ -9,15 +9,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
 
 @Configuration
+@EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
-//@MapperScan(basePackages = {"org.kkobi.mapper"})
+@ComponentScan(basePackages = {
+        "org.kkobi.product.deposit.service",
+        "org.kkobi.product.saving.service"
+})
+@MapperScan(basePackages = {
+        "org.kkobi.product.mapper"
+})
 public class RootConfig {
     @Value("${jdbc.driver}") String driver;
     @Value("${jdbc.url}") String url;
@@ -54,5 +64,11 @@ public class RootConfig {
         DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSource());
 
         return manager;
+    }
+
+    // 금융감독원 등 외부 API 호출에 사용하는 RestTemplate Bean 등록
+    @Bean
+    public RestTemplate restTemplate(){
+        return new RestTemplate();
     }
 }

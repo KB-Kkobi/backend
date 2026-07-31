@@ -4,5 +4,6 @@
 .idea
 build
 out
+.env
 *.iml
 README.md
