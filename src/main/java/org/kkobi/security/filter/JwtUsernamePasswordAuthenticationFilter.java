@@ -1,43 +1,47 @@
 package org.kkobi.security.filter;
 
-import lombok.extern.log4j.Log4j2;
-import org.kkobi.security.account.dto.LoginDTO;
-import org.kkobi.security.handler.LoginFailureHandler;
-import org.kkobi.security.handler.LoginSuccessHandler;
+import org.kkobi.security.util.JsonResponse;
+import org.kkobi.security.util.JwtProcessor;
+import org.kkobi.users.dto.request.LoginRequest;
+import org.kkobi.users.dto.response.MessageResponse;
+import org.kkobi.users.dto.response.TokenResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
-@Log4j2
-@Component
 public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
-    public JwtUsernamePasswordAuthenticationFilter(
-            AuthenticationManager authenticationManager,
-            LoginSuccessHandler loginSuccessHandler,
-            LoginFailureHandler loginFailureHandler
-    ) {
-        super(authenticationManager);
 
+    // 아이디와 비밀번호 로그인에 사용할 URL과 JSON 응답 핸들러를 설정
+    public JwtUsernamePasswordAuthenticationFilter(AuthenticationManager authenticationManager, JwtProcessor jwtProcessor) {
+        super(authenticationManager);
         setFilterProcessesUrl("/api/auth/login");
-        setAuthenticationSuccessHandler(loginSuccessHandler);
-        setAuthenticationFailureHandler(loginFailureHandler);
+        setAuthenticationSuccessHandler((request, response, authentication) ->
+                JsonResponse.send(response, new TokenResponse(jwtProcessor.generateToken(authentication.getName()), "Bearer")));
+        setAuthenticationFailureHandler((request, response, exception) -> {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            JsonResponse.send(response, new MessageResponse("Invalid email or password"));
+        });
     }
 
+    // 로그인 JSON을 읽고 인증 검증을 AuthenticationManager에 위임
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
             throws AuthenticationException {
-
-        LoginDTO login  =  LoginDTO.of(request);
-
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(login.getUsername(), login.getPassword());
-
-        return getAuthenticationManager().authenticate(authenticationToken);
+        try {
+            LoginRequest login = LoginRequest.of(request);
+            UsernamePasswordAuthenticationToken token =
+                    new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword());
+            return getAuthenticationManager().authenticate(token);
+        } catch (IOException e) {
+            throw new AuthenticationServiceException("Invalid login request", e);
+        }
     }
 }

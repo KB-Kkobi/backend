@@ -12,27 +12,24 @@ import java.util.Date;
 
 @Component
 public class JwtProcessor {
-    static private final long TOKEN_VALID_MILISECOND = 1000L * 60 * 5; // 5분
+    private static final long TOKEN_VALID_MILLISECOND = 1000L * 60 * 5;
 
-    private String secretKey = "충분히 긴 임의의(랜덤한) 비밀키 문자열 배정";
-    private Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-    //여러 서버에서 운영할 때는 공유 secretKey가 있어야함
-    //private Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256); -- 운영시 사용 근데 혼자 쓸 때
+    private final String secretKey = "change-this-secret-key-to-a-long-random-production-value";
+    private final Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
-    //JWT토큰 만약 refreshToken을 발행하고 싶으면 TOKEN_VALID_MILISECOND 대신 expireTime)
-    public String generateToken(String subject){
+    // 인증된 사용자 식별자로 액세스 토큰을 생성
+    public String generateToken(String subject) {
+        Date now = new Date();
         return Jwts.builder()
                 .setSubject(subject)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(new Date().getTime() + TOKEN_VALID_MILISECOND))
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + TOKEN_VALID_MILLISECOND))
                 .signWith(key)
                 .compact();
     }
 
-    // JWT Subject(username) 추출- 해석 불가인 경우 예외 발생
-    // 예외 ExpiredJwtException, UnsupportedJwtException, MalformedJwtException, SignatureException,
-    // IllegalArgumentException
-    public String getUsername(String token){
+    // 서명된 JWT에서 사용자 식별자를 추출
+    public String getUsername(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -41,11 +38,12 @@ public class JwtProcessor {
                 .getSubject();
     }
 
-    public boolean validateToken(String token){
+    // JWT 서명과 만료 시간이 유효한지 검증
+    public boolean validateToken(String token) {
         Jws<Claims> claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token);
-        return true;
+        return claims != null;
     }
 }
