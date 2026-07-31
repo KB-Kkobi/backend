@@ -14,7 +14,9 @@ import org.springframework.web.servlet.view.JstlView;
 @EnableWebMvc
 @ComponentScan(basePackages = {
         "org.kkobi.controller",
-        "org.kkobi.exception"
+        "org.kkobi.exception",
+        "org.kkobi.product.deposit.controller",
+        "org.kkobi.product.saving.controller"
 })
 public class ServletConfig implements WebMvcConfigurer {
 
