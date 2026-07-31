@@ -22,6 +22,7 @@ services:
       timeout: 5s
       retries: 10
 
+
   flyway:
     image: flyway/flyway:12.10.0
     container_name: kkobi-flyway
@@ -40,5 +41,54 @@ services:
       mysql:
         condition: service_healthy
 
+
+  redis:
+    image: redis:7
+    container_name: kkobi-redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: kkobi-backend
+    container_name: kkobi-backend
+    restart: unless-stopped
+
+    environment:
+      JDBC_URL: jdbc:log4jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED
+      JDBC_USERNAME: ${MYSQL_USER}
+      JDBC_PASSWORD: ${MYSQL_PASSWORD}
+      FINLIFE_API_KEY: ${FINLIFE_API_KEY}
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      flyway:
+        condition: service_completed_successfully
+
+
 volumes:
   mysql-data:
+  redis-data:
