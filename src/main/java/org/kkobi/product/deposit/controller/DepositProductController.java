@@ -1,8 +1,8 @@
-package org.kkobi.product.controller;
+package org.kkobi.product.deposit.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.kkobi.product.dto.DepositApiResponse;
-import org.kkobi.product.service.DepositProductService;
+import org.kkobi.product.deposit.dto.DepositApiResponse;
+import org.kkobi.product.deposit.service.DepositProductService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

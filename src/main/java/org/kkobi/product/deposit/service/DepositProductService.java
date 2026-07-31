@@ -1,9 +1,9 @@
-package org.kkobi.product.service;
+package org.kkobi.product.deposit.service;
 
 import lombok.RequiredArgsConstructor;
-import org.kkobi.product.dto.DepositApiResponse;
-import org.kkobi.product.dto.DepositProductDto;
-import org.kkobi.product.dto.DepositProductOptionDto;
+import org.kkobi.product.deposit.dto.DepositApiResponse;
+import org.kkobi.product.deposit.dto.DepositProductDto;
+import org.kkobi.product.deposit.dto.DepositProductOptionDto;
 import org.kkobi.product.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

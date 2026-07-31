@@ -1,4 +1,4 @@
-package org.kkobi.product.dto;
+package org.kkobi.product.saving.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DepositProductOptionDto {
+public class SavingProductOptionDto {
 
     // 어떤 금융회사의 상품인지 식별
     @JsonProperty("fin_co_no")
@@ -26,6 +26,15 @@ public class DepositProductOptionDto {
     @JsonProperty("intr_rate_type_nm")
     private String interestRateTypeName;
 
+    // 적립 유형 코드
+    // F: 자유적립식, S: 정액적립식
+    @JsonProperty("rsrv_type")
+    private String reserveType;
+
+    // 적립 유형명
+    @JsonProperty("rsrv_type_nm")
+    private String reserveTypeName;
+
     // 저축 기간 (개월)
     @JsonProperty("save_trm")
     private String savingTerm;
@@ -37,4 +46,5 @@ public class DepositProductOptionDto {
     // 최고 우대 금리
     @JsonProperty("intr_rate2")
     private BigDecimal maximumInterestRate;
+
 }

@@ -1,8 +1,8 @@
 package org.kkobi.product.mapper;
 
 import org.apache.ibatis.annotations.Param;
-import org.kkobi.product.dto.DepositProductDto;
-import org.kkobi.product.dto.DepositProductOptionDto;
+import org.kkobi.product.deposit.dto.DepositProductDto;
+import org.kkobi.product.deposit.dto.DepositProductOptionDto;
 
 public interface ProductMapper {
 

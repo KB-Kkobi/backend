@@ -1,4 +1,4 @@
-package org.kkobi.product.dto;
+package org.kkobi.product.deposit.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
