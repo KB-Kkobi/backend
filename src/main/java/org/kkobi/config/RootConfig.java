@@ -22,7 +22,8 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
-        "org.kkobi.product.service"
+        "org.kkobi.product.deposit.service",
+        "org.kkobi.product.saving.service"
 })
 @MapperScan(basePackages = {
         "org.kkobi.product.mapper"
