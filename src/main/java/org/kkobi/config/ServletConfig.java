@@ -15,6 +15,7 @@ import org.springframework.web.servlet.view.JstlView;
 @ComponentScan(basePackages = {
         "org.kkobi.controller",
         "org.kkobi.exception",
+        "org.kkobi.users.controller",
         "org.kkobi.product.deposit.controller",
         "org.kkobi.product.saving.controller"
 })

@@ -36,6 +36,7 @@ dependencies {
     implementation "org.springframework:spring-webmvc:${springVersion}"
     implementation 'javax.inject:javax.inject:1'
     implementation 'javax.validation:validation-api:2.0.1.Final'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
 
     // 스프링 시큐리티 (이제 정상적으로 변수를 인식합니다)
     implementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
