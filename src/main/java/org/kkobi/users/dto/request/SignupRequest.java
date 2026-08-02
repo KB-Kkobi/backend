@@ -3,6 +3,7 @@ package org.kkobi.users.dto.request;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Past;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @Data
 public class SignupRequest {
     @NotBlank(message = "이메일은 필수 입력 값입니다.")
+    @Email(message = "올바른 이메일 형식이 아닙니다.")
     private String email;
 
     @NotBlank(message = "비밀번호는 필수 입력 값입니다.")
