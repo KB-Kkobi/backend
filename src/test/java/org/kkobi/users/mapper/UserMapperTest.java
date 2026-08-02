@@ -53,14 +53,14 @@ class UserMapperTest {
         assertEquals(1, userMapper.countByNickname(user.getNickname()));
 
         user.setNickname("mapper-test-updated");
-        user.setPostalCode("54321");
+        user.setPostalCode("54322");
         user.setAddressLine1("updated address");
         user.setAddressLine2("updated detail");
         assertEquals(1, userMapper.update(user));
 
         UserVO updated = userMapper.findById(user.getUserId());
         assertEquals("mapper-test-updated", updated.getNickname());
-        assertEquals("54321", updated.getPostalCode());
+        assertEquals("54322", updated.getPostalCode());
         assertEquals("updated address", updated.getAddressLine1());
         assertEquals("updated detail", updated.getAddressLine2());
 
@@ -78,8 +78,8 @@ class UserMapperTest {
         user.setEmail("mapper-test@example.com");
         user.setPassword("password");
         user.setNickname("mapper-test");
-        user.setBirthDate(LocalDate.of(2000, 1, 1));
-        user.setPostalCode("12345");
+        user.setBirthDate(LocalDate.of(2001, 1, 1));
+        user.setPostalCode("12346");
         user.setAddressLine1("test address");
         user.setAddressLine2("test detail");
         return user;
