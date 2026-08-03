@@ -25,12 +25,14 @@ import javax.sql.DataSource;
         "org.kkobi.assessment",
         "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",
-        "org.kkobi.product.saving.service"
+        "org.kkobi.product.saving.service",
+        "org.kkobi.account.service"
 })
 @MapperScan(basePackages = {
         "org.kkobi.assessment.mapper",
         "org.kkobi.game.mapper",
-        "org.kkobi.product.mapper"
+        "org.kkobi.product.mapper",
+        "org.kkobi.account.mapper"
 })
 public class RootConfig {
     @Value("${jdbc.driver}") String driver;
