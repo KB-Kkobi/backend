@@ -3,8 +3,8 @@ package org.kkobi.security.config;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.filter.JwtUsernamePasswordAuthenticationFilter;
 import org.kkobi.security.jwt.JwtAuthenticationFilter;
+import org.kkobi.security.jwt.JwtProvider;
 import org.kkobi.security.util.JsonResponse;
-import org.kkobi.security.util.JwtProcessor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -42,7 +42,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtProcessor jwtProcessor;
+    private final JwtProvider jwtProvider;
 
     // Spring Security 필터보다 먼저 적용할 UTF-8 인코딩 필터를 생성
     public CharacterEncodingFilter encodingFilter() {
@@ -56,7 +56,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(HttpSecurity http) throws Exception {
         JwtUsernamePasswordAuthenticationFilter loginFilter =
-                new JwtUsernamePasswordAuthenticationFilter(authenticationManagerBean(), jwtProcessor);
+                new JwtUsernamePasswordAuthenticationFilter(authenticationManagerBean(), jwtProvider);
 
         http
                 .addFilterBefore(encodingFilter(), CsrfFilter.class)
