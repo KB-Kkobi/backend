@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper">
+
+    <select id="existsAccountByUserId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM accounts
+            WHERE account_id = #{accountId}
+              AND user_id = #{userId}
+        )
+    </select>
+
+    <select id="existsSecurityByIdAndStockCode" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM securities
+            WHERE security_id = #{securityId}
+              AND ticker = #{stockCode}
+        )
+    </select>
+
+    <select id="existsProductOption" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM product_options
+            WHERE product_option_id = #{productOptionId}
+        )
+    </select>
+
+    <select id="getPreviousVirtualInvestmentBehaviors"
+            resultType="org.kkobi.assessment.dto.VirtualInvestmentBehaviorDto">
+        SELECT
+            action_type,
+            asset_type,
+            security_id,
+            stock_code,
+            product_option_id,
+            quantity,
+            action_amount,
+            current_price_change_rate,
+            daily_price_range_rate,
+            traded_at
+        FROM (
+            SELECT
+                security_order.order_type AS action_type,
+                'SECURITY' AS asset_type,
+                security_order.security_id,
+                security.ticker AS stock_code,
+                NULL AS product_option_id,
+                security_order.quantity,
+                security_order.executed_price * security_order.quantity AS action_amount,
+                CASE
+                    WHEN previous_price.close_price IS NULL
+                        OR previous_price.close_price = 0
+                        OR daily_price.close_price IS NULL
+                    THEN NULL
+                    ELSE (
+                        (daily_price.close_price - previous_price.close_price)
+                        / previous_price.close_price
+                    ) * 100
+                END AS current_price_change_rate,
+                CASE
+                    WHEN daily_price.open_price IS NULL OR daily_price.open_price = 0
+                    THEN NULL
+                    ELSE (
+                        (daily_price.high_price - daily_price.low_price)
+                        / daily_price.open_price
+                    ) * 100
+                END AS daily_price_range_rate,
+                security_order.executed_at AS traded_at
+            FROM security_orders security_order
+            JOIN securities security
+              ON security.security_id = security_order.security_id
+            LEFT JOIN security_daily_prices daily_price
+              ON daily_price.security_id = security_order.security_id
+             AND daily_price.trade_date = DATE(security_order.executed_at)
+            LEFT JOIN security_daily_prices previous_price
+              ON previous_price.security_id = security_order.security_id
+             AND previous_price.trade_date = (
+                    SELECT MAX(price_history.trade_date)
+                    FROM security_daily_prices price_history
+                    WHERE price_history.security_id = security_order.security_id
+                      AND price_history.trade_date &lt; DATE(security_order.executed_at)
+                )
+            WHERE security_order.account_id = #{accountId}
+              AND security_order.status = 'COMPLETED'
+              AND security_order.executed_at IS NOT NULL
+              AND security_order.executed_at &lt; #{tradedAt}
+
+            UNION ALL
+
+            SELECT
+                CASE product_transaction.type
+                    WHEN 'SUBSCRIBE' THEN 'JOIN_PRODUCT'
+                    WHEN 'TERMINATE' THEN 'CANCEL_PRODUCT'
+                    ELSE 'MATURITY'
+                END AS action_type,
+                'PRODUCT' AS asset_type,
+                NULL AS security_id,
+                NULL AS stock_code,
+                holding_product.product_option_id,
+                NULL AS quantity,
+                product_transaction.amount AS action_amount,
+                NULL AS current_price_change_rate,
+                NULL AS daily_price_range_rate,
+                COALESCE(product_transaction.terminated_at, product_transaction.created_at) AS traded_at
+            FROM product_transactions product_transaction
+            JOIN holding_products holding_product
+              ON holding_product.holding_product_id = product_transaction.holding_product_id
+            WHERE holding_product.account_id = #{accountId}
+              AND product_transaction.status = 'COMPLETED'
+              AND product_transaction.type IN ('SUBSCRIBE', 'TERMINATE', 'MATURITY')
+              AND COALESCE(product_transaction.terminated_at, product_transaction.created_at) &lt; #{tradedAt}
+        ) previous_behavior
+        ORDER BY traded_at DESC
+    </select>
+</mapper>

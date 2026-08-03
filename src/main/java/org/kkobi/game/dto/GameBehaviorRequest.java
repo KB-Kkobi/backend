@@ -3,24 +3,22 @@ package org.kkobi.game.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Data
-public class ActionLogDto {
+public class GameBehaviorRequest {
 
-    private Long actionLogId;
     private Long userId;
     private Integer gameMonth;
     private String actionType;
     private String assetType;
     private Long actionAmount;
-    private String marketState;
-    private String depositStatus;
     private Long currentCash;
     private Long currentStock;
     private Long currentDeposit;
-    private BigDecimal rtScoreDelta;
-    private BigDecimal lhScoreDelta;
-    private BigDecimal rpScoreDelta;
-    private Timestamp createdAt;
+    private BigDecimal currentPriceChangeRate;
+    private BigDecimal dailyPriceRangeRate;
+    private BigDecimal realizedReturnRate;
+    private BigDecimal positionReturnRate;
+    private LocalDateTime actedAt;
 }

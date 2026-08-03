@@ -58,7 +58,8 @@
             current_deposit,
             rt_score_delta,
             lh_score_delta,
-            rp_score_delta
+            rp_score_delta,
+            created_at
         FROM action_logs
         WHERE user_id = #{userId}
         ORDER BY created_at, action_log_id
