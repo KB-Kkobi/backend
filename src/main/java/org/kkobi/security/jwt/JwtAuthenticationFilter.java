@@ -4,7 +4,6 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.util.JsonResponse;
-import org.kkobi.security.util.JwtProcessor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -26,12 +25,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtProcessor jwtProcessor;
+    private final JwtProvider jwtProvider;
     private final UserDetailsService userDetailsService;
 
     // 유효한 JWT로 Spring Security 인증 객체를 생성
     private Authentication getAuthentication(String token) {
-        String username = jwtProcessor.getUsername(token);
+        String username = jwtProvider.getSubject(token);
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
@@ -45,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (bearerToken != null && bearerToken.startsWith(BEARER_PREFIX)) {
                 String token = bearerToken.substring(BEARER_PREFIX.length());
-                if (jwtProcessor.validateToken(token)) {
+                if (jwtProvider.validateAccessToken(token)) {
                     SecurityContextHolder.getContext().setAuthentication(getAuthentication(token));
                 }
             }
@@ -54,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (ExpiredJwtException e) {
             JsonResponse.sendError(response, HttpStatus.UNAUTHORIZED, "Token has expired");
         } catch (JwtException | IllegalArgumentException e) {
-            JsonResponse.sendError(response, HttpStatus.UNAUTHORIZED, e.getMessage());
+            JsonResponse.sendError(response, HttpStatus.UNAUTHORIZED, "Invalid token");
         }
     }
 }
