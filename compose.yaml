@@ -74,6 +74,7 @@ services:
       JDBC_USERNAME: ${MYSQL_USER}
       JDBC_PASSWORD: ${MYSQL_PASSWORD}
       FINLIFE_API_KEY: ${FINLIFE_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
 
     ports:
       - "8080:8080"
