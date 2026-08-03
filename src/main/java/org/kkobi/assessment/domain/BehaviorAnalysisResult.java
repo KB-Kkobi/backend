@@ -17,7 +17,7 @@ public class BehaviorAnalysisResult {
                 .reduce(ScoreDelta.createZeroScoreDelta(), ScoreDelta::addScoreDelta);
     }
 
-    public boolean hasAppliedRules() {
+    public boolean existsAppliedRule() {
         return !appliedRules.isEmpty();
     }
 }

@@ -23,7 +23,7 @@ public class SecurityPositionCalculator {
         if (currentEvent.getActionType() != BehaviorActionType.BUY
                 || currentEvent.getAssetType() != BehaviorAssetType.SECURITY
                 || currentEvent.getSecurityId() == null
-                || !hasTradeAmount(currentEvent)) {
+                || !existsTradePrice(currentEvent)) {
             return null;
         }
 
@@ -72,7 +72,7 @@ public class SecurityPositionCalculator {
         List<BehaviorEvent> securityEvents = previousEvents.stream()
                 .filter(event -> event.getAssetType() == BehaviorAssetType.SECURITY)
                 .filter(event -> securityId.equals(event.getSecurityId()))
-                .filter(this::hasTradeAmount)
+                .filter(this::existsTradePrice)
                 .filter(event -> event.getTradedAt() != null)
                 .sorted(Comparator.comparing(BehaviorEvent::getTradedAt))
                 .toList();
@@ -80,8 +80,10 @@ public class SecurityPositionCalculator {
         for (BehaviorEvent securityEvent : securityEvents) {
             if (securityEvent.getActionType() == BehaviorActionType.BUY) {
                 BigDecimal previousPrincipal = averagePrice.multiply(BigDecimal.valueOf(quantity));
+                BigDecimal tradePrincipal = calculateTradePrice(securityEvent)
+                        .multiply(BigDecimal.valueOf(securityEvent.getQuantity()));
                 quantity += securityEvent.getQuantity();
-                averagePrice = previousPrincipal.add(BigDecimal.valueOf(securityEvent.getActionAmount()))
+                averagePrice = previousPrincipal.add(tradePrincipal)
                         .divide(BigDecimal.valueOf(quantity), PRICE_SCALE, RoundingMode.HALF_UP);
             } else if (securityEvent.getActionType() == BehaviorActionType.SELL) {
                 quantity = Math.max(0, quantity - securityEvent.getQuantity());
@@ -94,14 +96,20 @@ public class SecurityPositionCalculator {
         return new SecurityPosition(quantity, averagePrice);
     }
 
-    private boolean hasTradeAmount(BehaviorEvent event) {
-        return event.getQuantity() != null
-                && event.getQuantity() > 0
-                && event.getActionAmount() != null
-                && event.getActionAmount() > 0;
+    private boolean existsTradePrice(BehaviorEvent event) {
+        if (event.getQuantity() == null || event.getQuantity() <= 0) {
+            return false;
+        }
+
+        return event.getExecutionPrice() != null && event.getExecutionPrice() > 0
+                || event.getActionAmount() != null && event.getActionAmount() > 0;
     }
 
     private BigDecimal calculateTradePrice(BehaviorEvent event) {
+        if (event.getExecutionPrice() != null) {
+            return BigDecimal.valueOf(event.getExecutionPrice());
+        }
+
         return BigDecimal.valueOf(event.getActionAmount())
                 .divide(BigDecimal.valueOf(event.getQuantity()), PRICE_SCALE, RoundingMode.HALF_UP);
     }

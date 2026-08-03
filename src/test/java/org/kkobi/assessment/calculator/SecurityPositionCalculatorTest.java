@@ -32,6 +32,10 @@ class SecurityPositionCalculatorTest {
                 440L,
                 LocalDateTime.of(2026, 8, 2, 9, 0)
         );
+        firstBuy.setActionAmount(null);
+        firstBuy.setExecutionPrice(100L);
+        partialSell.setActionAmount(null);
+        partialSell.setExecutionPrice(110L);
         BehaviorEvent currentBuy = createSecurityEvent(
                 BehaviorActionType.BUY,
                 2,

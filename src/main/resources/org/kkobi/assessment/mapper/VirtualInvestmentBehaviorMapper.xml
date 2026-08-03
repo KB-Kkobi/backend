@@ -41,8 +41,12 @@
             product_option_id,
             quantity,
             action_amount,
-            current_price_change_rate,
-            daily_price_range_rate,
+            execution_price,
+            previous_close_price,
+            current_close_price,
+            open_price,
+            high_price,
+            low_price,
             traded_at
         FROM (
             SELECT
@@ -52,25 +56,13 @@
                 security.ticker AS stock_code,
                 NULL AS product_option_id,
                 security_order.quantity,
-                security_order.executed_price * security_order.quantity AS action_amount,
-                CASE
-                    WHEN previous_price.close_price IS NULL
-                        OR previous_price.close_price = 0
-                        OR daily_price.close_price IS NULL
-                    THEN NULL
-                    ELSE (
-                        (daily_price.close_price - previous_price.close_price)
-                        / previous_price.close_price
-                    ) * 100
-                END AS current_price_change_rate,
-                CASE
-                    WHEN daily_price.open_price IS NULL OR daily_price.open_price = 0
-                    THEN NULL
-                    ELSE (
-                        (daily_price.high_price - daily_price.low_price)
-                        / daily_price.open_price
-                    ) * 100
-                END AS daily_price_range_rate,
+                NULL AS action_amount,
+                security_order.executed_price AS execution_price,
+                previous_price.close_price AS previous_close_price,
+                daily_price.close_price AS current_close_price,
+                daily_price.open_price AS open_price,
+                daily_price.high_price AS high_price,
+                daily_price.low_price AS low_price,
                 security_order.executed_at AS traded_at
             FROM security_orders security_order
             JOIN securities security
@@ -94,19 +86,19 @@
             UNION ALL
 
             SELECT
-                CASE product_transaction.type
-                    WHEN 'SUBSCRIBE' THEN 'JOIN_PRODUCT'
-                    WHEN 'TERMINATE' THEN 'CANCEL_PRODUCT'
-                    ELSE 'MATURITY'
-                END AS action_type,
+                product_transaction.type AS action_type,
                 'PRODUCT' AS asset_type,
                 NULL AS security_id,
                 NULL AS stock_code,
                 holding_product.product_option_id,
                 NULL AS quantity,
                 product_transaction.amount AS action_amount,
-                NULL AS current_price_change_rate,
-                NULL AS daily_price_range_rate,
+                NULL AS execution_price,
+                NULL AS previous_close_price,
+                NULL AS current_close_price,
+                NULL AS open_price,
+                NULL AS high_price,
+                NULL AS low_price,
                 COALESCE(product_transaction.terminated_at, product_transaction.created_at) AS traded_at
             FROM product_transactions product_transaction
             JOIN holding_products holding_product

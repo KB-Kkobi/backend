@@ -15,7 +15,11 @@ public class VirtualInvestmentBehaviorDto {
     private Long productOptionId;
     private Integer quantity;
     private Long actionAmount;
-    private BigDecimal currentPriceChangeRate;
-    private BigDecimal dailyPriceRangeRate;
+    private Long executionPrice;
+    private BigDecimal previousClosePrice;
+    private BigDecimal currentClosePrice;
+    private BigDecimal openPrice;
+    private BigDecimal highPrice;
+    private BigDecimal lowPrice;
     private Timestamp tradedAt;
 }

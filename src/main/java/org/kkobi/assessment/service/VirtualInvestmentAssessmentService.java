@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.calculator.BehaviorContextFactory;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.MarketStateCalculator;
+import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
 import org.kkobi.assessment.calculator.SecurityPositionCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentResult;
@@ -31,6 +32,7 @@ public class VirtualInvestmentAssessmentService {
     private final VirtualInvestmentBehaviorValidator virtualInvestmentBehaviorValidator;
     private final VirtualInvestmentBehaviorMapper virtualInvestmentBehaviorMapper;
     private final MarketStateCalculator marketStateCalculator;
+    private final SecurityPriceRateCalculator securityPriceRateCalculator;
     private final SecurityPositionCalculator securityPositionCalculator;
     private final BehaviorContextFactory behaviorContextFactory;
     private final BehaviorRuleEngine behaviorRuleEngine;
@@ -50,15 +52,16 @@ public class VirtualInvestmentAssessmentService {
                 .stream()
                 .map(this::createBehaviorEvent)
                 .toList();
-        enrichSecurityPosition(currentEvent, previousEvents);
+        updateSecurityPosition(currentEvent, previousEvents);
 
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 currentEvent,
                 previousEvents
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehavior(behaviorContext);
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateBehaviorAnalysis(behaviorContext);
         AssessmentScore currentScore = assessmentResultService.getLatestAssessmentScore(request.getUserId());
-        if (!analysisResult.hasAppliedRules()) {
+        if (!analysisResult.existsAppliedRule()) {
             return assessmentResultService.createAssessmentResult(currentScore, List.of());
         }
 
@@ -103,8 +106,16 @@ public class VirtualInvestmentAssessmentService {
         event.setProductOptionId(behavior.getProductOptionId());
         event.setQuantity(behavior.getQuantity());
         event.setActionAmount(behavior.getActionAmount());
-        event.setCurrentPriceChangeRate(behavior.getCurrentPriceChangeRate());
-        event.setDailyPriceRangeRate(behavior.getDailyPriceRangeRate());
+        event.setExecutionPrice(behavior.getExecutionPrice());
+        event.setCurrentPriceChangeRate(securityPriceRateCalculator.calculatePriceChangeRate(
+                behavior.getPreviousClosePrice(),
+                behavior.getCurrentClosePrice()
+        ));
+        event.setDailyPriceRangeRate(securityPriceRateCalculator.calculateDailyPriceRangeRate(
+                behavior.getOpenPrice(),
+                behavior.getHighPrice(),
+                behavior.getLowPrice()
+        ));
         if (behavior.getTradedAt() != null) {
             event.setTradedAt(behavior.getTradedAt().toLocalDateTime());
         }
@@ -124,7 +135,7 @@ public class VirtualInvestmentAssessmentService {
         );
     }
 
-    private void enrichSecurityPosition(
+    private void updateSecurityPosition(
             BehaviorEvent currentEvent,
             List<BehaviorEvent> previousEvents) {
         if (currentEvent.getAssetType() != BehaviorAssetType.SECURITY) {

@@ -21,6 +21,7 @@ public class BehaviorEvent {
     private Long holdingProductId;
     private Integer quantity;
     private Long actionAmount;
+    private Long executionPrice;
     private Long currentCash;
     private Long currentStockPrincipal;
     private Long currentDeposit;

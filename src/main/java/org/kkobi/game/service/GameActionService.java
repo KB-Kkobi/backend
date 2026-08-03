@@ -25,7 +25,7 @@ public class GameActionService {
     private final BehaviorRuleEngine behaviorRuleEngine;
 
     @Transactional
-    public Long createGameAction(GameBehaviorRequest request) {
+    public Long saveGameActionLog(GameBehaviorRequest request) {
         validateGameBehavior(request);
         BehaviorEvent currentEvent = createBehaviorEvent(request);
         List<ActionLogDto> actionLogs = actionLogService.getActionLogsByUserId(request.getUserId());
@@ -38,10 +38,10 @@ public class GameActionService {
                 currentEvent,
                 previousEvents
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehavior(behaviorContext);
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(behaviorContext);
         ActionLogDto actionLog = createActionLog(request, behaviorContext, analysisResult);
 
-        return actionLogService.createActionLog(actionLog);
+        return actionLogService.saveActionLog(actionLog);
     }
 
     private void validateGameBehavior(GameBehaviorRequest request) {

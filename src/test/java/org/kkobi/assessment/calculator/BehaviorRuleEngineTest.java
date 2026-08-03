@@ -34,7 +34,7 @@ class BehaviorRuleEngineTest {
         context.setDepositRatio(BigDecimal.ZERO);
         context.setCashRatio(new BigDecimal("30.00"));
 
-        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehavior(context);
+        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehaviorAnalysis(context);
 
         Set<BehaviorRuleCode> appliedRuleCodes = result.getAppliedRules()
                 .stream()
@@ -65,7 +65,7 @@ class BehaviorRuleEngineTest {
         context.setMarketState(MarketState.CRASH);
         context.setConsecutiveActionCount(2);
 
-        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehavior(context);
+        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehaviorAnalysis(context);
 
         assertEquals(2, result.getAppliedRules().size());
         assertScoreEquals("30.00", result.getTotalScoreDelta().getRtDelta());

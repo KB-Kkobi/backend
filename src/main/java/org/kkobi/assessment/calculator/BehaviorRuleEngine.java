@@ -33,7 +33,7 @@ public class BehaviorRuleEngine {
     private static final BigDecimal LOW_TRADE_FREQUENCY = BigDecimal.valueOf(0.2);
     private static final int CASH_MAINTENANCE_DAYS = 5;
 
-    public BehaviorAnalysisResult calculateBehavior(BehaviorContext behaviorContext) {
+    public BehaviorAnalysisResult calculateBehaviorAnalysis(BehaviorContext behaviorContext) {
         List<RuleResult> appliedRules = new ArrayList<>();
 
         calculateInitialAllocationRules(behaviorContext, appliedRules);

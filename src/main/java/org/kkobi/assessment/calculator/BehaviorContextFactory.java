@@ -128,7 +128,7 @@ public class BehaviorContextFactory {
     }
 
     private BigDecimal calculateStockRatio(BehaviorEvent event) {
-        if (!hasAssetSnapshot(event)) {
+        if (!existsAssetSnapshot(event)) {
             return null;
         }
         return assetRatioCalculator.calculateStockRatio(
@@ -139,7 +139,7 @@ public class BehaviorContextFactory {
     }
 
     private BigDecimal calculateCashRatio(BehaviorEvent event) {
-        if (!hasAssetSnapshot(event)) {
+        if (!existsAssetSnapshot(event)) {
             return null;
         }
         return assetRatioCalculator.calculateCashRatio(
@@ -150,7 +150,7 @@ public class BehaviorContextFactory {
     }
 
     private BigDecimal calculateDepositRatio(BehaviorEvent event) {
-        if (!hasAssetSnapshot(event)) {
+        if (!existsAssetSnapshot(event)) {
             return null;
         }
         return assetRatioCalculator.calculateDepositRatio(
@@ -160,7 +160,7 @@ public class BehaviorContextFactory {
         );
     }
 
-    private boolean hasAssetSnapshot(BehaviorEvent event) {
+    private boolean existsAssetSnapshot(BehaviorEvent event) {
         return event.getCurrentCash() != null
                 && event.getCurrentStockPrincipal() != null
                 && event.getCurrentDeposit() != null;
