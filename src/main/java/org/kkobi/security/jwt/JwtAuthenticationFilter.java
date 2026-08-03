@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.util.JsonResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,7 +38,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // Bearer 토큰을 추출해 검증하고 인증 정보를 SecurityContext에 저장
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    )
             throws ServletException, IOException {
         try {
             String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
