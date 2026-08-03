@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -14,8 +15,12 @@ import java.util.Date;
 public class JwtProcessor {
     private static final long TOKEN_VALID_MILLISECOND = 1000L * 60 * 5;
 
-    private final String secretKey = "change-this-secret-key-to-a-long-random-production-value";
-    private final Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    private final Key key;
+
+    // 환경변수로 전달된 비밀키를 JWT 서명 키로 변환
+    public JwtProcessor(@Value("${jwt.secret}") String secretKey) {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
 
     // 인증된 사용자 식별자로 액세스 토큰을 생성
     public String generateToken(String subject) {
