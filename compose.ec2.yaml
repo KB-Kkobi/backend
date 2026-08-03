@@ -1,0 +1,85 @@
+services:
+  mysql:
+    image: mysql:8.0.46
+    container_name: kkobi-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  flyway:
+    image: flyway/flyway:12.10.0
+    container_name: kkobi-flyway
+
+    command:
+      - "-url=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED"
+      - "-user=${MYSQL_USER}"
+      - "-password=${MYSQL_PASSWORD}"
+      - "-connectRetries=60"
+      - "migrate"
+
+    volumes:
+      - ./migration:/flyway/sql:ro
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+
+  redis:
+    image: redis:7
+    container_name: kkobi-redis
+    restart: unless-stopped
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  backend:
+    image: kkobi-backend:manual
+    container_name: kkobi-backend
+    restart: unless-stopped
+
+    environment:
+      JDBC_URL: jdbc:log4jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED
+      JDBC_USERNAME: ${MYSQL_USER}
+      JDBC_PASSWORD: ${MYSQL_PASSWORD}
+      FINLIFE_API_KEY: ${FINLIFE_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      flyway:
+        condition: service_completed_successfully
+
+
+volumes:
+  mysql-data:
+  redis-data:
