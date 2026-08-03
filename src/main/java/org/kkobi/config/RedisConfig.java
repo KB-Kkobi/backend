@@ -22,6 +22,7 @@ public class RedisConfig {
         this.redisPort = redisPort;
     }
 
+    // Redis 서버 연결 정보를 설정
     @Bean
     public RedisConnectionFactory redisConnectionFactory(){
         RedisStandaloneConfiguration redisConfiguration =
@@ -33,6 +34,7 @@ public class RedisConfig {
         return new LettuceConnectionFactory(redisConfiguration);
     }
 
+    // 문자열 형태의 Redis 데이터를 저장하고 조회할 때 사용
     @Bean
     public StringRedisTemplate stringRedisTemplate(
             RedisConnectionFactory redisConnectionFactory
