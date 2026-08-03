@@ -1,10 +1,16 @@
 package org.kkobi.exception;
 
 import lombok.extern.log4j.Log4j2;
+import org.kkobi.users.dto.response.MessageResponse;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -13,6 +19,38 @@ import javax.servlet.http.HttpServletRequest;
 @ControllerAdvice
 @Log4j2
 public class CommonExceptionAdvice {
+
+    // DTO 필드 검증 실패 메시지를 JSON으로 반환
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleValidation(MethodArgumentNotValidException ex) {
+        FieldError fieldError = ex.getBindingResult().getFieldError();
+        String message = fieldError == null ? "요청 값을 확인해 주세요." : fieldError.getDefaultMessage();
+        return ResponseEntity.badRequest().body(new MessageResponse(message));
+    }
+
+    // 이메일 또는 닉네임 중복 오류를 JSON으로 반환
+    @ExceptionHandler(DuplicateUserException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleDuplicateUser(DuplicateUserException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
+    // 동시에 들어온 가입 요청이 DB 고유 제약조건과 충돌한 경우 JSON으로 반환
+    @ExceptionHandler(DuplicateKeyException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleDuplicateKey(DuplicateKeyException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new MessageResponse("이미 사용 중인 이메일 또는 닉네임입니다."));
+    }
+
+    // 비밀번호 등 비즈니스 규칙 검증 오류를 JSON으로 반환
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
+    }
 
     @ExceptionHandler(Exception.class)
     public String except(Exception ex, Model model){
