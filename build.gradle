@@ -35,6 +35,8 @@ dependencies {
     }
     implementation "org.springframework:spring-webmvc:${springVersion}"
     implementation 'javax.inject:javax.inject:1'
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+    implementation 'org.hibernate.validator:hibernate-validator:6.2.5.Final'
 
     // 스프링 시큐리티 (이제 정상적으로 변수를 인식합니다)
     implementation "org.springframework.security:spring-security-web:${springSecurityVersion}"
@@ -82,7 +84,7 @@ dependencies {
     implementation 'org.mybatis:mybatis-spring:2.1.1' // 스프링 5와 호환되는 버전
 
     // SQL 로그 정렬을 위한 툴
-    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4:1.16'
+    implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'
 
     // 테스트 관련 설정
     testImplementation "org.springframework:spring-test:${springVersion}"

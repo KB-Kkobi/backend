@@ -45,3 +45,8 @@ bin/
 .env
 .env.*
 !.env.example
+
+### Postman ###
+.postman/
+postman/globals/workspace.globals.yaml
+.postman/resources.yaml

@@ -5,23 +5,23 @@ import org.springframework.http.HttpStatus;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.Writer;
 
 public class JsonResponse {
-    public static <T> void send(HttpServletResponse response, T result) throws IOException{
-        ObjectMapper om = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String JSON_CONTENT_TYPE = "application/json;charset=UTF-8";
 
-        response.setContentType("application/json;charset=UTF-8");
-        Writer out = response.getWriter();
-        out.write(om.writeValueAsString(result));
-        out.flush();
+    // 객체를 JSON HTTP 응답으로 작성
+    public static <T> void send(HttpServletResponse response, T result) throws IOException {
+        response.setContentType(JSON_CONTENT_TYPE);
+        response.getWriter().write(OBJECT_MAPPER.writeValueAsString(result));
+        response.getWriter().flush();
     }
 
-    public static void sendError(HttpServletResponse response, HttpStatus status, String message) throws IOException{
+    // 에러 상태 코드와 메시지를 HTTP 응답으로 작성
+    public static void sendError(HttpServletResponse response, HttpStatus status, String message) throws IOException {
         response.setStatus(status.value());
-        response.setContentType("application/json;charset=UTF-8");
-        Writer out = response.getWriter();
-        out.write(message);
-        out.flush();
+        response.setContentType(JSON_CONTENT_TYPE);
+        response.getWriter().write(message);
+        response.getWriter().flush();
     }
 }

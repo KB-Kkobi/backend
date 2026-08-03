@@ -22,10 +22,12 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
+        "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",
         "org.kkobi.product.saving.service"
 })
 @MapperScan(basePackages = {
+        "org.kkobi.game.mapper",
         "org.kkobi.product.mapper"
 })
 public class RootConfig {
