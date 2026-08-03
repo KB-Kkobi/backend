@@ -51,16 +51,19 @@ public class GameActionService {
         if (request.getUserId() == null) {
             throw new IllegalArgumentException("userId는 필수입니다.");
         }
-        if (request.getGameMonth() == null
-                || request.getGameMonth() < 1
-                || request.getGameMonth() > 12) {
-            throw new IllegalArgumentException("gameMonth는 1부터 12 사이여야 합니다.");
+        if (request.getTick() == null
+                || request.getTick() < 0
+                || request.getTick() > 52) {
+            throw new IllegalArgumentException("tick은 0부터 52 사이여야 합니다.");
         }
         if (request.getActionType() == null || request.getAssetType() == null) {
             throw new IllegalArgumentException("actionType과 assetType은 필수입니다.");
         }
         if (request.getActedAt() == null) {
             throw new IllegalArgumentException("actedAt은 필수입니다.");
+        }
+        if (request.getChangeRate() == null) {
+            throw new IllegalArgumentException("changeRate는 필수입니다.");
         }
 
         BehaviorActionType actionType = BehaviorActionType.getBehaviorActionType(request.getActionType());
@@ -129,7 +132,7 @@ public class GameActionService {
         event.setCurrentCash(request.getCurrentCash());
         event.setCurrentStockPrincipal(request.getCurrentStock());
         event.setCurrentDeposit(request.getCurrentDeposit());
-        event.setCurrentPriceChangeRate(request.getCurrentPriceChangeRate());
+        event.setCurrentPriceChangeRate(request.getChangeRate());
         event.setDailyPriceRangeRate(request.getDailyPriceRangeRate());
         event.setRealizedReturnRate(request.getRealizedReturnRate());
         event.setPositionReturnRate(request.getPositionReturnRate());
@@ -159,7 +162,7 @@ public class GameActionService {
             BehaviorAnalysisResult analysisResult) {
         ActionLogDto actionLog = new ActionLogDto();
         actionLog.setUserId(request.getUserId());
-        actionLog.setGameMonth(request.getGameMonth());
+        actionLog.setGameTick(request.getTick());
         actionLog.setActionType(getActionLogActionType(behaviorContext.getCurrentEvent().getActionType()));
         actionLog.setAssetType(getActionLogAssetType(behaviorContext.getCurrentEvent().getAssetType()));
         actionLog.setActionAmount(request.getActionAmount());

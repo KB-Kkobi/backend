@@ -10,7 +10,7 @@ public class ActionLogDto {
 
     private Long actionLogId;
     private Long userId;
-    private Integer gameMonth;
+    private Integer gameTick;
     private String actionType;
     private String assetType;
     private Long actionAmount;

@@ -83,7 +83,7 @@ class ActionLogMapperTest {
     private ActionLogDto createActionLog(Long userId) {
         ActionLogDto actionLog = new ActionLogDto();
         actionLog.setUserId(userId);
-        actionLog.setGameMonth(1);
+        actionLog.setGameTick(20);
         actionLog.setActionType("BUY");
         actionLog.setAssetType("STOCK");
         actionLog.setActionAmount(100_000L);
