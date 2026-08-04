@@ -17,6 +17,4 @@ public class GameBehaviorRequest {
     private Long currentStock;
     private Long currentDeposit;
     private BigDecimal dailyPriceRangeRate;
-    private BigDecimal realizedReturnRate;
-    private BigDecimal positionReturnRate;
 }

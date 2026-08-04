@@ -10,12 +10,14 @@ import org.kkobi.assessment.enums.BehaviorActionType;
 import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.MarketState;
 import org.kkobi.game.calculator.GamePriceRateCalculator;
+import org.kkobi.game.calculator.GameSecurityReturnCalculator;
 import org.kkobi.game.dto.ActionLogDto;
 import org.kkobi.game.dto.GameBehaviorRequest;
 import org.kkobi.game.dto.ScenarioDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -30,6 +32,7 @@ public class GameActionService {
     private final ActionLogService actionLogService;
     private final ScenarioService scenarioService;
     private final GamePriceRateCalculator gamePriceRateCalculator;
+    private final GameSecurityReturnCalculator gameSecurityReturnCalculator;
     private final BehaviorContextFactory behaviorContextFactory;
     private final BehaviorRuleEngine behaviorRuleEngine;
 
@@ -38,9 +41,9 @@ public class GameActionService {
         validateGameBehavior(request);
         ScenarioDto scenario = scenarioService.getScenario(request.getScenarioId());
         validateGameTick(request, scenario);
-        BehaviorEvent currentEvent = createBehaviorEvent(request, scenario);
         List<ActionLogDto> actionLogs = actionLogService.getActionLogsByUserId(request.getUserId());
         validateInitialAllocation(request, actionLogs);
+        BehaviorEvent currentEvent = createBehaviorEvent(request, scenario, actionLogs);
         List<BehaviorEvent> previousEvents = actionLogs
                 .stream()
                 .map(this::createBehaviorEvent)
@@ -138,9 +141,11 @@ public class GameActionService {
 
     private BehaviorEvent createBehaviorEvent(
             GameBehaviorRequest request,
-            ScenarioDto scenario) {
+            ScenarioDto scenario,
+            List<ActionLogDto> actionLogs) {
         BehaviorEvent event = new BehaviorEvent();
         event.setUserId(request.getUserId());
+        event.setGameTick(request.getTick());
         event.setActionType(BehaviorActionType.getBehaviorActionType(request.getActionType()));
         event.setAssetType(BehaviorAssetType.getBehaviorAssetType(request.getAssetType()));
         updateGameSecurityId(event);
@@ -153,15 +158,37 @@ public class GameActionService {
                 request.getTick()
         ));
         event.setDailyPriceRangeRate(request.getDailyPriceRangeRate());
-        event.setRealizedReturnRate(request.getRealizedReturnRate());
-        event.setPositionReturnRate(request.getPositionReturnRate());
+        updateGameSecurityReturnRate(event, scenario, request.getTick(), actionLogs);
         event.setTradedAt(calculateGameActionAt(request.getTick()));
         return event;
+    }
+
+    private void updateGameSecurityReturnRate(
+            BehaviorEvent event,
+            ScenarioDto scenario,
+            int gameTick,
+            List<ActionLogDto> actionLogs) {
+        if (event.getAssetType() != BehaviorAssetType.SECURITY) {
+            return;
+        }
+
+        BigDecimal currentReturnRate = gameSecurityReturnCalculator.calculateCurrentReturnRate(
+                scenario,
+                gameTick,
+                actionLogs
+        );
+        if (event.getActionType() == BehaviorActionType.BUY) {
+            event.setPositionReturnRate(currentReturnRate);
+        } else if (event.getActionType() == BehaviorActionType.SELL) {
+            event.setRealizedReturnRate(currentReturnRate);
+        }
     }
 
     private BehaviorEvent createBehaviorEvent(ActionLogDto actionLog) {
         BehaviorEvent event = new BehaviorEvent();
         event.setUserId(actionLog.getUserId());
+        event.setGameTick(actionLog.getGameTick());
+        event.setActionSequence(actionLog.getActionLogId());
         event.setActionType(BehaviorActionType.getBehaviorActionType(actionLog.getActionType()));
         event.setAssetType(BehaviorAssetType.getBehaviorAssetType(actionLog.getAssetType()));
         updateGameSecurityId(event);

@@ -13,6 +13,8 @@ public class BehaviorEvent {
 
     private Long userId;
     private Long accountId;
+    private Integer gameTick;
+    private Long actionSequence;
     private BehaviorActionType actionType;
     private BehaviorAssetType assetType;
     private Long securityId;

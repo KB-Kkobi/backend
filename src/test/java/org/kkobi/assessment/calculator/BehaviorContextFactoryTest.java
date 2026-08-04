@@ -6,6 +6,7 @@ import org.kkobi.assessment.domain.BehaviorContext;
 import org.kkobi.assessment.domain.BehaviorEvent;
 import org.kkobi.assessment.enums.BehaviorActionType;
 import org.kkobi.assessment.enums.BehaviorAssetType;
+import org.kkobi.assessment.enums.MarketState;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -114,6 +115,35 @@ class BehaviorContextFactoryTest {
         assertEquals(0, new BigDecimal("10").compareTo(context.getAverageHoldingDays()));
     }
 
+    @Test
+    @DisplayName("게임에서 같은 행동이 연속 tick에 발생하면 누진 횟수를 계산한다.")
+    void createBehaviorContextCalculatesConsecutiveGameTicks() {
+        BehaviorEvent firstBuy = createGameSecurityEvent(1, 1L);
+        BehaviorEvent secondBuy = createGameSecurityEvent(2, 2L);
+        BehaviorEvent currentBuy = createGameSecurityEvent(3, null);
+
+        BehaviorContext context = behaviorContextFactory.createBehaviorContext(
+                currentBuy,
+                List.of(firstBuy, secondBuy)
+        );
+
+        assertEquals(3, context.getConsecutiveActionCount());
+    }
+
+    @Test
+    @DisplayName("게임 행동 사이의 tick이 비연속이면 누진 횟수를 초기화한다.")
+    void createBehaviorContextResetsConsecutiveGameTicksAfterGap() {
+        BehaviorEvent previousBuy = createGameSecurityEvent(1, 1L);
+        BehaviorEvent currentBuy = createGameSecurityEvent(3, null);
+
+        BehaviorContext context = behaviorContextFactory.createBehaviorContext(
+                currentBuy,
+                List.of(previousBuy)
+        );
+
+        assertEquals(1, context.getConsecutiveActionCount());
+    }
+
     private BehaviorEvent createSecurityEvent(LocalDateTime tradedAt) {
         BehaviorEvent event = new BehaviorEvent();
         event.setActionType(BehaviorActionType.BUY);
@@ -136,6 +166,16 @@ class BehaviorContextFactoryTest {
         event.setSecurityId(1L);
         event.setQuantity(quantity);
         event.setTradedAt(tradedAt);
+        return event;
+    }
+
+    private BehaviorEvent createGameSecurityEvent(int gameTick, Long actionSequence) {
+        BehaviorEvent event = createSecurityEvent(
+                LocalDateTime.of(2000, 1, 1, 0, 0).plusDays((long) gameTick * 7)
+        );
+        event.setGameTick(gameTick);
+        event.setActionSequence(actionSequence);
+        event.setMarketState(MarketState.CRASH);
         return event;
     }
 }

@@ -29,7 +29,14 @@ public class BehaviorContextFactory {
             List<BehaviorEvent> previousEvents) {
         List<BehaviorEvent> sortedPreviousEvents = previousEvents.stream()
                 .filter(event -> event.getTradedAt() != null)
-                .sorted(Comparator.comparing(BehaviorEvent::getTradedAt).reversed())
+                .sorted(Comparator.comparing(
+                                BehaviorEvent::getTradedAt,
+                                Comparator.reverseOrder()
+                        )
+                        .thenComparing(
+                                BehaviorEvent::getActionSequence,
+                                Comparator.nullsLast(Comparator.reverseOrder())
+                        ))
                 .toList();
         MarketState marketState = calculateMarketState(currentEvent);
 
@@ -244,7 +251,11 @@ public class BehaviorContextFactory {
         List<BehaviorEvent> sortedEvents = previousEvents.stream()
                 .filter(event -> event.getTradedAt() != null)
                 .filter(event -> event.getCurrentStockPrincipal() != null)
-                .sorted(Comparator.comparing(BehaviorEvent::getTradedAt))
+                .sorted(Comparator.comparing(BehaviorEvent::getTradedAt)
+                        .thenComparing(
+                                BehaviorEvent::getActionSequence,
+                                Comparator.nullsLast(Comparator.naturalOrder())
+                        ))
                 .toList();
         for (BehaviorEvent event : sortedEvents) {
             Long currentStockPrincipal = event.getCurrentStockPrincipal();
@@ -273,6 +284,10 @@ public class BehaviorContextFactory {
             return 1;
         }
 
+        if (currentEvent.getGameTick() != null) {
+            return calculateGameConsecutiveActionCount(currentEvent, previousEvents, marketState);
+        }
+
         int consecutiveActionCount = 1;
         for (BehaviorEvent previousEvent : previousEvents) {
             if (previousEvent.getActionType() != currentEvent.getActionType()
@@ -281,6 +296,31 @@ public class BehaviorContextFactory {
                 break;
             }
             consecutiveActionCount++;
+        }
+        return consecutiveActionCount;
+    }
+
+    private int calculateGameConsecutiveActionCount(
+            BehaviorEvent currentEvent,
+            List<BehaviorEvent> previousEvents,
+            MarketState marketState) {
+        int consecutiveActionCount = 1;
+        int comparedGameTick = currentEvent.getGameTick();
+
+        for (BehaviorEvent previousEvent : previousEvents) {
+            if (previousEvent.getGameTick() == null
+                    || previousEvent.getActionType() != currentEvent.getActionType()
+                    || previousEvent.getMarketState() != marketState) {
+                break;
+            }
+
+            int gameTickGap = comparedGameTick - previousEvent.getGameTick();
+            if (gameTickGap < 0 || gameTickGap > 1) {
+                break;
+            }
+
+            consecutiveActionCount++;
+            comparedGameTick = previousEvent.getGameTick();
         }
         return consecutiveActionCount;
     }
