@@ -1,7 +1,9 @@
 package org.kkobi.product.saving.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.kkobi.product.dto.request.ProductListRequestDto;
 import org.kkobi.product.dto.response.ProductDetailResponseDto;
+import org.kkobi.product.dto.response.ProductListResponseDto;
 import org.kkobi.product.saving.service.SavingProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,4 +37,15 @@ public class SavingProductController {
                 savingProductService.getSavingProductDetail(productId)
         );
     }
+
+    // 적금 상품 목록 조회
+    @GetMapping
+    public ResponseEntity<ProductListResponseDto> getSavingProductList(
+            @ModelAttribute ProductListRequestDto request
+            ){
+        return ResponseEntity.ok(
+                savingProductService.getSavingProductList(request)
+        );
+    }
+
 }
