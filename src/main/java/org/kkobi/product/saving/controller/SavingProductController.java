@@ -1,11 +1,12 @@
 package org.kkobi.product.saving.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.kkobi.product.dto.request.ProductListRequestDto;
+import org.kkobi.product.dto.response.ProductDetailResponseDto;
+import org.kkobi.product.dto.response.ProductListResponseDto;
 import org.kkobi.product.saving.service.SavingProductService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,4 +26,26 @@ public class SavingProductController {
 
         return ResponseEntity.ok("적금 상품 데이터 수집이 완료되었습니다");
     }
+
+    // 상품 ID로 적금 상품 상세 정보 조회
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductDetailResponseDto> getSavingProductDetail(
+            @PathVariable Long productId
+    ) {
+        // 적금 상품 상세 정보 반환
+        return ResponseEntity.ok(
+                savingProductService.getSavingProductDetail(productId)
+        );
+    }
+
+    // 적금 상품 목록 조회
+    @GetMapping
+    public ResponseEntity<ProductListResponseDto> getSavingProductList(
+            @ModelAttribute ProductListRequestDto request
+            ){
+        return ResponseEntity.ok(
+                savingProductService.getSavingProductList(request)
+        );
+    }
+
 }

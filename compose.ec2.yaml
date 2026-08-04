@@ -10,9 +10,6 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
 
-    ports:
-      - "3307:3306"
-
     volumes:
       - mysql-data:/var/lib/mysql
 
@@ -35,7 +32,7 @@ services:
       - "migrate"
 
     volumes:
-      - ./src/main/resources/db/migration:/flyway/sql
+      - ./migration:/flyway/sql:ro
 
     depends_on:
       mysql:
@@ -46,9 +43,6 @@ services:
     image: redis:7
     container_name: kkobi-redis
     restart: unless-stopped
-
-    ports:
-      - "6379:6379"
 
     volumes:
       - redis-data:/data
@@ -61,11 +55,7 @@ services:
 
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-
-    image: kkobi-backend
+    image: kkobi-backend:manual
     container_name: kkobi-backend
     restart: unless-stopped
 
@@ -79,7 +69,7 @@ services:
       REDIS_PORT: "6379"
 
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
     depends_on:
       mysql:
