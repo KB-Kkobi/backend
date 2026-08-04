@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.product.deposit.dto.DepositApiResponse;
 import org.kkobi.product.deposit.dto.DepositProductDto;
 import org.kkobi.product.deposit.dto.DepositProductOptionDto;
+import org.kkobi.product.dto.response.ProductDetailResponseDto;
+import org.kkobi.product.dto.response.ProductOptionResponseDto;
 import org.kkobi.product.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,9 @@ public class DepositProductService {
 
     // 은행권 금융회사 그룹 코드
     private static final String BANK_GROUP_CODE = "020000";
+
+    // 예금 상품 유형 코드
+    private static final String DEPOSIT_PRODUCT_TYPE = "DEPOSIT";
 
     // 금융감독원 API에서 예금 상품 정보를 조회
     public DepositApiResponse getDepositProducts(int pageNumber){
@@ -70,6 +76,35 @@ public class DepositProductService {
 
             saveDepositProducts(result);
         }
+    }
+
+    // 상품 ID로 예금 상품 상세 정보와 금리 옵션을 조회
+    @Transactional(readOnly = true)
+    public ProductDetailResponseDto getDepostProductDetail(Long productId){
+
+        // 예금 상품 기본 정보 조회
+        ProductDetailResponseDto productDetail =
+                productMapper.getProductDetail(
+                        productId,
+                        DEPOSIT_PRODUCT_TYPE
+                );
+
+        // 예금 상품이 존재하지 않으면 예외 발생
+        if(productDetail == null){
+            throw new IllegalArgumentException(
+                    "존재하지 않는 예금 상품입니다."
+            );
+        }
+
+        // 예금 상품의 금리 옵션 목록 조회
+        List<ProductOptionResponseDto> options =
+                productMapper.getProductOptions(productId);
+
+        // 상품 기본 정보에 금리 옵션 목록 설정
+        productDetail.setOptions(options);
+
+        // 예금 상품 상세 정보 반환
+        return productDetail;
     }
 
     // 금감원에서 조회한 한 페이지의 예금 상품 및 옵션을 DB에 저장
