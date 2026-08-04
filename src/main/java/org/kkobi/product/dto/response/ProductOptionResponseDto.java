@@ -22,7 +22,7 @@ public class ProductOptionResponseDto {
     private String reserveType;
 
     // 적립 유형 이름
-    private String reserverTypeName;
+    private String reserveTypeName;
 
     // 가입 기간
     private Integer savingTerm;
