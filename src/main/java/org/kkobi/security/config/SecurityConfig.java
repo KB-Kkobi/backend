@@ -24,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CharacterEncodingFilter;
@@ -72,10 +73,18 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) ->
                                 JsonResponse.sendError(response, HttpStatus.FORBIDDEN, "Access denied")))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/", "/resources/**", "/assets/**", "/error").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/signup").permitAll()
-                        .requestMatchers("/api/security/all").permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name())).permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/"),
+                                new AntPathRequestMatcher("/resources/**"),
+                                new AntPathRequestMatcher("/assets/**"),
+                                new AntPathRequestMatcher("/error"))
+                        .permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/auth/login"),
+                                new AntPathRequestMatcher("/api/auth/signup"))
+                        .permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/security/all")).permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
