@@ -2,6 +2,8 @@ package org.kkobi.product.saving.service;
 
 
 import lombok.RequiredArgsConstructor;
+import org.kkobi.product.dto.response.ProductDetailResponseDto;
+import org.kkobi.product.dto.response.ProductOptionResponseDto;
 import org.kkobi.product.saving.dto.SavingApiResponse;
 import org.kkobi.product.saving.dto.SavingProductDto;
 import org.kkobi.product.saving.dto.SavingProductOptionDto;
@@ -13,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +37,9 @@ public class SavingProductService {
 
     // 은행권 금융회사 그룹 코드
     private static final String BANK_GROUP_CODE = "020000";
+
+    // 적금 상품 유형 코드
+    private static final String SAVING_PRODUCT_TYPE = "SAVING";
 
     // 금융감독원 API에서 적금 상품 정보를 조회
     public SavingApiResponse getSavingProducts(int pageNumber) {
@@ -89,6 +95,35 @@ public class SavingProductService {
 
             productMapper.saveSavingProductOption(productId, option);
         }
+    }
+
+    // 상품 ID로 적금 상품 상세 정보와 금리 옵션을 조회
+    @Transactional(readOnly = true)
+    public ProductDetailResponseDto getSavingProductDetail(Long productId){
+
+        // 적금 상품 기본 정보 조회
+        ProductDetailResponseDto productDetail =
+                productMapper.getProductDetail(
+                        productId,
+                        SAVING_PRODUCT_TYPE
+                );
+
+        // 적금 상품이 존재하지 않으면 예외 발생
+        if(productDetail == null){
+            throw new IllegalArgumentException(
+                    "존재하지 않는 적금 상품입니다."
+            );
+        }
+
+        // 적금 상품의 금리 옵션 목록 조회
+        List<ProductOptionResponseDto> options =
+                productMapper.getProductOptions(productId);
+
+        // 상품 기본 정보에 금리 옵션 목록 설정
+        productDetail.setOptions(options);
+
+        // 적금 상품 상세 정보 변환
+        return productDetail;
     }
 
     // 금융감독원 API 응답이 정상인지 확인
