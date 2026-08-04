@@ -62,6 +62,6 @@
             created_at
         FROM action_logs
         WHERE user_id = #{userId}
-        ORDER BY created_at, action_log_id
+        ORDER BY game_tick, action_log_id
     </select>
 </mapper>

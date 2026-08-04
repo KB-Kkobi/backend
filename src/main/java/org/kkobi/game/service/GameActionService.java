@@ -9,25 +9,36 @@ import org.kkobi.assessment.domain.BehaviorEvent;
 import org.kkobi.assessment.enums.BehaviorActionType;
 import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.MarketState;
+import org.kkobi.game.calculator.GamePriceRateCalculator;
 import org.kkobi.game.dto.ActionLogDto;
 import org.kkobi.game.dto.GameBehaviorRequest;
+import org.kkobi.game.dto.ScenarioDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class GameActionService {
 
+    private static final LocalDateTime GAME_START_AT = LocalDateTime.of(2000, 1, 1, 0, 0);
+    private static final int DAYS_PER_TICK = 7;
+    private static final Long GAME_SECURITY_ID = 1L;
+
     private final ActionLogService actionLogService;
+    private final ScenarioService scenarioService;
+    private final GamePriceRateCalculator gamePriceRateCalculator;
     private final BehaviorContextFactory behaviorContextFactory;
     private final BehaviorRuleEngine behaviorRuleEngine;
 
     @Transactional
     public Long saveGameActionLog(GameBehaviorRequest request) {
         validateGameBehavior(request);
-        BehaviorEvent currentEvent = createBehaviorEvent(request);
+        ScenarioDto scenario = scenarioService.getScenario(request.getScenarioId());
+        validateGameTick(request, scenario);
+        BehaviorEvent currentEvent = createBehaviorEvent(request, scenario);
         List<ActionLogDto> actionLogs = actionLogService.getActionLogsByUserId(request.getUserId());
         validateInitialAllocation(request, actionLogs);
         List<BehaviorEvent> previousEvents = actionLogs
@@ -51,21 +62,15 @@ public class GameActionService {
         if (request.getUserId() == null) {
             throw new IllegalArgumentException("userId는 필수입니다.");
         }
-        if (request.getTick() == null
-                || request.getTick() < 0
-                || request.getTick() > 52) {
-            throw new IllegalArgumentException("tick은 0부터 52 사이여야 합니다.");
+        if (request.getScenarioId() == null || request.getScenarioId().isBlank()) {
+            throw new IllegalArgumentException("scenarioId는 필수입니다.");
+        }
+        if (request.getTick() == null || request.getTick() < 0) {
+            throw new IllegalArgumentException("tick은 0 이상이어야 합니다.");
         }
         if (request.getActionType() == null || request.getAssetType() == null) {
             throw new IllegalArgumentException("actionType과 assetType은 필수입니다.");
         }
-        if (request.getActedAt() == null) {
-            throw new IllegalArgumentException("actedAt은 필수입니다.");
-        }
-        if (request.getChangeRate() == null) {
-            throw new IllegalArgumentException("changeRate는 필수입니다.");
-        }
-
         BehaviorActionType actionType = BehaviorActionType.getBehaviorActionType(request.getActionType());
         BehaviorAssetType assetType = BehaviorAssetType.getBehaviorAssetType(request.getAssetType());
         if (actionType != BehaviorActionType.INITIAL_ALLOCATION
@@ -77,6 +82,14 @@ public class GameActionService {
 
         validateActionAssetType(actionType, assetType);
         validateAssetSnapshot(request);
+    }
+
+    private void validateGameTick(GameBehaviorRequest request, ScenarioDto scenario) {
+        if (request.getTick() > scenario.getTotalTicks()) {
+            throw new IllegalArgumentException(
+                    "tick은 0부터 " + scenario.getTotalTicks() + " 사이여야 합니다."
+            );
+        }
     }
 
     private void validateActionAssetType(
@@ -123,20 +136,26 @@ public class GameActionService {
         }
     }
 
-    private BehaviorEvent createBehaviorEvent(GameBehaviorRequest request) {
+    private BehaviorEvent createBehaviorEvent(
+            GameBehaviorRequest request,
+            ScenarioDto scenario) {
         BehaviorEvent event = new BehaviorEvent();
         event.setUserId(request.getUserId());
         event.setActionType(BehaviorActionType.getBehaviorActionType(request.getActionType()));
         event.setAssetType(BehaviorAssetType.getBehaviorAssetType(request.getAssetType()));
+        updateGameSecurityId(event);
         event.setActionAmount(request.getActionAmount());
         event.setCurrentCash(request.getCurrentCash());
         event.setCurrentStockPrincipal(request.getCurrentStock());
         event.setCurrentDeposit(request.getCurrentDeposit());
-        event.setCurrentPriceChangeRate(request.getChangeRate());
+        event.setCurrentPriceChangeRate(gamePriceRateCalculator.calculateTickPriceChangeRate(
+                scenario,
+                request.getTick()
+        ));
         event.setDailyPriceRangeRate(request.getDailyPriceRangeRate());
         event.setRealizedReturnRate(request.getRealizedReturnRate());
         event.setPositionReturnRate(request.getPositionReturnRate());
-        event.setTradedAt(request.getActedAt());
+        event.setTradedAt(calculateGameActionAt(request.getTick()));
         return event;
     }
 
@@ -145,15 +164,24 @@ public class GameActionService {
         event.setUserId(actionLog.getUserId());
         event.setActionType(BehaviorActionType.getBehaviorActionType(actionLog.getActionType()));
         event.setAssetType(BehaviorAssetType.getBehaviorAssetType(actionLog.getAssetType()));
+        updateGameSecurityId(event);
         event.setActionAmount(actionLog.getActionAmount());
         event.setCurrentCash(actionLog.getCurrentCash());
         event.setCurrentStockPrincipal(actionLog.getCurrentStock());
         event.setCurrentDeposit(actionLog.getCurrentDeposit());
         event.setMarketState(MarketState.getMarketState(actionLog.getMarketState()));
-        if (actionLog.getCreatedAt() != null) {
-            event.setTradedAt(actionLog.getCreatedAt().toLocalDateTime());
-        }
+        event.setTradedAt(calculateGameActionAt(actionLog.getGameTick()));
         return event;
+    }
+
+    private LocalDateTime calculateGameActionAt(Integer gameTick) {
+        return GAME_START_AT.plusDays((long) gameTick * DAYS_PER_TICK);
+    }
+
+    private void updateGameSecurityId(BehaviorEvent event) {
+        if (event.getAssetType() == BehaviorAssetType.SECURITY) {
+            event.setSecurityId(GAME_SECURITY_ID);
+        }
     }
 
     private ActionLogDto createActionLog(

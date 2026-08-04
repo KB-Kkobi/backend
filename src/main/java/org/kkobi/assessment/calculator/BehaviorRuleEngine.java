@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class BehaviorRuleEngine {
@@ -37,16 +39,31 @@ public class BehaviorRuleEngine {
         List<RuleResult> appliedRules = new ArrayList<>();
 
         calculateInitialAllocationRules(behaviorContext, appliedRules);
-        calculateMaintainedAllocationRules(behaviorContext, appliedRules);
         calculateMarketActionRules(behaviorContext, appliedRules);
         calculateDepositRules(behaviorContext, appliedRules);
         calculateHoldingPeriodRules(behaviorContext, appliedRules);
         calculateReturnResponseRules(behaviorContext, appliedRules);
         calculateStockRotationRule(behaviorContext, appliedRules);
-        calculateMaintainedCashRules(behaviorContext, appliedRules);
-        calculateTradeFrequencyRules(behaviorContext, appliedRules);
 
         return new BehaviorAnalysisResult(applyConsecutiveActionMultiplier(behaviorContext, appliedRules));
+    }
+
+    public BehaviorAnalysisResult calculateVirtualInvestmentPeriodAnalysis(
+            List<BehaviorContext> behaviorContexts) {
+        Map<BehaviorRuleCode, RuleResult> appliedRuleByCode = new LinkedHashMap<>();
+
+        for (BehaviorContext behaviorContext : behaviorContexts) {
+            List<RuleResult> periodRules = new ArrayList<>();
+            calculateMaintainedAllocationRules(behaviorContext, periodRules);
+            calculateMaintainedCashRules(behaviorContext, periodRules);
+            calculateTradeFrequencyRules(behaviorContext, periodRules);
+            periodRules.forEach(ruleResult -> appliedRuleByCode.putIfAbsent(
+                    ruleResult.getRuleCode(),
+                    ruleResult
+            ));
+        }
+
+        return new BehaviorAnalysisResult(new ArrayList<>(appliedRuleByCode.values()));
     }
 
     private void calculateInitialAllocationRules(

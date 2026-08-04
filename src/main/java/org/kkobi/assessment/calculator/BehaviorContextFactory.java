@@ -175,6 +175,23 @@ public class BehaviorContextFactory {
             return null;
         }
 
+        boolean existsGameAssetSnapshot = currentEvent.getCurrentStockPrincipal() != null
+                && previousEvents.stream()
+                .anyMatch(event -> event.getCurrentStockPrincipal() != null);
+        if (existsGameAssetSnapshot) {
+            return calculateGameHoldingDays(currentEvent, previousEvents);
+        }
+
+        List<BehaviorEvent> securityEvents = previousEvents.stream()
+                .filter(event -> currentEvent.getSecurityId().equals(event.getSecurityId()))
+                .filter(event -> event.getTradedAt() != null)
+                .filter(event -> event.getQuantity() != null && event.getQuantity() > 0)
+                .sorted(Comparator.comparing(BehaviorEvent::getTradedAt))
+                .toList();
+        if (!securityEvents.isEmpty()) {
+            return calculateVirtualInvestmentHoldingDays(currentEvent, securityEvents);
+        }
+
         return previousEvents.stream()
                 .filter(event -> event.getActionType() == BehaviorActionType.BUY)
                 .filter(event -> currentEvent.getSecurityId().equals(event.getSecurityId()))
@@ -185,6 +202,66 @@ public class BehaviorContextFactory {
                         ChronoUnit.DAYS.between(boughtAt, currentEvent.getTradedAt())
                 ))
                 .orElse(null);
+    }
+
+    private BigDecimal calculateVirtualInvestmentHoldingDays(
+            BehaviorEvent currentEvent,
+            List<BehaviorEvent> securityEvents) {
+        int holdingQuantity = 0;
+        LocalDateTime holdingStartedAt = null;
+
+        for (BehaviorEvent securityEvent : securityEvents) {
+            if (securityEvent.getActionType() == BehaviorActionType.BUY) {
+                if (holdingQuantity == 0) {
+                    holdingStartedAt = securityEvent.getTradedAt();
+                }
+                holdingQuantity += securityEvent.getQuantity();
+            } else if (securityEvent.getActionType() == BehaviorActionType.SELL) {
+                holdingQuantity = Math.max(0, holdingQuantity - securityEvent.getQuantity());
+                if (holdingQuantity == 0) {
+                    holdingStartedAt = null;
+                }
+            }
+        }
+
+        return holdingStartedAt == null
+                ? null
+                : BigDecimal.valueOf(ChronoUnit.DAYS.between(
+                        holdingStartedAt,
+                        currentEvent.getTradedAt()
+                ));
+    }
+
+    private BigDecimal calculateGameHoldingDays(
+            BehaviorEvent currentEvent,
+            List<BehaviorEvent> previousEvents) {
+        if (currentEvent.getCurrentStockPrincipal() != 0L) {
+            return null;
+        }
+
+        LocalDateTime holdingStartedAt = null;
+        Long previousStockPrincipal = 0L;
+        List<BehaviorEvent> sortedEvents = previousEvents.stream()
+                .filter(event -> event.getTradedAt() != null)
+                .filter(event -> event.getCurrentStockPrincipal() != null)
+                .sorted(Comparator.comparing(BehaviorEvent::getTradedAt))
+                .toList();
+        for (BehaviorEvent event : sortedEvents) {
+            Long currentStockPrincipal = event.getCurrentStockPrincipal();
+            if (previousStockPrincipal == 0L && currentStockPrincipal > 0L) {
+                holdingStartedAt = event.getTradedAt();
+            } else if (currentStockPrincipal == 0L) {
+                holdingStartedAt = null;
+            }
+            previousStockPrincipal = currentStockPrincipal;
+        }
+
+        return holdingStartedAt == null
+                ? null
+                : BigDecimal.valueOf(ChronoUnit.DAYS.between(
+                        holdingStartedAt,
+                        currentEvent.getTradedAt()
+                ));
     }
 
     private int calculateConsecutiveActionCount(
