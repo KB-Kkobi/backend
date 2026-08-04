@@ -3,7 +3,9 @@ package org.kkobi.product.deposit.controller;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.product.deposit.dto.DepositApiResponse;
 import org.kkobi.product.deposit.service.DepositProductService;
+import org.kkobi.product.dto.request.ProductListRequestDto;
 import org.kkobi.product.dto.response.ProductDetailResponseDto;
+import org.kkobi.product.dto.response.ProductListResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +44,16 @@ public class DepositProductController {
         // 예금 상품 상세 정보 반환
         return ResponseEntity.ok(
                 depositProductService.getDepostProductDetail(productId)
+        );
+    }
+
+    // 예금 상품 목록 조회
+    @GetMapping
+    public ResponseEntity<ProductListResponseDto> getDepositProductList(
+            @ModelAttribute ProductListRequestDto request
+    ){
+        return ResponseEntity.ok(
+                depositProductService.getDepositProductList(request)
         );
     }
 }
