@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GameActionServiceScenarioDateTest {
 
     @Test
-    @DisplayName("게임 보유 기간을 시나리오 tick 날짜의 일수 차이로 계산한다.")
-    void saveGameActionLogCalculatesHoldingDaysFromScenarioDate() {
+    @DisplayName("게임 매도에는 증권 보유 기간 규칙을 적용하지 않는다.")
+    void saveGameActionLogExcludesSecurityHoldingRules() {
         InMemoryActionLogMapper actionLogMapper = new InMemoryActionLogMapper();
         GameActionService gameActionService = createGameActionService(actionLogMapper);
 
@@ -47,8 +47,8 @@ class GameActionServiceScenarioDateTest {
         ActionLogDto sellActionLog = actionLogMapper.getActionLogsByUserId(1L).get(1);
 
         assertScoreEquals("0.00", sellActionLog.getRtScoreDelta());
-        assertScoreEquals("-5.00", sellActionLog.getLhScoreDelta());
-        assertScoreEquals("-5.00", sellActionLog.getRpScoreDelta());
+        assertScoreEquals("0.00", sellActionLog.getLhScoreDelta());
+        assertScoreEquals("0.00", sellActionLog.getRpScoreDelta());
     }
 
     private GameActionService createGameActionService(ActionLogMapper actionLogMapper) {

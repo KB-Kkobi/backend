@@ -96,6 +96,41 @@ class BehaviorRuleEngineTest {
         assertScoreEquals("0", result.getTotalScoreDelta().getRpDelta());
     }
 
+    @Test
+    @DisplayName("증권 보유 기간 규칙은 가상투자에만 적용한다.")
+    void calculateHoldingRulesOnlyForVirtualInvestment() {
+        BehaviorEvent gameSellEvent = new BehaviorEvent();
+        gameSellEvent.setActionType(BehaviorActionType.SELL);
+        gameSellEvent.setAssetType(BehaviorAssetType.SECURITY);
+        gameSellEvent.setGameTick(12);
+
+        BehaviorContext gameContext = new BehaviorContext();
+        gameContext.setCurrentEvent(gameSellEvent);
+        gameContext.setAverageHoldingDays(BigDecimal.valueOf(2));
+        BehaviorAnalysisResult gameResult = behaviorRuleEngine.calculateBehaviorAnalysis(gameContext);
+
+        BehaviorEvent virtualInvestmentSellEvent = new BehaviorEvent();
+        virtualInvestmentSellEvent.setActionType(BehaviorActionType.SELL);
+        virtualInvestmentSellEvent.setAssetType(BehaviorAssetType.SECURITY);
+
+        BehaviorContext virtualInvestmentShortHoldingContext = new BehaviorContext();
+        virtualInvestmentShortHoldingContext.setCurrentEvent(virtualInvestmentSellEvent);
+        virtualInvestmentShortHoldingContext.setAverageHoldingDays(BigDecimal.valueOf(2));
+        BehaviorAnalysisResult virtualInvestmentShortHoldingResult = behaviorRuleEngine
+                .calculateBehaviorAnalysis(virtualInvestmentShortHoldingContext);
+
+        BehaviorContext virtualInvestmentLongHoldingContext = new BehaviorContext();
+        virtualInvestmentLongHoldingContext.setAverageHoldingDays(BigDecimal.valueOf(30));
+        BehaviorAnalysisResult virtualInvestmentLongHoldingResult = behaviorRuleEngine
+                .calculateVirtualInvestmentPeriodAnalysis(List.of(virtualInvestmentLongHoldingContext));
+
+        assertEquals(0, gameResult.getAppliedRules().size());
+        assertEquals(BehaviorRuleCode.SHORT_SECURITY_HOLDING,
+                virtualInvestmentShortHoldingResult.getAppliedRules().get(0).getRuleCode());
+        assertEquals(BehaviorRuleCode.LONG_SECURITY_HOLDING,
+                virtualInvestmentLongHoldingResult.getAppliedRules().get(0).getRuleCode());
+    }
+
     private BehaviorContext createPeriodContext() {
         BehaviorContext context = new BehaviorContext();
         context.setStockRatio(new BigDecimal("80.00"));

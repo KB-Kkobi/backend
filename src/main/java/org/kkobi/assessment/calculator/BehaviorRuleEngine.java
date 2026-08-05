@@ -57,6 +57,7 @@ public class BehaviorRuleEngine {
             calculateMaintainedAllocationRules(behaviorContext, periodRules);
             calculateMaintainedCashRules(behaviorContext, periodRules);
             calculateTradeFrequencyRules(behaviorContext, periodRules);
+            calculateLongHoldingPeriodRule(behaviorContext, periodRules);
             periodRules.forEach(ruleResult -> appliedRuleByCode.putIfAbsent(
                     ruleResult.getRuleCode(),
                     ruleResult
@@ -155,10 +156,21 @@ public class BehaviorRuleEngine {
     private void calculateHoldingPeriodRules(
             BehaviorContext context,
             List<RuleResult> appliedRules) {
+        if (context.getCurrentEvent() == null
+                || context.getCurrentEvent().getGameTick() != null) {
+            return;
+        }
+
         if (isLessThan(context.getAverageHoldingDays(), SHORT_HOLDING_DAYS)) {
             addRule(appliedRules, BehaviorRuleCode.SHORT_SECURITY_HOLDING, 5, 5, 10,
                     "증권 평균 보유 기간이 3일 미만입니다.");
-        } else if (isGreaterThanOrEqual(context.getAverageHoldingDays(), LONG_HOLDING_DAYS)) {
+        }
+    }
+
+    private void calculateLongHoldingPeriodRule(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        if (isGreaterThanOrEqual(context.getAverageHoldingDays(), LONG_HOLDING_DAYS)) {
             addRule(appliedRules, BehaviorRuleCode.LONG_SECURITY_HOLDING, 0, -5, -5,
                     "증권 평균 보유 기간이 30일 이상입니다.");
         }
