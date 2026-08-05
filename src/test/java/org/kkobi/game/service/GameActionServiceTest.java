@@ -45,6 +45,7 @@ class GameActionServiceTest {
         ActionLogDto sameTickBuyLog = saveDepositCancelAndSecurityBuy(1, 1);
         ActionLogDto nextTickBuyLog = saveDepositCancelAndSecurityBuy(1, 2);
 
+        assertEquals("NORMAL", sameTickBuyLog.getMarketState());
         assertEquals(
                 0,
                 sameTickBuyLog.getRtScoreDelta()

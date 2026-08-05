@@ -55,6 +55,7 @@ class ActionLogMapperTest {
         List<ActionLogDto> actionLogs = actionLogMapper.getActionLogsByUserId(userId);
         assertEquals(1, actionLogs.size());
         assertEquals(20, actionLogs.get(0).getGameTick());
+        assertEquals("NORMAL", actionLogs.get(0).getMarketState());
         assertEquals(100_000L, actionLogs.get(0).getCurrentStock());
     }
 
@@ -106,7 +107,7 @@ class ActionLogMapperTest {
         actionLog.setActionType("BUY");
         actionLog.setAssetType("STOCK");
         actionLog.setActionAmount(100_000L);
-        actionLog.setMarketState("BULL");
+        actionLog.setMarketState("NORMAL");
         actionLog.setDepositStatus("NONE");
         actionLog.setCurrentCash(900_000L);
         actionLog.setCurrentStock(100_000L);
