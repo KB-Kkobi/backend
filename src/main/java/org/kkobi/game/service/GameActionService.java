@@ -247,7 +247,7 @@ public class GameActionService {
     }
 
     private String getActionLogMarketState(MarketState marketState) {
-        return marketState == MarketState.NORMAL ? "SIDEWAYS" : marketState.name();
+        return marketState.name();
     }
 
     private String getDepositStatus(BehaviorActionType actionType) {
