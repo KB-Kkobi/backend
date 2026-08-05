@@ -5,5 +5,7 @@
 build
 out
 .env
+.env.*
 *.iml
+*.log
 README.md
