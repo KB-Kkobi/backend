@@ -66,6 +66,38 @@ class GameActionServiceTest {
         );
     }
 
+    @Test
+    @DisplayName("게임 행동 후 예금 보유 여부에 따라 예금 상태를 저장한다.")
+    void saveGameActionLogStoresDepositStatus() {
+        Long userId = createUser();
+        GameBehaviorRequest initialAllocationRequest = createGameBehaviorRequest(
+                userId,
+                0,
+                "INITIAL_ALLOCATION",
+                "ALL"
+        );
+        initialAllocationRequest.setCurrentCash(300_000L);
+        initialAllocationRequest.setCurrentStock(200_000L);
+        initialAllocationRequest.setCurrentDeposit(500_000L);
+        gameActionService.saveGameActionLog(initialAllocationRequest);
+
+        GameBehaviorRequest depositCancelRequest = createGameBehaviorRequest(
+                userId,
+                1,
+                "DEPOSIT_CANCEL",
+                "DEPOSIT"
+        );
+        depositCancelRequest.setCurrentCash(800_000L);
+        depositCancelRequest.setCurrentStock(200_000L);
+        depositCancelRequest.setCurrentDeposit(0L);
+        gameActionService.saveGameActionLog(depositCancelRequest);
+
+        List<ActionLogDto> actionLogs = actionLogMapper.getActionLogsByUserId(userId);
+
+        assertEquals("ACTIVE", actionLogs.get(0).getDepositStatus());
+        assertEquals("CANCELLED", actionLogs.get(1).getDepositStatus());
+    }
+
     private ActionLogDto saveDepositCancelAndSecurityBuy(int cancelTick, int buyTick) {
         Long userId = createUser();
         gameActionService.saveGameActionLog(createGameBehaviorRequest(

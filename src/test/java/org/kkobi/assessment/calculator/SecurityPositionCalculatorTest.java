@@ -56,6 +56,35 @@ class SecurityPositionCalculatorTest {
         assertEquals(8, currentQuantity);
     }
 
+    @Test
+    @DisplayName("매도 체결가와 기존 평균 매입가로 실현 손익률을 계산한다.")
+    void calculateSecuritySellReturnRate() {
+        BehaviorEvent firstBuy = createSecurityEvent(
+                BehaviorActionType.BUY,
+                10,
+                1_000L,
+                LocalDateTime.of(2026, 8, 1, 9, 0)
+        );
+        BehaviorEvent currentSell = createSecurityEvent(
+                BehaviorActionType.SELL,
+                4,
+                320L,
+                LocalDateTime.of(2026, 8, 2, 9, 0)
+        );
+
+        BigDecimal realizedReturnRate = securityPositionCalculator.calculatePositionReturnRate(
+                currentSell,
+                List.of(firstBuy)
+        );
+        int currentQuantity = securityPositionCalculator.calculateCurrentSecurityQuantity(
+                currentSell,
+                List.of(firstBuy)
+        );
+
+        assertEquals(0, new BigDecimal("-20.00").compareTo(realizedReturnRate));
+        assertEquals(6, currentQuantity);
+    }
+
     private BehaviorEvent createSecurityEvent(
             BehaviorActionType actionType,
             int quantity,
