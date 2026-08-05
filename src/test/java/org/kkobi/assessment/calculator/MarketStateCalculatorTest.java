@@ -51,4 +51,44 @@ class MarketStateCalculatorTest {
                 )
         );
     }
+
+    @Test
+    @DisplayName("시장 상태 임계값의 직전과 경계를 구분한다.")
+    void calculateMarketStateThresholdBoundaries() {
+        assertEquals(
+                MarketState.NORMAL,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("-4.99"),
+                        new BigDecimal("4.99")
+                )
+        );
+        assertEquals(
+                MarketState.CRASH,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("-5.00"),
+                        new BigDecimal("4.99")
+                )
+        );
+        assertEquals(
+                MarketState.NORMAL,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("2.99"),
+                        new BigDecimal("4.99")
+                )
+        );
+        assertEquals(
+                MarketState.BULL,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("3.00"),
+                        new BigDecimal("4.99")
+                )
+        );
+        assertEquals(
+                MarketState.VOLATILE,
+                marketStateCalculator.calculateMarketState(
+                        BigDecimal.ZERO,
+                        new BigDecimal("5.00")
+                )
+        );
+    }
 }

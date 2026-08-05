@@ -33,7 +33,11 @@ class VirtualInvestmentAssessmentServiceTest {
     @DisplayName("매도 손익률이 없어도 거래 이력으로 손절 규칙을 계산한다.")
     void updateVirtualInvestmentAssessmentCalculatesSellReturnRate() {
         VirtualInvestmentBehaviorMapper behaviorMapper = createBehaviorMapper();
-        VirtualInvestmentAssessmentService assessmentService = createAssessmentService(behaviorMapper);
+        InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
+        VirtualInvestmentAssessmentService assessmentService = createAssessmentService(
+                behaviorMapper,
+                assessmentMapper
+        );
 
         AssessmentResult result = assessmentService.updateVirtualInvestmentAssessment(
                 createSellRequest()
@@ -44,10 +48,36 @@ class VirtualInvestmentAssessmentServiceTest {
         assertScoreEquals("50.00", result.getAssessmentScore().getRtScore());
         assertScoreEquals("53.33", result.getAssessmentScore().getLhScore());
         assertScoreEquals("51.67", result.getAssessmentScore().getRpScore());
+        assertEquals(1, assessmentMapper.getSavedResultCount());
+        assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
+    }
+
+    @Test
+    @DisplayName("급락장 매수 요청을 EMA 점수로 계산해 결과를 저장한다.")
+    void updateVirtualInvestmentAssessmentSavesCrashBuyEmaResult() {
+        VirtualInvestmentBehaviorMapper behaviorMapper = createBehaviorMapper(List.of());
+        InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
+        VirtualInvestmentAssessmentService assessmentService = createAssessmentService(
+                behaviorMapper,
+                assessmentMapper
+        );
+
+        AssessmentResult result = assessmentService.updateVirtualInvestmentAssessment(
+                createCrashBuyRequest()
+        );
+
+        assertTrue(result.getAppliedRules().stream()
+                .anyMatch(rule -> rule.getRuleCode() == BehaviorRuleCode.CRASH_BUY));
+        assertScoreEquals("53.33", result.getAssessmentScore().getRtScore());
+        assertScoreEquals("48.34", result.getAssessmentScore().getLhScore());
+        assertScoreEquals("51.67", result.getAssessmentScore().getRpScore());
+        assertEquals(1, assessmentMapper.getSavedResultCount());
+        assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
     }
 
     private VirtualInvestmentAssessmentService createAssessmentService(
-            VirtualInvestmentBehaviorMapper behaviorMapper) {
+            VirtualInvestmentBehaviorMapper behaviorMapper,
+            AssessmentMapper assessmentMapper) {
         MarketStateCalculator marketStateCalculator = new MarketStateCalculator();
         SecurityPriceRateCalculator securityPriceRateCalculator = new SecurityPriceRateCalculator();
         return new VirtualInvestmentAssessmentService(
@@ -63,7 +93,7 @@ class VirtualInvestmentAssessmentServiceTest {
                 new BehaviorRuleEngine(),
                 new VirtualInvestmentScoreCalculator(),
                 new AssessmentResultService(
-                        createAssessmentMapper(),
+                        assessmentMapper,
                         new PersonaClassifier()
                 )
         );
@@ -88,7 +118,41 @@ class VirtualInvestmentAssessmentServiceTest {
         return request;
     }
 
+    private VirtualInvestmentBehaviorRequest createCrashBuyRequest() {
+        VirtualInvestmentBehaviorRequest request = new VirtualInvestmentBehaviorRequest();
+        request.setUserId(1L);
+        request.setAccountId(1L);
+        request.setActionType("BUY");
+        request.setAssetType("SECURITY");
+        request.setSecurityId(1L);
+        request.setStockCode("TEST");
+        request.setQuantity(2);
+        request.setActionAmount(200L);
+        request.setCurrentCash(800L);
+        request.setCurrentStockPrincipal(200L);
+        request.setCurrentDeposit(0L);
+        request.setCurrentPriceChangeRate(new BigDecimal("-5.00"));
+        request.setDailyPriceRangeRate(BigDecimal.ZERO);
+        request.setTradedAt(LocalDateTime.of(2026, 8, 2, 9, 0));
+        return request;
+    }
+
     private VirtualInvestmentBehaviorMapper createBehaviorMapper() {
+        VirtualInvestmentBehaviorDto previousBuy = new VirtualInvestmentBehaviorDto();
+        previousBuy.setActionType("BUY");
+        previousBuy.setAssetType("SECURITY");
+        previousBuy.setSecurityId(1L);
+        previousBuy.setStockCode("TEST");
+        previousBuy.setQuantity(10);
+        previousBuy.setExecutionPrice(100L);
+        previousBuy.setTradedAt(Timestamp.valueOf(
+                LocalDateTime.of(2026, 8, 1, 9, 0)
+        ));
+        return createBehaviorMapper(List.of(previousBuy));
+    }
+
+    private VirtualInvestmentBehaviorMapper createBehaviorMapper(
+            List<VirtualInvestmentBehaviorDto> previousBehaviors) {
         return new VirtualInvestmentBehaviorMapper() {
             @Override
             public boolean existsAccountByUserId(Long accountId, Long userId) {
@@ -109,44 +173,46 @@ class VirtualInvestmentAssessmentServiceTest {
             public List<VirtualInvestmentBehaviorDto> getPreviousVirtualInvestmentBehaviors(
                     Long accountId,
                     Timestamp tradedAt) {
-                VirtualInvestmentBehaviorDto previousBuy = new VirtualInvestmentBehaviorDto();
-                previousBuy.setActionType("BUY");
-                previousBuy.setAssetType("SECURITY");
-                previousBuy.setSecurityId(1L);
-                previousBuy.setStockCode("TEST");
-                previousBuy.setQuantity(10);
-                previousBuy.setExecutionPrice(100L);
-                previousBuy.setTradedAt(Timestamp.valueOf(
-                        LocalDateTime.of(2026, 8, 1, 9, 0)
-                ));
-                return List.of(previousBuy);
-            }
-        };
-    }
-
-    private AssessmentMapper createAssessmentMapper() {
-        return new AssessmentMapper() {
-            @Override
-            public AssessmentScore getLatestAssessmentScore(Long userId) {
-                return null;
-            }
-
-            @Override
-            public Long getPersonaIdByName(String personaName) {
-                return 1L;
-            }
-
-            @Override
-            public int saveAssessmentResult(
-                    Long userId,
-                    Long personaId,
-                    AssessmentScore assessmentScore) {
-                return 1;
+                return previousBehaviors;
             }
         };
     }
 
     private void assertScoreEquals(String expected, BigDecimal actual) {
         assertEquals(0, new BigDecimal(expected).compareTo(actual));
+    }
+
+    private static class InMemoryAssessmentMapper implements AssessmentMapper {
+
+        private AssessmentScore savedAssessmentScore;
+        private int savedResultCount;
+
+        @Override
+        public AssessmentScore getLatestAssessmentScore(Long userId) {
+            return savedAssessmentScore;
+        }
+
+        @Override
+        public Long getPersonaIdByName(String personaName) {
+            return 1L;
+        }
+
+        @Override
+        public int saveAssessmentResult(
+                Long userId,
+                Long personaId,
+                AssessmentScore assessmentScore) {
+            savedAssessmentScore = assessmentScore;
+            savedResultCount++;
+            return 1;
+        }
+
+        private AssessmentScore getSavedAssessmentScore() {
+            return savedAssessmentScore;
+        }
+
+        private int getSavedResultCount() {
+            return savedResultCount;
+        }
     }
 }
