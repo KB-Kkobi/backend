@@ -54,7 +54,22 @@ class ActionLogMapperTest {
 
         List<ActionLogDto> actionLogs = actionLogMapper.getActionLogsByUserId(userId);
         assertEquals(1, actionLogs.size());
+        assertEquals(20, actionLogs.get(0).getGameTick());
         assertEquals(100_000L, actionLogs.get(0).getCurrentStock());
+    }
+
+    @Test
+    @DisplayName("게임 행동 로그를 tick 순서로 조회한다.")
+    void getActionLogsByUserIdOrdersByGameTick() {
+        Long userId = createUser();
+        actionLogMapper.saveActionLog(createActionLog(userId, 20));
+        actionLogMapper.saveActionLog(createActionLog(userId, 5));
+
+        List<ActionLogDto> actionLogs = actionLogMapper.getActionLogsByUserId(userId);
+
+        assertEquals(2, actionLogs.size());
+        assertEquals(5, actionLogs.get(0).getGameTick());
+        assertEquals(20, actionLogs.get(1).getGameTick());
     }
 
     private Long createUser() {
@@ -81,9 +96,13 @@ class ActionLogMapperTest {
     }
 
     private ActionLogDto createActionLog(Long userId) {
+        return createActionLog(userId, 20);
+    }
+
+    private ActionLogDto createActionLog(Long userId, int gameTick) {
         ActionLogDto actionLog = new ActionLogDto();
         actionLog.setUserId(userId);
-        actionLog.setGameMonth(1);
+        actionLog.setGameTick(gameTick);
         actionLog.setActionType("BUY");
         actionLog.setAssetType("STOCK");
         actionLog.setActionAmount(100_000L);

@@ -13,7 +13,7 @@ public class ActionLogService {
 
     private final ActionLogMapper actionLogMapper;
 
-    public Long createActionLog(ActionLogDto actionLog) {
+    public Long saveActionLog(ActionLogDto actionLog) {
         actionLogMapper.saveActionLog(actionLog);
         return actionLog.getActionLogId();
     }
