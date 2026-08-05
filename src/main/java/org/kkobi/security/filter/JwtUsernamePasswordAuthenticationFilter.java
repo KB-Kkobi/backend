@@ -8,7 +8,6 @@ import org.kkobi.users.dto.response.MessageResponse;
 import org.kkobi.users.dto.response.TokenResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -29,8 +28,13 @@ public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAut
             JsonResponse.send(response, TokenResponse.from(jwtToken));
         });
         setAuthenticationFailureHandler((request, response, exception) -> {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            JsonResponse.send(response, new MessageResponse("Invalid email or password"));
+            boolean invalidRequest = exception instanceof InvalidLoginRequestException;
+            response.setStatus(invalidRequest
+                    ? HttpStatus.BAD_REQUEST.value()
+                    : HttpStatus.UNAUTHORIZED.value());
+            JsonResponse.send(response, new MessageResponse(invalidRequest
+                    ? "로그인 요청 형식이 올바르지 않습니다."
+                    : "이메일 또는 비밀번호가 올바르지 않습니다."));
         });
     }
 
@@ -44,7 +48,7 @@ public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAut
                     new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword());
             return getAuthenticationManager().authenticate(token);
         } catch (IOException e) {
-            throw new AuthenticationServiceException("Invalid login request", e);
+            throw new InvalidLoginRequestException("로그인 요청 형식이 올바르지 않습니다.", e);
         }
     }
 }
