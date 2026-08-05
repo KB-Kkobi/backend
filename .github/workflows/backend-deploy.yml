@@ -88,7 +88,7 @@ jobs:
           cat > ssm-parameters.json <<EOF
           {
             "commands": [
-              "set -euo pipefail",
+              "set -eu",
               "printf '%s' '$COMPOSE_BASE64' | base64 -d > /opt/kkobi/compose.ec2.yaml",
               "cd /opt/kkobi",
               "docker compose -f compose.ec2.yaml pull backend",
