@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.assessment.mapper.AssessmentMapper">
+
+    <select id="getLatestAssessmentScore"
+            resultType="org.kkobi.assessment.domain.AssessmentScore">
+        SELECT
+            rt_score,
+            lh_score,
+            rp_score
+        FROM results
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, result_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="getPersonaIdByName" resultType="java.lang.Long">
+        SELECT persona_id
+        FROM personas
+        WHERE persona_name = #{personaName}
+        ORDER BY persona_id
+        LIMIT 1
+    </select>
+
+    <insert id="saveAssessmentResult">
+        INSERT INTO results (
+            user_id,
+            persona_id,
+            rt_score,
+            lh_score,
+            rp_score
+        )
+        VALUES (
+            #{userId},
+            #{personaId},
+            #{score.rtScore},
+            #{score.lhScore},
+            #{score.rpScore}
+        )
+    </insert>
+</mapper>
