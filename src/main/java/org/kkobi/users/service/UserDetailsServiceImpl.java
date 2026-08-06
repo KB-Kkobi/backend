@@ -5,6 +5,7 @@ import org.kkobi.security.principal.CustomUserDetails;
 import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.mapper.UserMapper;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 

@@ -3,13 +3,14 @@ package org.kkobi.game.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 @Data
 public class ActionLogDto {
 
     private Long actionLogId;
     private Long userId;
-    private Integer gameMonth;
+    private Integer gameTick;
     private String actionType;
     private String assetType;
     private Long actionAmount;
@@ -21,4 +22,5 @@ public class ActionLogDto {
     private BigDecimal rtScoreDelta;
     private BigDecimal lhScoreDelta;
     private BigDecimal rpScoreDelta;
+    private Timestamp createdAt;
 }

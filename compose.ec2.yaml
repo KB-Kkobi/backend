@@ -55,7 +55,7 @@ services:
 
 
   backend:
-    image: kkobi-backend:manual
+    image: ghcr.io/kb-kkobi/backend:latest
     container_name: kkobi-backend
     restart: unless-stopped
 

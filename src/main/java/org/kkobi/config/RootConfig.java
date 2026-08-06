@@ -19,6 +19,8 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
+        "org.kkobi.assessment",
+        "org.kkobi.game.calculator",
         "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",
         "org.kkobi.product.saving.service",
@@ -30,6 +32,7 @@ import javax.sql.DataSource;
         "org.kkobi.external.kis.realtime"
 })
 @MapperScan(basePackages = {
+        "org.kkobi.assessment.mapper",
         "org.kkobi.game.mapper",
         "org.kkobi.product.mapper",
         "org.kkobi.account.mapper"

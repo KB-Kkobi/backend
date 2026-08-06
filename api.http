@@ -3,10 +3,10 @@ GET https://examples.http-client.intellij.net/get
     ?generated-in=IntelliJ IDEA
 
 ###
-POST localhost:8080:/api/auth/login
+POST http://localhost:8080/api/auth/login
 Content-Type: application/json
 
 {
-  "username" : "user0",
+  "email" : "user@example.com",
   "password" : "1234"
 }

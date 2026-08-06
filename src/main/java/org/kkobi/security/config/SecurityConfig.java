@@ -3,8 +3,8 @@ package org.kkobi.security.config;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.filter.JwtUsernamePasswordAuthenticationFilter;
 import org.kkobi.security.jwt.JwtAuthenticationFilter;
+import org.kkobi.security.jwt.JwtProvider;
 import org.kkobi.security.util.JsonResponse;
-import org.kkobi.security.util.JwtProcessor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -12,17 +12,19 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CharacterEncodingFilter;
@@ -38,11 +40,11 @@ import org.springframework.web.filter.CorsFilter;
         "org.kkobi.users.service"
 })
 @RequiredArgsConstructor
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtProcessor jwtProcessor;
+    private final JwtProvider jwtProvider;
 
     // Spring Security 필터보다 먼저 적용할 UTF-8 인코딩 필터를 생성
     public CharacterEncodingFilter encodingFilter() {
@@ -53,40 +55,48 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     // JWT 필터, 예외 처리, URL 인증 규칙, 무상태 세션을 설정
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            AuthenticationManager authenticationManager
+    ) throws Exception {
         JwtUsernamePasswordAuthenticationFilter loginFilter =
-                new JwtUsernamePasswordAuthenticationFilter(authenticationManagerBean(), jwtProcessor);
+                new JwtUsernamePasswordAuthenticationFilter(authenticationManager, jwtProvider);
 
         http
                 .addFilterBefore(encodingFilter(), CsrfFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(loginFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling()
-                .authenticationEntryPoint((request, response, authException) ->
-                        JsonResponse.sendError(response, HttpStatus.UNAUTHORIZED, authException.getMessage()))
-                .accessDeniedHandler((request, response, accessDeniedException) ->
-                        JsonResponse.sendError(response, HttpStatus.FORBIDDEN, "Access denied"))
-                .and()
-                .authorizeRequests()
-                .antMatchers(HttpMethod.OPTIONS).permitAll()
-                .antMatchers("/", "/resources/**", "/error").permitAll()
-                .antMatchers("/api/auth/login", "/api/auth/signup").permitAll()
-                .antMatchers("/api/security/all").permitAll()
-                .antMatchers("/api/stocks/**").permitAll()
-                .antMatchers("/ws-stocks/**").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .httpBasic().disable()
-                .csrf().disable()
-                .formLogin().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-    }
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) ->
+                                JsonResponse.sendError(response, HttpStatus.UNAUTHORIZED, authException.getMessage()))
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                JsonResponse.sendError(response, HttpStatus.FORBIDDEN, "Access denied")))
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(new AntPathRequestMatcher("/**", HttpMethod.OPTIONS.name())).permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/"),
+                                new AntPathRequestMatcher("/resources/**"),
+                                new AntPathRequestMatcher("/assets/**"),
+                                new AntPathRequestMatcher("/error"))
+                        .permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/auth/login"),
+                                new AntPathRequestMatcher("/api/auth/signup"),
+                                new AntPathRequestMatcher("/api/security/all"),
+                                new AntPathRequestMatcher("/api/games/scenarios/**"),
+                                new AntPathRequestMatcher("/api/stocks/**"),
+                                new AntPathRequestMatcher("/ws-stocks/**"))
+                        .permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/health", HttpMethod.GET.name())).permitAll()
+                        .anyRequest().authenticated())
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    // 로그인 인증에 사용할 사용자 조회 서비스와 비밀번호 인코더를 등록
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+        return http.build();
     }
 
     // Spring Security에서 사용할 BCrypt 비밀번호 인코더를 제공
@@ -95,11 +105,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 
-    // 로그인 필터가 아이디와 비밀번호를 검증할 수 있도록 AuthenticationManager를 빈으로 노출
+    // 로그인 인증에 사용할 사용자 조회 서비스와 비밀번호 인코더를 AuthenticationManager에 등록
     @Bean
-    @Override
-    public AuthenticationManager authenticationManagerBean() throws Exception {
-        return super.authenticationManagerBean();
+    public AuthenticationManager authenticationManager(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
     }
 
     // 브라우저 클라이언트의 API 요청을 허용하는 CORS 필터를 생성
@@ -114,11 +126,5 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
-    }
-
-    // 정적 리소스는 Spring Security 필터를 거치지 않도록 제외
-    @Override
-    public void configure(WebSecurity web) {
-        web.ignoring().antMatchers("/assets/**");
     }
 }
