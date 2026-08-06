@@ -22,7 +22,12 @@ import javax.sql.DataSource;
         "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",
         "org.kkobi.product.saving.service",
-        "org.kkobi.account.service"
+        "org.kkobi.account.service",
+        "org.kkobi.external.kis.config",
+        "org.kkobi.external.kis.auth",
+        "org.kkobi.external.kis.client",
+        "org.kkobi.external.kis.service",
+        "org.kkobi.external.kis.realtime"
 })
 @MapperScan(basePackages = {
         "org.kkobi.game.mapper",
