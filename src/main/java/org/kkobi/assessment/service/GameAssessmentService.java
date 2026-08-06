@@ -25,6 +25,10 @@ public class GameAssessmentService {
     private final GameScoreCalculator gameScoreCalculator;
     private final AssessmentResultService assessmentResultService;
 
+    public boolean existsCompletedGame(Long userId) {
+        return assessmentResultService.existsAssessmentResult(userId);
+    }
+
     @Transactional
     public AssessmentResult calculateGameAssessment(Long userId) {
         List<ActionLogDto> actionLogs = actionLogService.getActionLogsByUserId(userId);

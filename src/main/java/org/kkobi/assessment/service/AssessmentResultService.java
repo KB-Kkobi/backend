@@ -18,6 +18,10 @@ public class AssessmentResultService {
     private final AssessmentMapper assessmentMapper;
     private final PersonaClassifier personaClassifier;
 
+    public boolean existsAssessmentResult(Long userId) {
+        return assessmentMapper.getLatestAssessmentScore(userId) != null;
+    }
+
     public AssessmentScore getLatestAssessmentScore(Long userId) {
         AssessmentScore assessmentScore = assessmentMapper.getLatestAssessmentScore(userId);
         return assessmentScore == null

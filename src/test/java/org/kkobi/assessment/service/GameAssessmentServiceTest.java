@@ -17,9 +17,32 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameAssessmentServiceTest {
+
+    @Test
+    @DisplayName("저장된 성향 결과가 있으면 게임을 완료한 것으로 판단한다.")
+    void existsCompletedGameReturnsTrueWhenAssessmentResultExists() {
+        GameAssessmentService gameAssessmentService = createGameAssessmentService(
+                List.of(),
+                createAssessmentMapper(AssessmentScore.createInitialScore())
+        );
+
+        assertTrue(gameAssessmentService.existsCompletedGame(1L));
+    }
+
+    @Test
+    @DisplayName("저장된 성향 결과가 없으면 게임을 완료하지 않은 것으로 판단한다.")
+    void existsCompletedGameReturnsFalseWhenAssessmentResultDoesNotExist() {
+        GameAssessmentService gameAssessmentService = createGameAssessmentService(
+                List.of(),
+                createAssessmentMapper(null)
+        );
+
+        assertFalse(gameAssessmentService.existsCompletedGame(1L));
+    }
 
     @Test
     @DisplayName("게임 종료까지 예금을 해지하지 않으면 만기 유지 점수를 반영한다.")
@@ -54,6 +77,12 @@ class GameAssessmentServiceTest {
     }
 
     private GameAssessmentService createGameAssessmentService(List<ActionLogDto> actionLogs) {
+        return createGameAssessmentService(actionLogs, createAssessmentMapper(null));
+    }
+
+    private GameAssessmentService createGameAssessmentService(
+            List<ActionLogDto> actionLogs,
+            AssessmentMapper assessmentMapper) {
         ActionLogService actionLogService = new ActionLogService(new ActionLogMapper() {
             @Override
             public int saveActionLog(ActionLogDto actionLog) {
@@ -66,7 +95,7 @@ class GameAssessmentServiceTest {
             }
         });
         AssessmentResultService assessmentResultService = new AssessmentResultService(
-                createAssessmentMapper(),
+                assessmentMapper,
                 new PersonaClassifier()
         );
         return new GameAssessmentService(
@@ -77,11 +106,11 @@ class GameAssessmentServiceTest {
         );
     }
 
-    private AssessmentMapper createAssessmentMapper() {
+    private AssessmentMapper createAssessmentMapper(AssessmentScore latestAssessmentScore) {
         return new AssessmentMapper() {
             @Override
             public AssessmentScore getLatestAssessmentScore(Long userId) {
-                return null;
+                return latestAssessmentScore;
             }
 
             @Override
