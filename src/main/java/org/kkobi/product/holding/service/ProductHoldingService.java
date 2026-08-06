@@ -259,7 +259,7 @@ public class ProductHoldingService {
             throw new IllegalArgumentException("상품 거래 내역 저장에 실패했습니다.");
         }
 
-        int accountTransactionCount = productHoldingMapper.saveAccountWithdrawlTransaction(accountId, amount);
+        int accountTransactionCount = productHoldingMapper.saveAccountWithdrawalTransaction(accountId, amount);
 
         if(accountTransactionCount != 1) {
             throw new IllegalArgumentException("계좌 거래 내역 저장에 실패했습니다.");

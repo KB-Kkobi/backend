@@ -33,7 +33,7 @@ public interface ProductHoldingMapper {
     );
 
     // 계좌 출금 거래 내역 저장
-    int saveAccountWithdrawlTransaction(
+    int saveAccountWithdrawalTransaction(
             @Param("accountId") Long accountId,
             @Param("amount") BigDecimal amount
     );
