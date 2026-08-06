@@ -39,6 +39,9 @@ class MapperXmlTest {
                 "org.kkobi.game.mapper.ActionLogMapper.saveActionLog"
         ));
         assertTrue(configuration.hasStatement(
+                "org.kkobi.game.mapper.ActionLogMapper.deleteActionLogsByUserId"
+        ));
+        assertTrue(configuration.hasStatement(
                 "org.kkobi.assessment.mapper.AssessmentMapper.saveAssessmentResult"
         ));
         assertTrue(configuration.hasStatement(
