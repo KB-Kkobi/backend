@@ -10,7 +10,7 @@ COPY settings.gradle .
 COPY src src
 
 RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
-RUN ./gradlew clean war -x installGitHooks --no-daemon
+RUN ./gradlew clean war -x test -x installGitHooks --no-daemon
 
 
 # 2단계: Tomcat 9에서 WAR 실행

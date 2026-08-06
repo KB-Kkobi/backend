@@ -82,9 +82,11 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/auth/login"),
-                                new AntPathRequestMatcher("/api/auth/signup"))
+                                new AntPathRequestMatcher("/api/auth/signup"),
+                                new AntPathRequestMatcher("/api/security/all"),
+                                new AntPathRequestMatcher("/api/games/scenarios/**"))
                         .permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/security/all")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/health", HttpMethod.GET.name())).permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
