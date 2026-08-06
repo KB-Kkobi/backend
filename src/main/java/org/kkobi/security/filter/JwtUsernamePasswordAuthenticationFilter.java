@@ -1,13 +1,13 @@
 package org.kkobi.security.filter;
 
+import org.kkobi.security.jwt.JwtProvider;
+import org.kkobi.security.jwt.JwtToken;
 import org.kkobi.security.util.JsonResponse;
-import org.kkobi.security.util.JwtProcessor;
 import org.kkobi.users.dto.request.LoginRequest;
 import org.kkobi.users.dto.response.MessageResponse;
 import org.kkobi.users.dto.response.TokenResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -20,14 +20,21 @@ import java.io.IOException;
 public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     // 아이디와 비밀번호 로그인에 사용할 URL과 JSON 응답 핸들러를 설정
-    public JwtUsernamePasswordAuthenticationFilter(AuthenticationManager authenticationManager, JwtProcessor jwtProcessor) {
+    public JwtUsernamePasswordAuthenticationFilter(AuthenticationManager authenticationManager, JwtProvider jwtProvider) {
         super(authenticationManager);
         setFilterProcessesUrl("/api/auth/login");
-        setAuthenticationSuccessHandler((request, response, authentication) ->
-                JsonResponse.send(response, new TokenResponse(jwtProcessor.generateToken(authentication.getName()), "Bearer")));
+        setAuthenticationSuccessHandler((request, response, authentication) -> {
+            JwtToken jwtToken = jwtProvider.issueToken(authentication.getName());
+            JsonResponse.send(response, TokenResponse.from(jwtToken));
+        });
         setAuthenticationFailureHandler((request, response, exception) -> {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            JsonResponse.send(response, new MessageResponse("Invalid email or password"));
+            boolean invalidRequest = exception instanceof InvalidLoginRequestException;
+            response.setStatus(invalidRequest
+                    ? HttpStatus.BAD_REQUEST.value()
+                    : HttpStatus.UNAUTHORIZED.value());
+            JsonResponse.send(response, new MessageResponse(invalidRequest
+                    ? "로그인 요청 형식이 올바르지 않습니다."
+                    : "이메일 또는 비밀번호가 올바르지 않습니다."));
         });
     }
 
@@ -41,7 +48,7 @@ public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAut
                     new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword());
             return getAuthenticationManager().authenticate(token);
         } catch (IOException e) {
-            throw new AuthenticationServiceException("Invalid login request", e);
+            throw new InvalidLoginRequestException("로그인 요청 형식이 올바르지 않습니다.", e);
         }
     }
 }

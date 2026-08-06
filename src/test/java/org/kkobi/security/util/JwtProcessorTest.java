@@ -3,10 +3,10 @@ package org.kkobi.security.util;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.kkobi.config.RootConfig;
-import org.kkobi.security.config.SecurityConfig;
+import org.kkobi.security.config.JwtConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -14,7 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @Log4j2
-@ContextConfiguration(classes = {RootConfig.class, SecurityConfig.class})
+@ContextConfiguration(classes = {JwtConfig.class, JwtProcessor.class})
+@TestPropertySource(properties = {
+        "jwt.secret=test-jwt-secret-key-at-least-32-bytes-long",
+        "jwt.issuer=kkobi-test",
+        "jwt.access-token-validity-ms=1800000",
+        "jwt.refresh-token-validity-ms=1209600000"
+})
 class JwtProcessorTest {
     @Autowired
     JwtProcessor jwtProcessor;
