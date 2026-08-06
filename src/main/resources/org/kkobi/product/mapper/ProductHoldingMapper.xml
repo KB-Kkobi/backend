@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.product.mapper.ProductHoldingMapper">
+
+    <!-- 로그인 사용자의 계좌와 가입할 상품 옵션 정보를 조회 -->
+    <select id="getProductSubscriptionInfo"
+            resultType="org.kkobi.product.holding.dto.ProductSubscriptionInfoDto">
+        SELECT
+            a.account_id,
+            a.cash_balance,
+            po.product_option_id,
+            p.product_type,
+            p.kor_co_nm AS financial_company_name,
+            p.fin_prdt_nm AS product_name,
+            p.max_limit,
+            po.save_trm AS saving_term,
+            po.intr_rate AS interest_rate,
+            po.intr_rate2 AS maximum_interest_rate,
+            po.rsrv_type AS reserve_type
+        FROM accounts a
+                 CROSS JOIN product_options po
+                 INNER JOIN products p
+                            ON p.product_id = po.product_id
+        WHERE a.user_id = #{userId}
+          AND po.product_option_id = #{productOptionId}
+        LIMIT 1
+    </select>
+
+    <!-- 가입한 예적금 상품을 보유 상품으로 저장 -->
+    <insert id="saveHoldingProduct"
+            parameterType="org.kkobi.product.holding.dto.ProductHoldingCreateDto"
+            useGeneratedKeys="true"
+            keyProperty="holdingProductId"
+            keyColumn="holding_product_id">
+        INSERT INTO holding_products (
+            account_id,
+            product_option_id,
+            join_amount,
+            applied_rate,
+            total_installments,
+            paid_installments,
+            payment_date,
+            start_date,
+            maturity_date,
+            status
+        )
+        VALUES (
+                   #{accountId},
+                   #{productOptionId},
+                   #{joinAmount},
+                   #{appliedRate},
+                   #{totalInstallments},
+                   #{paidInstallments},
+                   #{paymentDate},
+                   #{startDate},
+                   #{maturityDate},
+                   #{status}
+               )
+    </insert>
+
+    <!-- 잔액이 충분한 경우에만 가입 금액만큼 계좌 잔액 차감 -->
+    <update id="decreaseAccountCashBalance">
+        UPDATE accounts
+        SET cash_balance = cash_balance - #{amount},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE account_id = #{accountId}
+          AND cash_balance >= #{amount}
+    </update>
+
+    <!-- 예적금 가입 거래 내역 저장 -->
+    <insert id="saveProductSubscriptionTransaction">
+        INSERT INTO product_transactions (
+            holding_product_id,
+            type,
+            amount,
+            installment_number,
+            status
+        )
+        VALUES (
+                   #{holdingProductId},
+                   'SUBSCRIBE',
+                   #{amount},
+                   #{installmentNumber},
+                   'COMPLETED'
+               )
+    </insert>
+
+    <!-- 예적금 가입으로 발생한 계좌 출금 거래 내역 저장 -->
+    <insert id="saveAccountWithdrawalTransaction">
+        INSERT INTO account_transactions (
+            account_id,
+            type,
+            amount,
+            created_at,
+            updated_at
+        )
+        VALUES (
+                   #{accountId},
+                   'OUT',
+                   #{amount},
+                   CURRENT_TIMESTAMP,
+                   CURRENT_TIMESTAMP
+               )
+    </insert>
+
+</mapper>
