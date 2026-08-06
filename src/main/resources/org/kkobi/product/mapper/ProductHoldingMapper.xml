@@ -20,12 +20,12 @@
             po.intr_rate AS interest_rate,
             po.intr_rate2 AS maximum_interest_rate,
             po.rsrv_type AS reserve_type
-        FROM accounts a
-                 CROSS JOIN product_options po
+        FROM product_options po
                  INNER JOIN products p
                             ON p.product_id = po.product_id
-        WHERE a.user_id = #{userId}
-          AND po.product_option_id = #{productOptionId}
+                 LEFT JOIN accounts a
+                           ON a.user_id = #{userId}
+        WHERE po.product_option_id = #{productOptionId}
         LIMIT 1
     </select>
 

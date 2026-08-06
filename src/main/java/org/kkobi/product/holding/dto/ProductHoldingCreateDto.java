@@ -24,13 +24,13 @@ public class ProductHoldingCreateDto {
     private BigDecimal appliedRate;
 
     // 전체 납입 횟수, 예금은 null
-    private Integer totalIstallments;
+    private Integer totalInstallments;
 
     // 완료한 납입 횟수, 예금은 null
     private Integer paidInstallments;
 
     // 다음 적금 납입일, 예금은 null
-    private LocalDate paymentate;
+    private LocalDate paymentDate;
 
     // 가입일
     private LocalDate startDate;

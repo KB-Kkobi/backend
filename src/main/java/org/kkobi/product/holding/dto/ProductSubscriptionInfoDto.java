@@ -20,7 +20,7 @@ public class ProductSubscriptionInfoDto {
     private String productType;
 
     // 금융회사명
-    private String finalcialCompanyName;
+    private String financialCompanyName;
 
     // 상품명
     private String productName;
