@@ -14,10 +14,12 @@ import org.kkobi.game.calculator.GameSecurityReturnCalculator;
 import org.kkobi.game.dto.ActionLogDto;
 import org.kkobi.game.dto.GameBehaviorRequest;
 import org.kkobi.game.dto.ScenarioDto;
+import org.kkobi.game.dto.ScenarioTickDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,8 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GameActionService {
 
-    private static final LocalDateTime GAME_START_AT = LocalDateTime.of(2000, 1, 1, 0, 0);
-    private static final int DAYS_PER_TICK = 7;
     private static final Long GAME_SECURITY_ID = 1L;
 
     private final ActionLogService actionLogService;
@@ -46,7 +46,7 @@ public class GameActionService {
         BehaviorEvent currentEvent = createBehaviorEvent(request, scenario, actionLogs);
         List<BehaviorEvent> previousEvents = actionLogs
                 .stream()
-                .map(this::createBehaviorEvent)
+                .map(actionLog -> createBehaviorEvent(actionLog, scenario))
                 .toList();
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 currentEvent,
@@ -159,7 +159,7 @@ public class GameActionService {
         ));
         event.setDailyPriceRangeRate(request.getDailyPriceRangeRate());
         updateGameSecurityReturnRate(event, scenario, request.getTick(), actionLogs);
-        event.setTradedAt(calculateGameActionAt(request.getTick()));
+        event.setTradedAt(calculateGameActionAt(scenario, request.getTick()));
         return event;
     }
 
@@ -184,7 +184,9 @@ public class GameActionService {
         }
     }
 
-    private BehaviorEvent createBehaviorEvent(ActionLogDto actionLog) {
+    private BehaviorEvent createBehaviorEvent(
+            ActionLogDto actionLog,
+            ScenarioDto scenario) {
         BehaviorEvent event = new BehaviorEvent();
         event.setUserId(actionLog.getUserId());
         event.setGameTick(actionLog.getGameTick());
@@ -197,12 +199,24 @@ public class GameActionService {
         event.setCurrentStockPrincipal(actionLog.getCurrentStock());
         event.setCurrentDeposit(actionLog.getCurrentDeposit());
         event.setMarketState(MarketState.getMarketState(actionLog.getMarketState()));
-        event.setTradedAt(calculateGameActionAt(actionLog.getGameTick()));
+        event.setTradedAt(calculateGameActionAt(scenario, actionLog.getGameTick()));
         return event;
     }
 
-    private LocalDateTime calculateGameActionAt(Integer gameTick) {
-        return GAME_START_AT.plusDays((long) gameTick * DAYS_PER_TICK);
+    private LocalDateTime calculateGameActionAt(
+            ScenarioDto scenario,
+            Integer gameTick) {
+        return scenario.getTicks()
+                .stream()
+                .filter(scenarioTick -> scenarioTick.getTick() == gameTick)
+                .map(ScenarioTickDto::getDate)
+                .filter(scenarioDate -> scenarioDate != null && !scenarioDate.isBlank())
+                .map(LocalDate::parse)
+                .map(LocalDate::atStartOfDay)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "게임 시나리오 tick 날짜를 찾을 수 없습니다: " + gameTick
+                ));
     }
 
     private void updateGameSecurityId(BehaviorEvent event) {
@@ -222,7 +236,10 @@ public class GameActionService {
         actionLog.setAssetType(getActionLogAssetType(behaviorContext.getCurrentEvent().getAssetType()));
         actionLog.setActionAmount(request.getActionAmount());
         actionLog.setMarketState(getActionLogMarketState(behaviorContext.getMarketState()));
-        actionLog.setDepositStatus(getDepositStatus(behaviorContext.getCurrentEvent().getActionType()));
+        actionLog.setDepositStatus(getDepositStatus(
+                behaviorContext.getCurrentEvent().getActionType(),
+                request.getCurrentDeposit()
+        ));
         actionLog.setCurrentCash(request.getCurrentCash());
         actionLog.setCurrentStock(request.getCurrentStock());
         actionLog.setCurrentDeposit(request.getCurrentDeposit());
@@ -250,13 +267,17 @@ public class GameActionService {
         return marketState.name();
     }
 
-    private String getDepositStatus(BehaviorActionType actionType) {
+    private String getDepositStatus(
+            BehaviorActionType actionType,
+            Long currentDeposit) {
         if (actionType == BehaviorActionType.CANCEL_PRODUCT) {
             return "CANCELLED";
         }
         if (actionType == BehaviorActionType.MATURITY) {
             return "MATURED";
         }
-        return "NONE";
+        return currentDeposit != null && currentDeposit > 0L
+                ? "ACTIVE"
+                : "NONE";
     }
 }

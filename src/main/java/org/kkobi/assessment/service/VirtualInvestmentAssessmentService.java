@@ -22,6 +22,7 @@ import org.kkobi.assessment.validator.VirtualInvestmentBehaviorValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -142,9 +143,16 @@ public class VirtualInvestmentAssessmentService {
             return;
         }
 
-        currentEvent.setPositionReturnRate(
-                securityPositionCalculator.calculatePositionReturnRate(currentEvent, previousEvents)
+        BigDecimal currentReturnRate = securityPositionCalculator.calculatePositionReturnRate(
+                currentEvent,
+                previousEvents
         );
+        if (currentEvent.getActionType() == BehaviorActionType.BUY) {
+            currentEvent.setPositionReturnRate(currentReturnRate);
+        } else if (currentEvent.getActionType() == BehaviorActionType.SELL
+                && currentReturnRate != null) {
+            currentEvent.setRealizedReturnRate(currentReturnRate);
+        }
         currentEvent.setCurrentSecurityQuantity(
                 securityPositionCalculator.calculateCurrentSecurityQuantity(currentEvent, previousEvents)
         );

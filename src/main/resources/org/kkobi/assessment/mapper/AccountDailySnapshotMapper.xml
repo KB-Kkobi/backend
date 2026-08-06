@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.assessment.mapper.AccountDailySnapshotMapper">
+
+    <select id="getAccountSnapshotTargets"
+            resultType="org.kkobi.assessment.dto.AccountDailySnapshotDto">
+        SELECT
+            account_record.account_id,
+            account_record.user_id,
+            DATE(account_record.created_at) AS virtual_investment_started_date,
+            security_holding.security_holding_started_date,
+            account_record.cash_balance AS current_cash,
+            COALESCE(security_holding.current_stock_principal, 0)
+                AS current_stock_principal,
+            COALESCE(product_holding.current_deposit, 0)
+                AS current_deposit,
+            security_holding.average_security_holding_days
+        FROM accounts account_record
+        LEFT JOIN (
+            SELECT
+                holding_security.account_id,
+                SUM(holding_security.quantity * holding_security.average_price)
+                    AS current_stock_principal,
+                MIN(DATE(holding_security.created_at))
+                    AS security_holding_started_date,
+                AVG(DATEDIFF(#{snapshotDate}, DATE(holding_security.created_at)))
+                    AS average_security_holding_days
+            FROM holding_securities holding_security
+            WHERE holding_security.created_at
+                &lt; DATE_ADD(#{snapshotDate}, INTERVAL 1 DAY)
+            GROUP BY holding_security.account_id
+        ) security_holding
+          ON security_holding.account_id = account_record.account_id
+        LEFT JOIN (
+            SELECT
+                holding_product.account_id,
+                SUM(
+                    holding_product.join_amount
+                    + COALESCE(product_payment.additional_paid_amount, 0)
+                )
+                    AS current_deposit
+            FROM holding_products holding_product
+            LEFT JOIN (
+                SELECT
+                    product_transaction.holding_product_id,
+                    SUM(product_transaction.amount) AS additional_paid_amount
+                FROM product_transactions product_transaction
+                WHERE product_transaction.status = 'COMPLETED'
+                  AND product_transaction.type IN (
+                        'PAYMENT',
+                        'ADDITIONAL_PAYMENT'
+                    )
+                  AND product_transaction.created_at
+                    &lt; DATE_ADD(#{snapshotDate}, INTERVAL 1 DAY)
+                GROUP BY product_transaction.holding_product_id
+            ) product_payment
+              ON product_payment.holding_product_id = holding_product.holding_product_id
+            WHERE holding_product.status = 'ACTIVE'
+              AND holding_product.created_at
+                &lt; DATE_ADD(#{snapshotDate}, INTERVAL 1 DAY)
+            GROUP BY holding_product.account_id
+        ) product_holding
+          ON product_holding.account_id = account_record.account_id
+        ORDER BY account_record.account_id
+    </select>
+
+    <insert id="saveAccountDailySnapshot"
+            useGeneratedKeys="true"
+            keyProperty="accountDailySnapshotId">
+        INSERT INTO account_daily_snapshots (
+            account_id,
+            snapshot_date,
+            current_cash,
+            current_stock_principal,
+            current_deposit,
+            total_invested_principal,
+            cash_ratio
+        )
+        VALUES (
+            #{accountId},
+            #{snapshotDate},
+            #{currentCash},
+            #{currentStockPrincipal},
+            #{currentDeposit},
+            #{totalInvestedPrincipal},
+            #{cashRatio}
+        )
+        ON DUPLICATE KEY UPDATE
+            current_cash = VALUES(current_cash),
+            current_stock_principal = VALUES(current_stock_principal),
+            current_deposit = VALUES(current_deposit),
+            total_invested_principal = VALUES(total_invested_principal),
+            cash_ratio = VALUES(cash_ratio),
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="getAccountDailySnapshots"
+            resultType="org.kkobi.assessment.dto.AccountDailySnapshotDto">
+        SELECT
+            account_daily_snapshot_id,
+            account_id,
+            snapshot_date,
+            current_cash,
+            current_stock_principal,
+            current_deposit,
+            total_invested_principal,
+            cash_ratio
+        FROM account_daily_snapshots
+        WHERE account_id = #{accountId}
+          AND snapshot_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY snapshot_date
+    </select>
+
+    <select id="getFirstCompletedSecurityOrderDate"
+            resultType="java.time.LocalDate">
+        SELECT DATE(MIN(executed_at))
+        FROM security_orders
+        WHERE account_id = #{accountId}
+          AND status = 'COMPLETED'
+          AND executed_at IS NOT NULL
+    </select>
+
+    <select id="getCompletedSecurityOrderCount" resultType="int">
+        SELECT COUNT(*)
+        FROM security_orders
+        WHERE account_id = #{accountId}
+          AND status = 'COMPLETED'
+          AND executed_at IS NOT NULL
+          AND executed_at &lt; DATE_ADD(#{assessmentDate}, INTERVAL 1 DAY)
+    </select>
+
+</mapper>

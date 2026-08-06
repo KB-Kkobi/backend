@@ -30,6 +30,10 @@ class MapperXmlTest {
                 configuration,
                 "org/kkobi/assessment/mapper/VirtualInvestmentBehaviorMapper.xml"
         );
+        parseMapper(
+                configuration,
+                "org/kkobi/assessment/mapper/AccountDailySnapshotMapper.xml"
+        );
 
         assertTrue(configuration.hasStatement(
                 "org.kkobi.game.mapper.ActionLogMapper.saveActionLog"
@@ -40,6 +44,10 @@ class MapperXmlTest {
         assertTrue(configuration.hasStatement(
                 "org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper"
                         + ".getPreviousVirtualInvestmentBehaviors"
+        ));
+        assertTrue(configuration.hasStatement(
+                "org.kkobi.assessment.mapper.AccountDailySnapshotMapper"
+                        + ".saveAccountDailySnapshot"
         ));
     }
 

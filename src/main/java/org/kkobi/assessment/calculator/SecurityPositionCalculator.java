@@ -20,7 +20,9 @@ public class SecurityPositionCalculator {
     public BigDecimal calculatePositionReturnRate(
             BehaviorEvent currentEvent,
             List<BehaviorEvent> previousEvents) {
-        if (currentEvent.getActionType() != BehaviorActionType.BUY
+        boolean securityTrade = currentEvent.getActionType() == BehaviorActionType.BUY
+                || currentEvent.getActionType() == BehaviorActionType.SELL;
+        if (!securityTrade
                 || currentEvent.getAssetType() != BehaviorAssetType.SECURITY
                 || currentEvent.getSecurityId() == null
                 || !existsTradePrice(currentEvent)) {
