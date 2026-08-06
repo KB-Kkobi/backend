@@ -93,6 +93,11 @@ class GameAssessmentServiceTest {
             public List<ActionLogDto> getActionLogsByUserId(Long userId) {
                 return actionLogs;
             }
+
+            @Override
+            public int deleteActionLogsByUserId(Long userId) {
+                return 0;
+            }
         });
         AssessmentResultService assessmentResultService = new AssessmentResultService(
                 assessmentMapper,

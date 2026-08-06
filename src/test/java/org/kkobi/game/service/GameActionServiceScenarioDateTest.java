@@ -131,5 +131,12 @@ class GameActionServiceScenarioDateTest {
                     .filter(actionLog -> userId.equals(actionLog.getUserId()))
                     .toList();
         }
+
+        @Override
+        public int deleteActionLogsByUserId(Long userId) {
+            int previousSize = actionLogs.size();
+            actionLogs.removeIf(actionLog -> userId.equals(actionLog.getUserId()));
+            return previousSize - actionLogs.size();
+        }
     }
 }
