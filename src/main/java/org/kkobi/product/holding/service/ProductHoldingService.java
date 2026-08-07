@@ -6,13 +6,20 @@ import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
+import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
+import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
 import org.kkobi.product.mapper.ProductHoldingMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.security.Principal;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +33,10 @@ public class ProductHoldingService {
             ZoneId.of("Asia/Seoul");
 
     private final ProductHoldingMapper productHoldingMapper;
+
+    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
+
+    private static final BigDecimal DAYS_PER_YEAR = new BigDecimal("365");
 
     // 로그인 사용자가 예금 또는 적금 상품에 가입
     @Transactional
@@ -81,6 +92,309 @@ public class ProductHoldingService {
         return createResponse(
                 subscriptionInfo,
                 holdingProduct
+        );
+    }
+
+    // 로그인 사용자의 보유 예적금 목록 조회
+    @Transactional(readOnly = true)
+    public List<ProductHoldingListItemResponseDto> getHoldingProducts(Long userId){
+        validateUserId(userId);
+
+        List<ProductHoldingInfoDto> holdingProducts = productHoldingMapper.getHoldingProductsByUserId(userId);
+
+        return holdingProducts.stream()
+                .map(this::createHoldingListItemResponse)
+                .toList();
+    }
+
+    // 보유 예적금 목록 응답 생성
+    private ProductHoldingListItemResponseDto createHoldingListItemResponse(ProductHoldingInfoDto holdingProduct){
+        LocalDate today = LocalDate.now(KOREA_ZONE_ID);
+
+        BigDecimal currentPrincipal =  calculateCurrentPrincipal(holdingProduct);
+
+        BigDecimal accruedInterest = calculateAccruedInterest(holdingProduct, today);
+
+        BigDecimal expectedInterest = calculateExpectedInterest(holdingProduct);
+
+        BigDecimal expectedPrincipal = calculateExpectedPrincipal(holdingProduct);
+
+        ProductHoldingListItemResponseDto response = new ProductHoldingListItemResponseDto();
+
+        response.setHoldingProductId(
+                holdingProduct.getHoldingProductId()
+        );
+        response.setProductOptionId(
+                holdingProduct.getProductOptionId()
+        );
+        response.setProductType(
+                holdingProduct.getProductType()
+        );
+        response.setFinancialCompanyName(
+                holdingProduct.getFinancialCompanyName()
+        );
+        response.setProductName(
+                holdingProduct.getProductName()
+        );
+        response.setReserveTypeName(
+                holdingProduct.getReserveTypeName()
+        );
+        response.setJoinAmount(
+                holdingProduct.getJoinAmount()
+        );
+        response.setAppliedRate(
+                holdingProduct.getAppliedRate()
+        );
+        response.setSavingTerm(
+                holdingProduct.getSavingTerm()
+        );
+        response.setTotalInstallments(
+                holdingProduct.getTotalInstallments()
+        );
+        response.setPaidInstallments(
+                holdingProduct.getPaidInstallments()
+        );
+
+        response.setCurrentPrincipal(currentPrincipal);
+        response.setAccruedInterest(accruedInterest);
+        response.setCurrentValue(
+                currentPrincipal.add(accruedInterest)
+        );
+
+        response.setExpectedInterest(expectedInterest);
+        response.setExpectedMaturityAmount(
+                expectedPrincipal.add(expectedInterest)
+        );
+
+        response.setMaturityProgressRate(
+                calculateMaturityProgressRate(
+                        holdingProduct.getStartDate(),
+                        holdingProduct.getMaturityDate(),
+                        today
+                )
+        );
+
+        response.setRemainingDays(
+                calculateRemainingDays(
+                        holdingProduct.getMaturityDate(),
+                        today
+                )
+        );
+
+        response.setStartDate(
+                holdingProduct.getStartDate()
+        );
+        response.setMaturityDate(
+                holdingProduct.getMaturityDate()
+        );
+        response.setNextPaymentDate(
+                holdingProduct.getNextPaymentDate()
+        );
+        response.setStatus(
+                holdingProduct.getStatus()
+        );
+
+        return response;
+    }
+
+    // 현재까지 실제 납입한 원금 계산
+    private BigDecimal calculateCurrentPrincipal(ProductHoldingInfoDto holdingProduct){
+        if(DEPOSIT.equals(holdingProduct.getProductType())){
+            return holdingProduct.getJoinAmount();
+        }
+
+        int paidInstallments = holdingProduct.getPaidInstallments() == null ? 0 : holdingProduct.getPaidInstallments();
+
+        return holdingProduct.getJoinAmount().multiply(BigDecimal.valueOf(paidInstallments));
+    }
+
+    // 만기까지 정상 납입했을 때 전체 원금 계산
+    private BigDecimal calculateExpectedPrincipal(ProductHoldingInfoDto holdingProduct){
+        if(DEPOSIT.equals(holdingProduct.getProductType())){
+            return holdingProduct.getJoinAmount();
+        }
+
+        int totalInstallments = holdingProduct.getTotalInstallments() == null ? 0 : holdingProduct.getTotalInstallments();
+
+        return holdingProduct.getJoinAmount().multiply(BigDecimal.valueOf(totalInstallments));
+    }
+
+    // 현재까지 발생한 예상 이자 계산
+    private BigDecimal calculateAccruedInterest(ProductHoldingInfoDto holdingProduct, LocalDate today){
+        LocalDate evaluetionDate = today.isAfter(holdingProduct.getMaturityDate()) ? holdingProduct.getMaturityDate() : today;
+
+        if(evaluetionDate.isBefore(holdingProduct.getStartDate())) {
+            return BigDecimal.ZERO;
+        }
+
+        if(DEPOSIT.equals(holdingProduct.getProductType())) {
+            long interestDays = ChronoUnit.DAYS.between(
+                    holdingProduct.getStartDate(), evaluetionDate);
+
+            return calculateSimpleInterest(
+                    holdingProduct.getJoinAmount(),
+                    holdingProduct.getAppliedRate(),
+                    interestDays
+            );
+        }
+
+        return calculateSavingAccruedInterest(
+                holdingProduct,
+                evaluetionDate
+        );
+    }
+
+    // 적금의 현재까지 발생한 이자 계산
+    private BigDecimal calculateSavingAccruedInterest(ProductHoldingInfoDto holdingProduct, LocalDate evaluationDate) {
+        int paidInstallments = holdingProduct.getPaidInstallments() == null ? 0 : holdingProduct.getPaidInstallments();
+
+        BigDecimal totalInterest = BigDecimal.ZERO;
+
+        for(int installment = 0; installment < paidInstallments; installment++){
+            LocalDate paymentDate = calculateInstallmentDate(holdingProduct, installment);
+
+            if(paymentDate.isAfter(evaluationDate)){
+                continue;
+            }
+
+            long interestDays =
+                    ChronoUnit.DAYS.between(
+                            paymentDate,
+                            evaluationDate
+                    );
+
+            totalInterest = totalInterest.add(calculateSimpleInterest(
+                    holdingProduct.getJoinAmount(),
+                    holdingProduct.getAppliedRate(),
+                    interestDays));
+        }
+        return totalInterest;
+    }
+
+    // 만기까지 정상 유지했을 때 예상 이자 계산
+    private BigDecimal calculateExpectedInterest(ProductHoldingInfoDto holdingProduct){
+        if(DEPOSIT.equals(holdingProduct.getProductType())){
+            long interestDays =
+                    ChronoUnit.DAYS.between(
+                            holdingProduct.getStartDate(),
+                            holdingProduct.getMaturityDate()
+                    );
+
+            return calculateSimpleInterest(
+                    holdingProduct.getJoinAmount(),
+                    holdingProduct.getAppliedRate(),
+                    interestDays
+            );
+        }
+
+        int totalInstallments =
+                holdingProduct.getTotalInstallments() == null ? 0 : holdingProduct.getTotalInstallments();
+
+        BigDecimal totalInterest = BigDecimal.ZERO;
+
+        for(int installment = 0; installment < totalInstallments; installment ++){
+            LocalDate paymentDate =
+                    calculateInstallmentDate(
+                            holdingProduct, installment
+                    );
+
+            long interestDays =
+                    ChronoUnit.DAYS.between(
+                            paymentDate,
+                            holdingProduct.getMaturityDate()
+                    );
+
+            if(interestDays <= 0){
+                continue;
+            }
+
+            totalInterest = totalInterest.add(
+                    calculateSimpleInterest(
+                            holdingProduct.getJoinAmount(),
+                            holdingProduct.getAppliedRate(),
+                            interestDays
+                    )
+            );
+        }
+        return totalInterest;
+    }
+
+    // 적금 회차별 납입일 계산
+    private LocalDate calculateInstallmentDate(
+            ProductHoldingInfoDto holdingProduct,
+            int installmentIndex
+    ) {
+        if (installmentIndex == 0) {
+            return holdingProduct.getStartDate();
+        }
+
+        int paymentDay =
+                holdingProduct.getNextPaymentDate() == null ? holdingProduct.getStartDate().getDayOfMonth() :
+                        holdingProduct.getNextPaymentDate().getDayOfMonth();
+
+        return holdingProduct.getStartDate().plusMonths(installmentIndex).withDayOfMonth(paymentDay);
+    }
+
+    // 원금, 연이율, 보유 일수를 기준으로 단리 계산
+    private BigDecimal calculateSimpleInterest(
+            BigDecimal principal, BigDecimal annualRate, long interestDays
+    ) {
+        if(principal == null || annualRate == null || interestDays <= 0){
+            return BigDecimal.ZERO;
+        }
+
+        return principal.multiply(annualRate)
+                .multiply(BigDecimal.valueOf(interestDays))
+                .divide(ONE_HUNDRED, 10, RoundingMode.HALF_UP)
+                .divide(DAYS_PER_YEAR, 0, RoundingMode.DOWN);
+    }
+
+    // 가입일부터 만기일까지의 진행률 계산
+    private BigDecimal calculateMaturityProgressRate(
+            LocalDate startDate,
+            LocalDate maturityDate,
+            LocalDate today
+    ) {
+        long totalDays =
+                ChronoUnit.DAYS.between(
+                        startDate, maturityDate
+                );
+
+        if(totalDays <= 0) {
+            return new BigDecimal("100.00");
+        }
+
+        if(!today.isAfter(startDate)) {
+            return new BigDecimal("0.00");
+        }
+
+        if(!today.isBefore(maturityDate)) {
+            return new BigDecimal("100.00");
+        }
+
+        long elapsedDays = ChronoUnit.DAYS.between(startDate, today);
+
+        return BigDecimal.valueOf(elapsedDays)
+                .multiply(ONE_HUNDRED)
+                .divide(
+                        BigDecimal.valueOf(totalDays),
+                        2,
+                        RoundingMode.HALF_UP
+                );
+    }
+
+    // 만기일까지 남은 일수 계산
+    private Long calculateRemainingDays(
+            LocalDate maturityDate,
+            LocalDate today
+    ) {
+        if(!today.isBefore(maturityDate)){
+            return 0L;
+        }
+
+        return ChronoUnit.DAYS.between(
+                today,
+                maturityDate
         );
     }
 

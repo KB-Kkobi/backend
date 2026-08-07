@@ -3,8 +3,10 @@ package org.kkobi.product.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
+import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface ProductHoldingMapper {
 
@@ -36,5 +38,10 @@ public interface ProductHoldingMapper {
     int saveAccountWithdrawalTransaction(
             @Param("accountId") Long accountId,
             @Param("amount") BigDecimal amount
+    );
+
+    // 로그인 사용자의 보유 예적금 목록 조회
+    List<ProductHoldingInfoDto> getHoldingProductsByUserId(
+            @Param("userId") Long userId
     );
 }
