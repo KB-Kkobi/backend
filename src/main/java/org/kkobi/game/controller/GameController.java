@@ -2,9 +2,12 @@ package org.kkobi.game.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.service.GameAssessmentService;
+import org.kkobi.game.dto.GameActionRequest;
+import org.kkobi.game.dto.GameActionResponse;
 import org.kkobi.game.dto.GameStartRequest;
 import org.kkobi.game.dto.GameStartResponse;
 import org.kkobi.game.dto.GameStatusResponse;
+import org.kkobi.game.service.GameActionService;
 import org.kkobi.game.service.GameStartService;
 import org.kkobi.security.principal.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,7 @@ public class GameController {
 
     private final GameAssessmentService gameAssessmentService;
     private final GameStartService gameStartService;
+    private final GameActionService gameActionService;
 
     @GetMapping("/status")
     public ResponseEntity<GameStatusResponse> getGameStatus(
@@ -39,6 +43,16 @@ public class GameController {
             @AuthenticationPrincipal CustomUserDetails authenticatedUser,
             @Valid @RequestBody GameStartRequest request) {
         return ResponseEntity.ok(gameStartService.startGame(
+                authenticatedUser.getUserId(),
+                request
+        ));
+    }
+
+    @PostMapping("/actions")
+    public ResponseEntity<GameActionResponse> saveGameAction(
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser,
+            @Valid @RequestBody GameActionRequest request) {
+        return ResponseEntity.ok(gameActionService.saveGameAction(
                 authenticatedUser.getUserId(),
                 request
         ));
