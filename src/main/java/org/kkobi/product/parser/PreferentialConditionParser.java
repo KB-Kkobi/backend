@@ -37,10 +37,8 @@ public class PreferentialConditionParser {
                 "체크카드",
                 "카드결제",
                 "카드사용",
-                "카드 사용",
                 "카드이용",
-                "카드 이용",
-                "카드 거래"
+                "카드거래"
         )) {
             conditionTypes.add(PreferentialConditionType.CARD_USAGE);
         }
@@ -105,7 +103,7 @@ public class PreferentialConditionParser {
         return new ArrayList<>(conditionTypes);
     }
 
-    // 우대조건이 없느 상품인지 확인
+    // 우대조건이 없는 상품인지 확인
     private boolean hasNoPreferenticalCondition(String preferentialConditions) {
 
         if(preferentialConditions == null || preferentialConditions.trim().isEmpty()) {
@@ -126,8 +124,16 @@ public class PreferentialConditionParser {
     // 원문에 하나 이상의 키워드가 포함되어 있는지 확인
     private boolean containsAny(String text, String... keywords){
 
+        if(text == null || text.trim().isEmpty()){
+            return false;
+        }
+
+        String normalizedText = text.replaceAll("\\s+","");
+
         for(String keyword : keywords){
-            if(text.contains(keyword)){
+            String normalizedKeyword = keyword.replaceAll("\\s+","");
+
+            if(normalizedText.contains(normalizedKeyword)){
                 return true;
             }
         }

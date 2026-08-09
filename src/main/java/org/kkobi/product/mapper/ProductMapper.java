@@ -62,6 +62,8 @@ public interface ProductMapper {
             @Param("keyword") String keyword,
             @Param("savingTerm") Integer savingTerm,
             @Param("reserveType") String reserveType,
+            @Param("preferentialConditions")
+            List<PreferentialConditionType> preferentialConditions,
             @Param("sortCode") Integer sortCode,
             @Param("offset") Integer offset,
             @Param("size") Integer size
@@ -72,7 +74,9 @@ public interface ProductMapper {
             @Param("productType") String productType,
             @Param("keyword") String keyword,
             @Param("savingTerm") Integer savingTerm,
-            @Param("reserveType") String reserveType
+            @Param("reserveType") String reserveType,
+            @Param("preferentialConditions")
+            List<PreferentialConditionType> preferentialConditions
     );
 
     // 상품에 저장된 기존 우대조건을 삭제

@@ -26,14 +26,12 @@ public class DepositProductController {
     }
 
     // 금융감독원 예금 상품 데이터를 조회하여 DB에 저장
-    @PostMapping(value = "/collect",
-                produces = "text/plain;charset=UTF-8"
-    )
-    public String collectDepositProducts() {
+    @PostMapping(value = "/collect")
+    public ResponseEntity<Void> collectDepositProducts() {
 
         depositProductService.collectDepositProducts();
 
-        return "예금 상품 데이터 수집 완료";
+        return ResponseEntity.ok().build();
     }
 
     // 상품 ID로 예금 상품 상세 정보 조회

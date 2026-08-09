@@ -9,6 +9,7 @@ import org.kkobi.product.dto.response.ProductDetailResponseDto;
 import org.kkobi.product.dto.response.ProductListItemResponseDto;
 import org.kkobi.product.dto.response.ProductListResponseDto;
 import org.kkobi.product.dto.response.ProductOptionResponseDto;
+import org.kkobi.product.enums.PreferentialConditionType;
 import org.kkobi.product.mapper.ProductMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -128,7 +129,7 @@ public class DepositProductService {
                     product.getProductCode()
             );
 
-            // 예금 상푸 우대조건 저장
+            // 예금 상품 우대조건 저장
             productPreferentialConditionService.replacePreferentialConditions(
                     productId,
                     product.getPreferentialConditions()
@@ -182,6 +183,11 @@ public class DepositProductService {
         String keyword = normalizeKeyword(request.getKeyword());
         int sortCode = convertSortCode(request.getSort());
 
+        List<PreferentialConditionType> preferentialConditions =
+                normalizePreferentialConditions(
+                        request.getPreferentialConditions()
+                );
+
         // 조회를 시작할 행 위치 계산
         int offset = (page - 1) * size;
 
@@ -192,6 +198,7 @@ public class DepositProductService {
                         keyword,
                         savingTerm,
                         null,
+                        preferentialConditions,
                         sortCode,
                         offset,
                         size
@@ -203,7 +210,8 @@ public class DepositProductService {
                         DEPOSIT_PRODUCT_TYPE,
                         keyword,
                         savingTerm,
-                        null
+                        null,
+                        preferentialConditions
                         );
 
         // 전체 페이지 수 계산
@@ -246,6 +254,17 @@ public class DepositProductService {
         }
 
         return keyword.trim();
+    }
+
+    // 우대조건이 없으면 필터를 적용하지 않도록 정리
+    private List<PreferentialConditionType> normalizePreferentialConditions(
+            List<PreferentialConditionType> preferentialConditions
+    ){
+        if(preferentialConditions == null || preferentialConditions.isEmpty()){
+            return null;
+        }
+
+        return preferentialConditions;
     }
 
     // 정렬 문자열을  안전한 정렬  코드로 변환
