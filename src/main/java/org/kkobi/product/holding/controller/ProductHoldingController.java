@@ -1,5 +1,6 @@
 package org.kkobi.product.holding.controller;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
@@ -40,7 +41,10 @@ public class ProductHoldingController {
 
     // 로그인 사용자의 보유 예적금 목록 조회
     @GetMapping
-    public ResponseEntity<List<ProductHoldingListItemResponseDto>> getHoldingProducts (@AuthenticationPrincipal CustomUserDetails authenticateUser){
+    public ResponseEntity<List<ProductHoldingListItemResponseDto>> getHoldingProducts (
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser
+    ){
 
         List<ProductHoldingListItemResponseDto> response = productHoldingService.getHoldingProducts(
                 authenticateUser.getUserId());

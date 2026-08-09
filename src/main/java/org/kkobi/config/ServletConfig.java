@@ -50,7 +50,8 @@ import java.util.List;
         SwaggerUiOAuthProperties.class,
         SwaggerConfig.class,
         CacheOrGroupedOpenApiCondition.class,
-        JacksonAutoConfiguration.class
+        JacksonAutoConfiguration.class,
+        OpenApiConfig.class
 })
 public class ServletConfig implements WebMvcConfigurer {
 
