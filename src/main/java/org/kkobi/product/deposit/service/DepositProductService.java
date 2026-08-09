@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.kkobi.product.service.ProductPreferentialConditionService;
 
 import java.net.URI;
 import java.util.List;
@@ -25,8 +26,12 @@ public class DepositProductService {
 
     // 외부 API 호출에 사용하는 HTTP 클라이언트
     private final RestTemplate restTemplate;
+
     // 예금 상품 DB 접근 Mapper
     private final ProductMapper productMapper;
+
+    // 상품 우대조건 저장 처리
+    private final ProductPreferentialConditionService productPreferentialConditionService;
 
     // 금융감독원 금융상품통합비교공시 API 기본 주소
     @Value("${finlife.api.base-url}")
@@ -114,7 +119,20 @@ public class DepositProductService {
     private void saveDepositProducts(DepositApiResponse.Result result){
 
         for(DepositProductDto product : result.getBaseList()) {
+            // 예금 상품 저장
             productMapper.saveDepositProduct(product);
+
+            // 저장된 예금 상품 ID 조회
+            Long productId = productMapper.getDepositProductId(
+                    product.getFinancialCompanyNumber(),
+                    product.getProductCode()
+            );
+
+            // 예금 상푸 우대조건 저장
+            productPreferentialConditionService.replacePreferentialConditions(
+                    productId,
+                    product.getPreferentialConditions()
+            );
         }
 
         for(DepositProductOptionDto option : result.getOptionList()){
