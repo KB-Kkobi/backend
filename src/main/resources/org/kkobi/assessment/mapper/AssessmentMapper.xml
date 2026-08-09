@@ -17,10 +17,31 @@
         LIMIT 1
     </select>
 
-    <select id="getPersonaIdByName" resultType="java.lang.Long">
+    <select id="getLatestAssessmentResultDetails"
+            resultType="org.kkobi.assessment.domain.AssessmentResultDetails">
+        SELECT
+            r.result_id,
+            p.persona_name,
+            p.description,
+            p.feature,
+            p.strength,
+            p.caution,
+            p.stock_ratio,
+            p.bond_ratio,
+            p.deposit_ratio,
+            r.created_at AS analyzed_at
+        FROM results r
+        JOIN personas p
+          ON p.persona_id = r.persona_id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.created_at DESC, r.result_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="getPersonaIdByAxisCode" resultType="java.lang.Long">
         SELECT persona_id
         FROM personas
-        WHERE persona_name = #{personaName}
+        WHERE axis_code = #{axisCode}
         ORDER BY persona_id
         LIMIT 1
     </select>
