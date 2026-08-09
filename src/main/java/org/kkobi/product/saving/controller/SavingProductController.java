@@ -16,15 +16,12 @@ public class SavingProductController {
     private final SavingProductService savingProductService;
 
     // 금융감독원 적금 상품 데이터를 수집하여 DB에 저장
-    @PostMapping(
-            value = "/collect",
-            produces = "text/plain;charset=UTF-8"
-    )
-    public ResponseEntity<String> collectSavingProducts() {
+    @PostMapping("/collect")
+    public ResponseEntity<Void> collectSavingProducts() {
 
         savingProductService.collectSavingProducts();
 
-        return ResponseEntity.ok("적금 상품 데이터 수집이 완료되었습니다");
+        return ResponseEntity.ok().build();
     }
 
     // 상품 ID로 적금 상품 상세 정보 조회

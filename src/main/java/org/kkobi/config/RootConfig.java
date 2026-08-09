@@ -25,6 +25,8 @@ import javax.sql.DataSource;
         "org.kkobi.product.deposit.service",
         "org.kkobi.product.saving.service",
         "org.kkobi.product.holding.service",
+        "org.kkobi.product.service",
+        "org.kkobi.product.parser",
         "org.kkobi.account.service",
         "org.kkobi.external.kis.config",
         "org.kkobi.external.kis.auth",
