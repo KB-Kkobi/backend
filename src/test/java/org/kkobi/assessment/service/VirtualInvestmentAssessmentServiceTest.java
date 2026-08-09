@@ -193,7 +193,13 @@ class VirtualInvestmentAssessmentServiceTest {
         }
 
         @Override
-        public Long getPersonaIdByName(String personaName) {
+        public org.kkobi.assessment.domain.AssessmentResultDetails
+                getLatestAssessmentResultDetails(Long userId) {
+            return null;
+        }
+
+        @Override
+        public Long getPersonaIdByAxisCode(String axisCode) {
             return 1L;
         }
 

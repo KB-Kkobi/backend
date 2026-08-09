@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.service.GameAssessmentService;
 import org.kkobi.game.dto.GameActionRequest;
 import org.kkobi.game.dto.GameActionResponse;
+import org.kkobi.game.dto.GameCompletionResponse;
 import org.kkobi.game.dto.GameStartRequest;
 import org.kkobi.game.dto.GameStartResponse;
 import org.kkobi.game.dto.GameStatusResponse;
@@ -55,6 +56,14 @@ public class GameController {
         return ResponseEntity.ok(gameActionService.saveGameAction(
                 authenticatedUser.getUserId(),
                 request
+        ));
+    }
+
+    @PostMapping("/completion")
+    public ResponseEntity<GameCompletionResponse> completeGame(
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
+        return ResponseEntity.ok(gameAssessmentService.completeGame(
+                authenticatedUser.getUserId()
         ));
     }
 }
