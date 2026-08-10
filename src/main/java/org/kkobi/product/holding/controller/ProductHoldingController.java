@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
 import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
+import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.kkobi.product.holding.service.ProductHoldingService;
 import org.kkobi.security.principal.CustomUserDetails;
@@ -44,6 +45,17 @@ public class ProductHoldingController {
 
         List<ProductHoldingListItemResponseDto> response = productHoldingService.getHoldingProducts(
                 authenticateUser.getUserId());
+
+        return ResponseEntity.ok(response);
+    }
+
+    //로그인 사용자의 전체 저축 자산 현황 조회
+    @GetMapping("/assets")
+    public ResponseEntity<SavingsAssetStatusResponseDto> getSavingsAssetStatus(
+            @AuthenticationPrincipal CustomUserDetails authenticateUser
+    ){
+        SavingsAssetStatusResponseDto response =
+                productHoldingService.getSavingAssetStatus(authenticateUser.getUserId());
 
         return ResponseEntity.ok(response);
     }

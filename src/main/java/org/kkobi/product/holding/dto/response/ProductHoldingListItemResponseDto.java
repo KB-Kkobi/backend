@@ -48,8 +48,17 @@ public class ProductHoldingListItemResponseDto {
     // 현재까지 발생한 예상 이자
     private BigDecimal accruedInterest;
 
-    // 현재 평가금액
+    // 현재 세전 평가금액
     private BigDecimal currentValue;
+
+    // 현재까지 발생한 세후 이자
+    private BigDecimal afterTaxInterest;
+
+    // 현재 세후 평가금액
+    private BigDecimal afterTaxCurrentValue;
+
+    // 현재 수익률
+    private BigDecimal returnRate;
 
     // 만기 예상 이자
     private BigDecimal expectedInterest;
