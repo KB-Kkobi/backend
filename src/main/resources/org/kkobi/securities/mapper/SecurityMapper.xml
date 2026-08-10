@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.securities.mapper.SecurityMapper">
+
+    <!-- 종목 리스트 조회 (type 필터, 페이지네이션) -->
+    <select id="getSecurityList"
+            resultType="org.kkobi.securities.dto.response.SecurityListItemResponse">
+        SELECT
+            security_id,
+            ticker,
+            name,
+            type,
+            kis_code IS NOT NULL AS kis_supported
+        FROM securities
+        <where>
+            <if test="type != null">
+                type = #{type}
+            </if>
+        </where>
+        ORDER BY security_id ASC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 종목 리스트 조건에 맞는 전체 개수 조회 -->
+    <select id="countSecurityList" resultType="long">
+        SELECT COUNT(*)
+        FROM securities
+        <where>
+            <if test="type != null">
+                type = #{type}
+            </if>
+        </where>
+    </select>
+
+    <!-- ticker로 종목 상세 조회 -->
+    <select id="getSecurityByTicker"
+            resultType="org.kkobi.securities.dto.response.SecurityDetailResponse">
+        SELECT
+            security_id,
+            ticker,
+            name,
+            type,
+            kis_code IS NOT NULL AS kis_supported,
+            market,
+            sector,
+            market_cap,
+            volatility,
+            mdd AS max_drawdown,
+            average_daily_move,
+            average_volume
+        FROM securities
+        WHERE ticker = #{ticker}
+    </select>
+
+    <!-- 여러 ticker에 대한 (ticker, kis_code) 배치 조회 -->
+    <select id="findKisCodesByTickers"
+            resultType="org.kkobi.securities.dto.response.TickerKisCodeRow">
+        SELECT
+            ticker,
+            kis_code
+        FROM securities
+        WHERE ticker IN
+        <foreach collection="tickers" item="t" open="(" separator="," close=")">
+            #{t}
+        </foreach>
+    </select>
+
+</mapper>

@@ -29,7 +29,8 @@ import java.util.List;
         "org.kkobi.game.controller",
         "org.kkobi.account.controller",
         "org.kkobi.external.kis.controller",
-        "org.kkobi.external.kis.websocket"
+        "org.kkobi.external.kis.websocket",
+        "org.kkobi.securities.controller"
 })
 public class ServletConfig implements WebMvcConfigurer {
 

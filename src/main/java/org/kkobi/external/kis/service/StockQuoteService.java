@@ -54,8 +54,8 @@ public class StockQuoteService {
             throw new IllegalArgumentException("종목 코드는 필수입니다.");
         }
         String trimmed = stockCode.trim();
-        if (!trimmed.matches("\\d{6}")) {
-            throw new IllegalArgumentException("종목 코드는 6자리 숫자여야 합니다.");
+        if (!trimmed.matches("[0-9A-Z]{6}")) {
+            throw new IllegalArgumentException("종목 코드는 6자리 영숫자여야 합니다.");
         }
         return trimmed;
     }
