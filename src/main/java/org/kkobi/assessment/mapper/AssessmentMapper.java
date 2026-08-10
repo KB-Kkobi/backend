@@ -3,12 +3,15 @@ package org.kkobi.assessment.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.assessment.domain.AssessmentResultDetails;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 
 public interface AssessmentMapper {
 
     AssessmentScore getLatestAssessmentScore(@Param("userId") Long userId);
 
     AssessmentResultDetails getLatestAssessmentResultDetails(@Param("userId") Long userId);
+
+    AssessmentResultResponseDto getLatestAssessmentResult(@Param("userId") Long userId);
 
     Long getPersonaIdByAxisCode(@Param("axisCode") String axisCode);
 
