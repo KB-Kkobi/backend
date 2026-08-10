@@ -1,6 +1,8 @@
 package org.kkobi.product.holding.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
@@ -22,11 +24,16 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/products/holdings")
+@Tag(name = "예적금 보유", description ="예적금 가입 및 보유 상품 조회 API")
 public class ProductHoldingController {
 
     private final ProductHoldingService productHoldingService;
 
     // 로그인 사용자가 예금 또는 적금 상품에 가입
+    @Operation(
+            summary = "예적금 상품 가입",
+            description = "선택한 예금 또는 적금 상품에 가입합니다."
+    )
     @PostMapping
     public ResponseEntity<ProductSubscriptionResponseDto> subscribeProduct(
             @Parameter(hidden = true)
@@ -41,6 +48,10 @@ public class ProductHoldingController {
     }
 
     // 로그인 사용자의 보유 예적금 목록 조회
+    @Operation(
+            summary = "보유 예적금 조회",
+            description = "로그인한 사용자가 보유한 예금 및 적금 상품을 조회합니다."
+    )
     @GetMapping
     public ResponseEntity<List<ProductHoldingListItemResponseDto>> getHoldingProducts (
             @Parameter(hidden = true)
