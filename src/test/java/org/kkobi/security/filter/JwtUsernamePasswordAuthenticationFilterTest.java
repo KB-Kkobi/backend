@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kkobi.security.jwt.JwtProvider;
+import org.kkobi.security.token.RefreshTokenCookieManager;
 import org.kkobi.security.token.RefreshTokenService;
 import org.kkobi.security.token.RefreshTokenStore;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -47,11 +48,16 @@ class JwtUsernamePasswordAuthenticationFilterTest {
         };
         RefreshTokenStore refreshTokenStore = new InMemoryRefreshTokenStore();
         RefreshTokenService refreshTokenService = new RefreshTokenService(jwtProvider, refreshTokenStore);
-        filter = new JwtUsernamePasswordAuthenticationFilter(authenticationManager, refreshTokenService);
+        RefreshTokenCookieManager cookieManager = new RefreshTokenCookieManager(true, "Strict");
+        filter = new JwtUsernamePasswordAuthenticationFilter(
+                authenticationManager,
+                refreshTokenService,
+                cookieManager
+        );
     }
 
     @Test
-    void returnsAccessAndRefreshTokensForValidCredentials() throws Exception {
+    void returnsAccessTokenAndStoresRefreshTokenInHttpOnlyCookie() throws Exception {
         MockHttpServletResponse response = performLogin(
                 "{\"email\":\"user@example.com\",\"password\":\"correct-password\"}");
 
@@ -63,11 +69,25 @@ class JwtUsernamePasswordAuthenticationFilterTest {
         JsonNode body = objectMapper.readTree(response.getContentAsString());
         assertEquals("Bearer", body.get("tokenType").asText());
         assertEquals(EMAIL, jwtProvider.getSubject(body.get("accessToken").asText()));
-        assertEquals(EMAIL, jwtProvider.getSubject(body.get("refreshToken").asText()));
         assertTrue(jwtProvider.validateAccessToken(body.get("accessToken").asText()));
-        assertTrue(jwtProvider.validateRefreshToken(body.get("refreshToken").asText()));
+        assertFalse(body.has("refreshToken"));
         assertTrue(body.get("refreshTokenExpiresAt").asLong()
                 > body.get("accessTokenExpiresAt").asLong());
+
+        String setCookie = response.getHeader("Set-Cookie");
+        assertNotNull(setCookie);
+        assertTrue(setCookie.startsWith(RefreshTokenCookieManager.COOKIE_NAME + "="));
+        assertTrue(setCookie.contains("Path=/api/auth"));
+        assertTrue(setCookie.contains("Secure"));
+        assertTrue(setCookie.contains("HttpOnly"));
+        assertTrue(setCookie.contains("SameSite=Strict"));
+
+        String refreshToken = setCookie.substring(
+                (RefreshTokenCookieManager.COOKIE_NAME + "=").length(),
+                setCookie.indexOf(';')
+        );
+        assertEquals(EMAIL, jwtProvider.getSubject(refreshToken));
+        assertTrue(jwtProvider.validateRefreshToken(refreshToken));
     }
 
     @Test

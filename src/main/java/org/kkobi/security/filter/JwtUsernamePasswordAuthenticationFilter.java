@@ -1,6 +1,7 @@
 package org.kkobi.security.filter;
 
 import org.kkobi.security.jwt.JwtToken;
+import org.kkobi.security.token.RefreshTokenCookieManager;
 import org.kkobi.security.token.RefreshTokenService;
 import org.kkobi.security.util.JsonResponse;
 import org.kkobi.users.dto.request.LoginRequest;
@@ -22,12 +23,18 @@ public class JwtUsernamePasswordAuthenticationFilter extends UsernamePasswordAut
     // 아이디와 비밀번호 로그인에 사용할 URL과 JSON 응답 핸들러를 설정
     public JwtUsernamePasswordAuthenticationFilter(
             AuthenticationManager authenticationManager,
-            RefreshTokenService refreshTokenService
+            RefreshTokenService refreshTokenService,
+            RefreshTokenCookieManager refreshTokenCookieManager
     ) {
         super(authenticationManager);
         setFilterProcessesUrl("/api/auth/login");
         setAuthenticationSuccessHandler((request, response, authentication) -> {
             JwtToken jwtToken = refreshTokenService.issue(authentication.getName());
+            refreshTokenCookieManager.write(
+                    response,
+                    jwtToken.getRefreshToken(),
+                    jwtToken.getRefreshTokenExpiresAt()
+            );
             JsonResponse.send(response, TokenResponse.from(jwtToken));
         });
         setAuthenticationFailureHandler((request, response, exception) -> {
