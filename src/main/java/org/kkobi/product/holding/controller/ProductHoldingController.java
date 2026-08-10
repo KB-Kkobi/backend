@@ -7,17 +7,14 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
 import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
+import org.kkobi.product.holding.dto.response.ProductTerminationResponseDto;
 import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 import org.kkobi.product.holding.service.ProductHoldingService;
 import org.kkobi.security.principal.CustomUserDetails;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 import java.util.List;
@@ -46,6 +43,26 @@ public class ProductHoldingController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    // 로그인 사용자의 보유 예적금을 해지
+    @Operation(
+            summary = "예적금 상품 해지",
+            description = "로그인한 사용자가 보유 중인 예금 또는 적금 상품을 해지합니다."
+    )
+    @PostMapping("/{holdingProductId}/terminate")
+    public ResponseEntity<ProductTerminationResponseDto> terminateProduct(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser,
+            @PathVariable Long holdingProductId
+    ) {
+        ProductTerminationResponseDto response =
+                productHoldingService.terminateProduct(
+                        authenticateUser.getUserId(),
+                        holdingProductId
+                );
+
+        return ResponseEntity.ok(response);
     }
 
     // 로그인 사용자의 보유 예적금 목록 조회
