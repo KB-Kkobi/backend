@@ -3,6 +3,9 @@ services:
     image: mysql:8.0.46
     container_name: kkobi-mysql
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+
 
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -67,6 +70,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      KIS_BASE_URL: ${KIS_BASE_URL:-https://openapi.koreainvestment.com:9443}
+      KIS_APP_KEY: ${KIS_APP_KEY}
+      KIS_APP_SECRET: ${KIS_APP_SECRET}
 
     ports:
       - "127.0.0.1:8080:8080"

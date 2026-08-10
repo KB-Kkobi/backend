@@ -62,7 +62,7 @@ jobs:
       id-token: write
 
     steps:
-      # EC2에 전달할 Compose 파일을 내려받는다.
+      # EC2에 전달할 Compose 파일과 마이그레이션 파일을 내려받는다.
       - name: Checkout repository
         uses: actions/checkout@v7
 
@@ -84,16 +84,42 @@ jobs:
           # Compose 파일을 한 줄 문자열로 변환한다.
           COMPOSE_BASE64="$(base64 -w 0 compose.ec2.yaml)"
 
+          # Flyway 마이그레이션 파일을 압축한 뒤 한 줄 문자열로 변환한다.
+          tar -czf migration.tar.gz -C src/main/resources/db migration
+          MIGRATION_BASE64="$(base64 -w 0 migration.tar.gz)"
+
           # EC2 내부에서 실행할 명령 목록을 만든다.
           cat > ssm-parameters.json <<EOF
           {
             "commands": [
               "set -eu",
+
+              "echo 'Updating Compose configuration...'",
               "printf '%s' '$COMPOSE_BASE64' | base64 -d > /opt/kkobi/compose.ec2.yaml",
+
+              "echo 'Updating Flyway migration files...'",
+              "rm -rf /tmp/kkobi-migration",
+              "mkdir -p /tmp/kkobi-migration",
+              "printf '%s' '$MIGRATION_BASE64' | base64 -d > /tmp/kkobi-migration/migration.tar.gz",
+              "tar -xzf /tmp/kkobi-migration/migration.tar.gz -C /tmp/kkobi-migration",
+              "mkdir -p /opt/kkobi/migration",
+              "cp -f /tmp/kkobi-migration/migration/*.sql /opt/kkobi/migration/",
+              "rm -rf /tmp/kkobi-migration",
+
               "cd /opt/kkobi",
-              "docker compose -f compose.ec2.yaml pull backend",
+
+              "echo 'Pulling deployment images...'",
+              "docker compose -f compose.ec2.yaml pull flyway backend",
+
+              "echo 'Running Flyway migrations...'",
+              "docker compose -f compose.ec2.yaml run --rm flyway",
+
+              "echo 'Deploying backend...'",
               "docker compose -f compose.ec2.yaml up -d --no-deps backend",
+
+              "echo 'Checking backend health...'",
               "for attempt in \$(seq 1 30); do if curl -fsS http://127.0.0.1:8080/api/health; then echo; echo 'Backend health check passed.'; exit 0; fi; echo \"Waiting for backend... (\$attempt/30)\"; sleep 5; done",
+
               "echo 'Backend health check failed.'",
               "docker compose -f compose.ec2.yaml logs --tail=100 backend",
               "exit 1"

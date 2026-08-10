@@ -52,6 +52,15 @@ public class CommonExceptionAdvice {
         return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
     }
 
+    // KIS Open API 호출 실패를 JSON으로 반환
+    @ExceptionHandler(KisApiException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleKisApi(KisApiException ex) {
+        log.warn("KIS API 호출 실패: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public String except(Exception ex, Model model){
 

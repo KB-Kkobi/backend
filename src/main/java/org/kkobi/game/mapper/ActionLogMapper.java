@@ -12,4 +12,6 @@ public interface ActionLogMapper {
 
     // 사용자별 게임 행동 로그 조회
     List<ActionLogDto> getActionLogsByUserId(@Param("userId") Long userId);
+
+    int deleteActionLogsByUserId(@Param("userId") Long userId);
 }

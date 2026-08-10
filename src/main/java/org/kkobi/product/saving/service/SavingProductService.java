@@ -7,6 +7,7 @@ import org.kkobi.product.dto.response.ProductDetailResponseDto;
 import org.kkobi.product.dto.response.ProductListItemResponseDto;
 import org.kkobi.product.dto.response.ProductListResponseDto;
 import org.kkobi.product.dto.response.ProductOptionResponseDto;
+import org.kkobi.product.enums.PreferentialConditionType;
 import org.kkobi.product.saving.dto.SavingApiResponse;
 import org.kkobi.product.saving.dto.SavingProductDto;
 import org.kkobi.product.saving.dto.SavingProductOptionDto;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.kkobi.product.service.ProductPreferentialConditionService;
 
 import java.net.URI;
 import java.util.List;
@@ -29,6 +31,9 @@ public class SavingProductService {
 
     // 적금 상품 DB 접근 Mapper
     private final ProductMapper productMapper;
+
+    // 상품 우대조건 저장 처리
+    private final ProductPreferentialConditionService productPreferentialConditionService;
 
     // 금융감독원 금융상품통합비교공시 API 기본 주소
     @Value("${finlife.api.base-url}")
@@ -86,7 +91,21 @@ public class SavingProductService {
     private void saveSavingProducts(SavingApiResponse.Result result) {
 
         for (SavingProductDto product : result.getBaseList()){
+
+            //적금 상품 저장
             productMapper.saveSavingProduct(product);
+
+            // 저장된 적금 상품 ID 조회
+            Long productId = productMapper.getSavingProductId(
+                    product.getFinancialCompanyNumber(),
+                    product.getProductCode()
+            );
+
+            // 적금 상품 우대조건 저장
+            productPreferentialConditionService.replacePreferentialConditions(
+                    productId,
+                    product.getPreferentialConditions()
+            );
         }
 
         for (SavingProductOptionDto option : result.getOptionList()) {
@@ -167,6 +186,11 @@ public class SavingProductService {
         String reserveType = normalizeReserveType(request.getReserveType());
         int sortCode = convertSortCode(request.getSort());
 
+        List<PreferentialConditionType> preferentailConditions =
+                normalizePreferentialConditions(
+                        request.getPreferentialConditions()
+                );
+
         // 조회를 시작할 행 위치 계산
         int offset = (page- 1) * size;
 
@@ -177,6 +201,7 @@ public class SavingProductService {
                         keyword,
                         savingTerm,
                         reserveType,
+                        preferentailConditions,
                         sortCode,
                         offset,
                         size
@@ -188,7 +213,8 @@ public class SavingProductService {
                         SAVING_PRODUCT_TYPE,
                         keyword,
                         savingTerm,
-                        reserveType
+                        reserveType,
+                        preferentailConditions
                 );
 
         // 전체 페이지 수 계산
@@ -203,6 +229,17 @@ public class SavingProductService {
         response.setTotalPages(totalPages);
 
         return response;
+    }
+
+    // 우대조건이 없으면 필터를 적용하지 않도록 정리
+    private List<PreferentialConditionType> normalizePreferentialConditions(
+            List<PreferentialConditionType> preferentailConditions
+    ) {
+        if(preferentailConditions == null ||  preferentailConditions.isEmpty()){
+            return null;
+        }
+
+        return preferentailConditions;
     }
 
     // 페이지 번호를 정상 범위로 보정

@@ -4,11 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.GameScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentResult;
+import org.kkobi.assessment.domain.AssessmentResultDetails;
 import org.kkobi.assessment.domain.AssessmentScore;
 import org.kkobi.assessment.domain.BehaviorAnalysisResult;
 import org.kkobi.assessment.domain.BehaviorContext;
 import org.kkobi.assessment.domain.ScoreDelta;
 import org.kkobi.game.dto.ActionLogDto;
+import org.kkobi.game.dto.GameCompletionResponse;
 import org.kkobi.game.service.ActionLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,19 @@ public class GameAssessmentService {
     private final BehaviorRuleEngine behaviorRuleEngine;
     private final GameScoreCalculator gameScoreCalculator;
     private final AssessmentResultService assessmentResultService;
+
+    public boolean existsCompletedGame(Long userId) {
+        return assessmentResultService.existsAssessmentResult(userId);
+    }
+
+    @Transactional
+    public GameCompletionResponse completeGame(Long userId) {
+        validateGameCompletion(userId);
+        AssessmentResult assessmentResult = calculateGameAssessment(userId);
+        AssessmentResultDetails resultDetails = assessmentResultService
+                .getLatestAssessmentResultDetails(userId);
+        return new GameCompletionResponse(assessmentResult, resultDetails);
+    }
 
     @Transactional
     public AssessmentResult calculateGameAssessment(Long userId) {
@@ -41,6 +56,21 @@ public class GameAssessmentService {
                 assessmentScore,
                 gameCompletionAnalysis.getAppliedRules()
         );
+    }
+
+    private void validateGameCompletion(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+        }
+        if (existsCompletedGame(userId)) {
+            throw new IllegalStateException("이미 완료된 게임입니다.");
+        }
+        boolean existsInitialAllocation = actionLogService.getActionLogsByUserId(userId)
+                .stream()
+                .anyMatch(actionLog -> "INITIAL_ALLOCATION".equals(actionLog.getActionType()));
+        if (!existsInitialAllocation) {
+            throw new IllegalStateException("게임 시작 기록을 찾을 수 없습니다.");
+        }
     }
 
     private BehaviorAnalysisResult calculateGameCompletionAnalysis(List<ActionLogDto> actionLogs) {

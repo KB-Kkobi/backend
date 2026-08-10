@@ -12,6 +12,8 @@ import org.kkobi.assessment.enums.MarketState;
 import org.kkobi.game.calculator.GamePriceRateCalculator;
 import org.kkobi.game.calculator.GameSecurityReturnCalculator;
 import org.kkobi.game.dto.ActionLogDto;
+import org.kkobi.game.dto.GameActionRequest;
+import org.kkobi.game.dto.GameActionResponse;
 import org.kkobi.game.dto.GameBehaviorRequest;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
@@ -28,6 +30,7 @@ import java.util.List;
 public class GameActionService {
 
     private static final Long GAME_SECURITY_ID = 1L;
+    private static final String GAME_SCENARIO_ID = "SC001";
 
     private final ActionLogService actionLogService;
     private final ScenarioService scenarioService;
@@ -37,7 +40,15 @@ public class GameActionService {
     private final BehaviorRuleEngine behaviorRuleEngine;
 
     @Transactional
-    public Long saveGameActionLog(GameBehaviorRequest request) {
+    public GameActionResponse saveGameAction(Long userId, GameActionRequest request) {
+        validateStartedGame(userId);
+        GameBehaviorRequest gameBehaviorRequest = createGameBehaviorRequest(userId, request);
+        ActionLogDto actionLog = saveGameActionLog(gameBehaviorRequest);
+        return createGameActionResponse(actionLog);
+    }
+
+    @Transactional
+    public ActionLogDto saveGameActionLog(GameBehaviorRequest request) {
         validateGameBehavior(request);
         ScenarioDto scenario = scenarioService.getScenario(request.getScenarioId());
         validateGameTick(request, scenario);
@@ -55,7 +66,62 @@ public class GameActionService {
         BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(behaviorContext);
         ActionLogDto actionLog = createActionLog(request, behaviorContext, analysisResult);
 
-        return actionLogService.saveActionLog(actionLog);
+        actionLogService.saveActionLog(actionLog);
+        return actionLog;
+    }
+
+    private void validateStartedGame(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
+        }
+        boolean existsInitialAllocation = actionLogService.getActionLogsByUserId(userId)
+                .stream()
+                .anyMatch(actionLog -> "INITIAL_ALLOCATION".equals(actionLog.getActionType()));
+        if (!existsInitialAllocation) {
+            throw new IllegalStateException("게임을 먼저 시작해야 합니다.");
+        }
+    }
+
+    private GameBehaviorRequest createGameBehaviorRequest(
+            Long userId,
+            GameActionRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("게임 행동 요청은 필수입니다.");
+        }
+        GameBehaviorRequest gameBehaviorRequest = new GameBehaviorRequest();
+        gameBehaviorRequest.setUserId(userId);
+        gameBehaviorRequest.setScenarioId(GAME_SCENARIO_ID);
+        gameBehaviorRequest.setTick(request.getGameTick());
+        gameBehaviorRequest.setActionType(request.getActionType());
+        gameBehaviorRequest.setAssetType(request.getAssetType());
+        gameBehaviorRequest.setActionAmount(request.getActionAmount());
+        gameBehaviorRequest.setCurrentCash(request.getCurrentCash());
+        gameBehaviorRequest.setCurrentStock(request.getCurrentStockPrincipal());
+        gameBehaviorRequest.setCurrentDeposit(request.getCurrentDeposit());
+        return gameBehaviorRequest;
+    }
+
+    private GameActionResponse createGameActionResponse(ActionLogDto actionLog) {
+        long totalAssetPrincipal = Math.addExact(
+                Math.addExact(actionLog.getCurrentCash(), actionLog.getCurrentStock()),
+                actionLog.getCurrentDeposit()
+        );
+        return new GameActionResponse(
+                actionLog.getActionLogId(),
+                actionLog.getGameTick(),
+                actionLog.getActionType(),
+                actionLog.getAssetType(),
+                actionLog.getActionAmount(),
+                actionLog.getCurrentCash(),
+                actionLog.getCurrentStock(),
+                actionLog.getCurrentDeposit(),
+                totalAssetPrincipal,
+                actionLog.getMarketState(),
+                actionLog.getDepositStatus(),
+                actionLog.getRtScoreDelta(),
+                actionLog.getLhScoreDelta(),
+                actionLog.getRpScoreDelta()
+        );
     }
 
     private void validateGameBehavior(GameBehaviorRequest request) {
@@ -84,7 +150,20 @@ public class GameActionService {
         }
 
         validateActionAssetType(actionType, assetType);
+        validateActionAmount(actionType, request.getActionAmount());
         validateAssetSnapshot(request);
+    }
+
+    private void validateActionAmount(
+            BehaviorActionType actionType,
+            Long actionAmount) {
+        if (actionAmount == null || actionAmount < 0) {
+            throw new IllegalArgumentException("행동 금액은 0 이상이어야 합니다.");
+        }
+        if ((actionType == BehaviorActionType.BUY || actionType == BehaviorActionType.SELL)
+                && actionAmount == 0) {
+            throw new IllegalArgumentException("매수·매도 금액은 0보다 커야 합니다.");
+        }
     }
 
     private void validateGameTick(GameBehaviorRequest request, ScenarioDto scenario) {

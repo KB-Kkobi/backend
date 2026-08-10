@@ -78,13 +78,19 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/"),
                                 new AntPathRequestMatcher("/resources/**"),
                                 new AntPathRequestMatcher("/assets/**"),
+                                new AntPathRequestMatcher("/swagger-ui.html"),
+                                new AntPathRequestMatcher("/swagger-ui/**"),
+                                new AntPathRequestMatcher("/v3/api-docs"),
+                                new AntPathRequestMatcher("/v3/api-docs/**"),
                                 new AntPathRequestMatcher("/error"))
                         .permitAll()
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/auth/login"),
                                 new AntPathRequestMatcher("/api/auth/signup"),
                                 new AntPathRequestMatcher("/api/security/all"),
-                                new AntPathRequestMatcher("/api/games/scenarios/**"))
+                                new AntPathRequestMatcher("/api/games/scenarios/**"),
+                                new AntPathRequestMatcher("/api/stocks/**"),
+                                new AntPathRequestMatcher("/ws-stocks/**"))
                         .permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/health", HttpMethod.GET.name())).permitAll()
                         .anyRequest().authenticated())

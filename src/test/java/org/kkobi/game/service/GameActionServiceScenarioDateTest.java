@@ -10,6 +10,8 @@ import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
 import org.kkobi.game.calculator.GamePriceRateCalculator;
 import org.kkobi.game.calculator.GameSecurityReturnCalculator;
 import org.kkobi.game.dto.ActionLogDto;
+import org.kkobi.game.dto.GameActionRequest;
+import org.kkobi.game.dto.GameActionResponse;
 import org.kkobi.game.dto.GameBehaviorRequest;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
@@ -20,8 +22,48 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class GameActionServiceScenarioDateTest {
+
+    @Test
+    @DisplayName("게임 행동 요청을 기존 분석 흐름에 연결하고 저장 결과를 응답한다.")
+    void saveGameActionReturnsSavedActionLog() {
+        InMemoryActionLogMapper actionLogMapper = new InMemoryActionLogMapper();
+        GameActionService gameActionService = createGameActionService(actionLogMapper);
+        gameActionService.saveGameActionLog(createGameBehaviorRequest(
+                0,
+                "INITIAL_ALLOCATION",
+                "ALL",
+                0L,
+                1_000L
+        ));
+
+        GameActionRequest request = createGameActionRequest();
+        GameActionResponse response = gameActionService.saveGameAction(1L, request);
+
+        assertEquals(2L, response.getActionLogId());
+        assertEquals(1, response.getGameTick());
+        assertEquals("BUY", response.getActionType());
+        assertEquals("STOCK", response.getAssetType());
+        assertEquals(2_000L, response.getTotalAssetPrincipal());
+        assertEquals("NORMAL", response.getMarketState());
+        assertEquals("NONE", response.getDepositStatus());
+        assertEquals(2, actionLogMapper.getActionLogsByUserId(1L).size());
+    }
+
+    @Test
+    @DisplayName("초기 자산 배분 로그가 없으면 게임 행동을 저장하지 않는다.")
+    void saveGameActionRejectsGameThatHasNotStarted() {
+        GameActionService gameActionService = createGameActionService(
+                new InMemoryActionLogMapper()
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> gameActionService.saveGameAction(1L, createGameActionRequest())
+        );
+    }
 
     @Test
     @DisplayName("게임 매도에는 증권 보유 기간 규칙을 적용하지 않는다.")
@@ -110,6 +152,18 @@ class GameActionServiceScenarioDateTest {
         return request;
     }
 
+    private GameActionRequest createGameActionRequest() {
+        GameActionRequest request = new GameActionRequest();
+        request.setGameTick(1);
+        request.setActionType("BUY");
+        request.setAssetType("STOCK");
+        request.setActionAmount(1_000L);
+        request.setCurrentCash(0L);
+        request.setCurrentStockPrincipal(2_000L);
+        request.setCurrentDeposit(0L);
+        return request;
+    }
+
     private void assertScoreEquals(String expected, BigDecimal actual) {
         assertEquals(0, new BigDecimal(expected).compareTo(actual));
     }
@@ -130,6 +184,13 @@ class GameActionServiceScenarioDateTest {
             return actionLogs.stream()
                     .filter(actionLog -> userId.equals(actionLog.getUserId()))
                     .toList();
+        }
+
+        @Override
+        public int deleteActionLogsByUserId(Long userId) {
+            int previousSize = actionLogs.size();
+            actionLogs.removeIf(actionLog -> userId.equals(actionLog.getUserId()));
+            return previousSize - actionLogs.size();
         }
     }
 }

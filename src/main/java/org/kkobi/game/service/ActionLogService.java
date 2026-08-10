@@ -21,4 +21,8 @@ public class ActionLogService {
     public List<ActionLogDto> getActionLogsByUserId(Long userId) {
         return actionLogMapper.getActionLogsByUserId(userId);
     }
+
+    public int deleteActionLogsByUserId(Long userId) {
+        return actionLogMapper.deleteActionLogsByUserId(userId);
+    }
 }

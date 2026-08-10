@@ -94,7 +94,7 @@ class GameAssessmentFlowTest {
         assertScoreEquals("45.00", result.getAssessmentScore().getRtScore());
         assertScoreEquals("35.00", result.getAssessmentScore().getLhScore());
         assertScoreEquals("55.00", result.getAssessmentScore().getRpScore());
-        assertEquals(PersonaType.STEADY_ACCUMULATOR, result.getPersonaType());
+        assertEquals(PersonaType.LLH, result.getPersonaType());
         assertEquals(1, assessmentMapper.getSavedResultCount());
         assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
     }
@@ -183,6 +183,13 @@ class GameAssessmentFlowTest {
                     .filter(actionLog -> userId.equals(actionLog.getUserId()))
                     .toList();
         }
+
+        @Override
+        public int deleteActionLogsByUserId(Long userId) {
+            int previousSize = actionLogs.size();
+            actionLogs.removeIf(actionLog -> userId.equals(actionLog.getUserId()));
+            return previousSize - actionLogs.size();
+        }
     }
 
     private static class InMemoryAssessmentMapper implements AssessmentMapper {
@@ -196,7 +203,13 @@ class GameAssessmentFlowTest {
         }
 
         @Override
-        public Long getPersonaIdByName(String personaName) {
+        public org.kkobi.assessment.domain.AssessmentResultDetails
+                getLatestAssessmentResultDetails(Long userId) {
+            return null;
+        }
+
+        @Override
+        public Long getPersonaIdByAxisCode(String axisCode) {
             return 7L;
         }
 

@@ -54,7 +54,7 @@ class BehaviorAnalysisFlowTest {
         assertEquals(0, new BigDecimal("75.00").compareTo(assessmentScore.getRtScore()));
         assertEquals(0, new BigDecimal("40.00").compareTo(assessmentScore.getLhScore()));
         assertEquals(0, new BigDecimal("60.00").compareTo(assessmentScore.getRpScore()));
-        assertEquals(PersonaType.AMBITIOUS_PIONEER, personaType);
+        assertEquals(PersonaType.HLH, personaType);
     }
 
     private BehaviorEvent createCrashBuyEvent() {

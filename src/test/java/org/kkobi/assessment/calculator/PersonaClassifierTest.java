@@ -19,14 +19,14 @@ class PersonaClassifierTest {
     @DisplayName("RT, LH, RP의 High와 Low 조합을 8가지 투자 유형으로 판정한다.")
     void calculatePersona() {
         Map<AssessmentScore, PersonaType> expectedPersonas = new LinkedHashMap<>();
-        expectedPersonas.put(createScore(50, 50, 50), PersonaType.FLAME_CHASER);
-        expectedPersonas.put(createScore(50, 50, 49), PersonaType.SMART_TRADER);
-        expectedPersonas.put(createScore(50, 49, 50), PersonaType.AMBITIOUS_PIONEER);
-        expectedPersonas.put(createScore(50, 49, 49), PersonaType.CONVICTION_VALUE_INVESTOR);
-        expectedPersonas.put(createScore(49, 50, 50), PersonaType.PRACTICAL_INFORMATION_SEEKER);
-        expectedPersonas.put(createScore(49, 50, 49), PersonaType.CASH_PRESERVER);
-        expectedPersonas.put(createScore(49, 49, 50), PersonaType.STEADY_ACCUMULATOR);
-        expectedPersonas.put(createScore(49, 49, 49), PersonaType.STRICT_VAULT_KEEPER);
+        expectedPersonas.put(createScore(50, 50, 50), PersonaType.HHH);
+        expectedPersonas.put(createScore(50, 50, 49), PersonaType.HHL);
+        expectedPersonas.put(createScore(50, 49, 50), PersonaType.HLH);
+        expectedPersonas.put(createScore(50, 49, 49), PersonaType.HLL);
+        expectedPersonas.put(createScore(49, 50, 50), PersonaType.LHH);
+        expectedPersonas.put(createScore(49, 50, 49), PersonaType.LHL);
+        expectedPersonas.put(createScore(49, 49, 50), PersonaType.LLH);
+        expectedPersonas.put(createScore(49, 49, 49), PersonaType.LLL);
 
         expectedPersonas.forEach((assessmentScore, personaType) ->
                 assertEquals(personaType, personaClassifier.calculatePersona(assessmentScore))
