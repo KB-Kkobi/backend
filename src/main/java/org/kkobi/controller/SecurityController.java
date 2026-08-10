@@ -1,5 +1,6 @@
 package org.kkobi.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -11,6 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Log4j2
 @RequestMapping("/api/security")
+@Tag(
+        name = "보안 테스트 API",
+        description = "Spring Security 인증 및 접근 제어 동작을 확인하는 API"
+)
 public class SecurityController {
 
     @GetMapping("/all")
