@@ -79,3 +79,18 @@ ON DUPLICATE KEY UPDATE
                      bond_ratio = incoming.bond_ratio,
                      deposit_ratio = incoming.deposit_ratio,
                      updated_at = CURRENT_TIMESTAMP;
+
+-- 페르소나별 이미지 경로를 저장
+UPDATE personas
+SET image_path = CASE persona_id
+                     WHEN 1 THEN '/resources/images/personas/flame-chaser.png'
+                     WHEN 2 THEN '/resources/images/personas/smart-trader.png'
+                     WHEN 3 THEN '/resources/images/personas/ambitious-pioneer.png'
+                     WHEN 4 THEN '/resources/images/personas/value-investor.png'
+                     WHEN 5 THEN '/resources/images/personas/practical-analyst.png'
+                     WHEN 6 THEN '/resources/images/personas/cash-reserve-keeper.png'
+                     WHEN 7 THEN '/resources/images/personas/steady-saver.png'
+                     WHEN 8 THEN '/resources/images/personas/vault-keeper.png'
+                     ELSE image_path
+    END
+WHERE persona_id IN (1, 2, 3, 4, 5, 6, 7, 8);
