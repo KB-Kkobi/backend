@@ -6,6 +6,7 @@ import org.kkobi.product.deposit.dto.DepositProductOptionDto;
 import org.kkobi.product.dto.response.ProductDetailResponseDto;
 import org.kkobi.product.dto.response.ProductListItemResponseDto;
 import org.kkobi.product.dto.response.ProductOptionResponseDto;
+import org.kkobi.product.enums.PreferentialConditionType;
 import org.kkobi.product.saving.dto.SavingProductDto;
 import org.kkobi.product.saving.dto.SavingProductOptionDto;
 import org.springframework.security.core.parameters.P;
@@ -61,6 +62,8 @@ public interface ProductMapper {
             @Param("keyword") String keyword,
             @Param("savingTerm") Integer savingTerm,
             @Param("reserveType") String reserveType,
+            @Param("preferentialConditions")
+            List<PreferentialConditionType> preferentialConditions,
             @Param("sortCode") Integer sortCode,
             @Param("offset") Integer offset,
             @Param("size") Integer size
@@ -71,6 +74,19 @@ public interface ProductMapper {
             @Param("productType") String productType,
             @Param("keyword") String keyword,
             @Param("savingTerm") Integer savingTerm,
-            @Param("reserveType") String reserveType
+            @Param("reserveType") String reserveType,
+            @Param("preferentialConditions")
+            List<PreferentialConditionType> preferentialConditions
+    );
+
+    // 상품에 저장된 기존 우대조건을 삭제
+    int deleteProductPreferentialConditions(
+            @Param("productId") Long productId
+    );
+
+    // 상품의 우대조건 유형을 저장
+    int saveProductPreferentialCondition(
+            @Param("productId") Long productId,
+            @Param("conditionType") PreferentialConditionType conditionType
     );
 }

@@ -1,6 +1,9 @@
 package org.kkobi.product.dto.request;
 
 import lombok.Data;
+import org.kkobi.product.enums.PreferentialConditionType;
+
+import java.util.List;
 
 // 상품 목록 조회 요청 데이터
 @Data
@@ -11,6 +14,9 @@ public class ProductListRequestDto {
 
     // 가입 기간
     private Integer savingTerm;
+
+    // 우대조건 유형
+    private List<PreferentialConditionType> preferentialConditions;
 
     // 적립 유형 코드
     private String reserveType;

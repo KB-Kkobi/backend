@@ -17,27 +17,27 @@ public class PersonaClassifier {
         boolean highRp = isHighScore(assessmentScore.getRpScore());
 
         if (highRt && highLh && highRp) {
-            return PersonaType.FLAME_CHASER;
+            return PersonaType.HHH;
         }
         if (highRt && highLh) {
-            return PersonaType.SMART_TRADER;
+            return PersonaType.HHL;
         }
         if (highRt && highRp) {
-            return PersonaType.AMBITIOUS_PIONEER;
+            return PersonaType.HLH;
         }
         if (highRt) {
-            return PersonaType.CONVICTION_VALUE_INVESTOR;
+            return PersonaType.HLL;
         }
         if (highLh && highRp) {
-            return PersonaType.PRACTICAL_INFORMATION_SEEKER;
+            return PersonaType.LHH;
         }
         if (highLh) {
-            return PersonaType.CASH_PRESERVER;
+            return PersonaType.LHL;
         }
         if (highRp) {
-            return PersonaType.STEADY_ACCUMULATOR;
+            return PersonaType.LLH;
         }
-        return PersonaType.STRICT_VAULT_KEEPER;
+        return PersonaType.LLL;
     }
 
     private boolean isHighScore(BigDecimal score) {

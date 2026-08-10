@@ -123,6 +123,24 @@
                              updated_at = CURRENT_TIMESTAMP
     </insert>
 
+    <!-- 상품에 저장된 기존 우대조건 삭제 -->
+    <delete id="deleteProductPreferentialConditions">
+        DELETE FROM product_preferential_conditions
+        WHERE product_id = #{productId}
+    </delete>
+
+    <!-- 상품의 우대조건 유형 저장 -->
+    <insert id="saveProductPreferentialCondition">
+        INSERT INTO product_preferential_conditions (
+            product_id,
+            condition_type
+        )
+        VALUES (
+                   #{productId},
+                   #{conditionType}
+               )
+    </insert>
+
     <!-- 금융회사 번호와 상품 코드로 저장된 적금 상품의 PK 조회 -->
     <select id="getSavingProductId" resultType="java.lang.Long">
         SELECT product_id
@@ -241,6 +259,18 @@
         <if test="reserveType != null and reserveType != ''">
             AND po.rsrv_type = #{reserveType}
         </if>
+
+        <!-- 선택한 우대조건을 모두 만족하는 상품만 조회 -->
+        <if test="preferentialConditions != null and preferentialConditions.size() > 0">
+            <foreach collection="preferentialConditions" item="conditionType">
+                AND EXISTS (
+                SELECT 1
+                FROM product_preferential_conditions ppc
+                WHERE ppc.product_id = p.product_id
+                AND ppc.condition_type = #{conditionType}
+                )
+            </foreach>
+        </if>
         )
 
         SELECT
@@ -339,6 +369,18 @@
 
         <if test="reserveType != null and reserveType != ''">
             AND po.rsrv_type = #{reserveType}
+        </if>
+
+        <!-- 선택한 우대조건을 모두 만족하는 상품만 조회 -->
+        <if test="preferentialConditions != null and preferentialConditions.size() > 0">
+            <foreach collection="preferentialConditions" item="conditionType">
+                AND EXISTS (
+                SELECT 1
+                FROM product_preferential_conditions ppc
+                WHERE ppc.product_id = p.product_id
+                AND ppc.condition_type = #{conditionType}
+                )
+            </foreach>
         </if>
         )
 

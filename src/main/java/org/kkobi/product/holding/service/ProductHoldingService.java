@@ -8,6 +8,7 @@ import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
 import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
+import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.mapper.ProductHoldingMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,10 @@ public class ProductHoldingService {
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
 
     private static final BigDecimal DAYS_PER_YEAR = new BigDecimal("365");
+
+    // 이자 소득세율
+    private static final BigDecimal INTEREST_TAX_RATE =
+            new BigDecimal("0.154");
 
     // 로그인 사용자가 예금 또는 적금 상품에 가입
     @Transactional
@@ -107,6 +112,47 @@ public class ProductHoldingService {
                 .toList();
     }
 
+    // 로그인 사용자의 전체 저축 자산 현황 조회
+    @Transactional(readOnly = true)
+    public SavingsAssetStatusResponseDto getSavingAssetStatus(Long userId) {
+        validateUserId(userId);
+
+        List<ProductHoldingListItemResponseDto> holdings =
+                getHoldingProducts(userId);
+
+        BigDecimal totalPrincipal = BigDecimal.ZERO;
+        BigDecimal totalAccuredInterest = BigDecimal.ZERO;
+        BigDecimal totalCurrentValue = BigDecimal.ZERO;
+        BigDecimal totalAfterTaxInterest = BigDecimal.ZERO;
+        BigDecimal totalAfterTaxCurrentValue = BigDecimal.ZERO;
+
+        for(ProductHoldingListItemResponseDto holding : holdings) {
+            totalPrincipal = totalPrincipal.add(holding.getCurrentPrincipal());
+
+            totalAccuredInterest = totalAccuredInterest.add(holding.getAccruedInterest());
+
+            totalCurrentValue = totalCurrentValue.add(holding.getCurrentValue());
+
+            totalAfterTaxInterest = totalAfterTaxInterest.add(holding.getAfterTaxInterest());
+
+            totalAfterTaxCurrentValue = totalAfterTaxCurrentValue.add(holding.getAfterTaxCurrentValue());
+        }
+
+        BigDecimal totalReturnRate = calculateReturnRate(totalPrincipal, totalAfterTaxCurrentValue);
+
+        SavingsAssetStatusResponseDto response = new SavingsAssetStatusResponseDto();
+
+        response.setTotalPrincipal(totalPrincipal);
+        response.setTotalAccruedInterest(totalAccuredInterest);
+        response.setTotalCurrentValue(totalCurrentValue);
+        response.setTotalAfterTaxInterest(totalAfterTaxInterest);
+        response.setTotalAfterTaxCurrentValue(totalAfterTaxCurrentValue);
+        response.setTotalReturnRate(totalReturnRate);
+        response.setHoldings(holdings);
+
+        return response;
+    }
+
     // 보유 예적금 목록 응답 생성
     private ProductHoldingListItemResponseDto createHoldingListItemResponse(ProductHoldingInfoDto holdingProduct){
         LocalDate today = LocalDate.now(KOREA_ZONE_ID);
@@ -114,6 +160,14 @@ public class ProductHoldingService {
         BigDecimal currentPrincipal =  calculateCurrentPrincipal(holdingProduct);
 
         BigDecimal accruedInterest = calculateAccruedInterest(holdingProduct, today);
+
+        BigDecimal currentValue = currentPrincipal.add(accruedInterest);
+
+        BigDecimal afterTaxInterest = calculateAfterTaxInterest(accruedInterest);
+
+        BigDecimal afterTaxCurrentValue = currentPrincipal.add(afterTaxInterest);
+
+        BigDecimal returnRate = calculateReturnRate(currentPrincipal, afterTaxCurrentValue);
 
         BigDecimal expectedInterest = calculateExpectedInterest(holdingProduct);
 
@@ -156,10 +210,16 @@ public class ProductHoldingService {
         );
 
         response.setCurrentPrincipal(currentPrincipal);
+
         response.setAccruedInterest(accruedInterest);
-        response.setCurrentValue(
-                currentPrincipal.add(accruedInterest)
-        );
+
+        response.setCurrentValue(currentValue);
+
+        response.setAfterTaxInterest(afterTaxInterest);
+
+        response.setAfterTaxCurrentValue(afterTaxCurrentValue);
+
+        response.setReturnRate(returnRate);
 
         response.setExpectedInterest(expectedInterest);
         response.setExpectedMaturityAmount(
@@ -347,6 +407,33 @@ public class ProductHoldingService {
                 .multiply(BigDecimal.valueOf(interestDays))
                 .divide(ONE_HUNDRED, 10, RoundingMode.HALF_UP)
                 .divide(DAYS_PER_YEAR, 0, RoundingMode.DOWN);
+    }
+
+    // 이자소득세를 반영한 후 세후 이자 계산
+    private BigDecimal calculateAfterTaxInterest(
+            BigDecimal accruedInterest
+    ){
+        if(accruedInterest == null || accruedInterest.compareTo(BigDecimal.ZERO) <= 0){
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal tax = accruedInterest
+                .multiply(INTEREST_TAX_RATE)
+                .setScale(0,RoundingMode.DOWN);
+
+        return accruedInterest.subtract(tax);
+    }
+
+    // 현재 원금 대비 세후 평가금액의 수익률 계산
+    private BigDecimal calculateReturnRate(BigDecimal currentPrincipal, BigDecimal afterTaxCurrentValue){
+        if(currentPrincipal == null || currentPrincipal.compareTo(BigDecimal.ZERO) <= 0){
+            return new BigDecimal("0.00");
+        }
+
+        return afterTaxCurrentValue
+                .subtract(currentPrincipal)
+                .multiply(ONE_HUNDRED)
+                .divide(currentPrincipal, 2, RoundingMode.HALF_UP);
     }
 
     // 가입일부터 만기일까지의 진행률 계산

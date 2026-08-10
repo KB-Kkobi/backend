@@ -18,6 +18,8 @@ ext {
     springDataRedisVersion = '2.7.18'
     lettuceVersion = '6.1.10.RELEASE'
     lombokVersion = '1.18.30'
+    springDocVersion = '1.8.0'
+    springBootVersion = '2.7.18'
 }
 
 java {
@@ -109,6 +111,11 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+
+    // Swagger OpenAPI
+    implementation "org.springdoc:springdoc-openapi-ui:${springDocVersion}"
+    implementation "org.springframework.boot:spring-boot:${springBootVersion}"
+    implementation "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
 }
 
 test {

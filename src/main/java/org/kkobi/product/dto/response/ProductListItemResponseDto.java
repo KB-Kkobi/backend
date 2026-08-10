@@ -15,7 +15,7 @@ public class ProductListItemResponseDto {
     private String productType;
 
     // 금융회사 이름
-    private String financialCompnayName;
+    private String financialCompanyName;
 
     // 상품 이름
     private String productName;
