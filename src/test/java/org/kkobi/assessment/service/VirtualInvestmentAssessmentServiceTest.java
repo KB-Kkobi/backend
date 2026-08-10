@@ -103,6 +103,8 @@ class VirtualInvestmentAssessmentServiceTest {
         VirtualInvestmentBehaviorRequest request = new VirtualInvestmentBehaviorRequest();
         request.setUserId(1L);
         request.setAccountId(1L);
+        request.setReferenceType("SECURITY_ORDER");
+        request.setReferenceId(1L);
         request.setActionType("SELL");
         request.setAssetType("SECURITY");
         request.setSecurityId(1L);
@@ -122,6 +124,8 @@ class VirtualInvestmentAssessmentServiceTest {
         VirtualInvestmentBehaviorRequest request = new VirtualInvestmentBehaviorRequest();
         request.setUserId(1L);
         request.setAccountId(1L);
+        request.setReferenceType("SECURITY_ORDER");
+        request.setReferenceId(2L);
         request.setActionType("BUY");
         request.setAssetType("SECURITY");
         request.setSecurityId(1L);
