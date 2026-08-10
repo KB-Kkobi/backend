@@ -1,5 +1,6 @@
 package org.kkobi.account.controller;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.account.dto.AccountCreateRequestDto;
 import org.kkobi.account.service.AccountService;
@@ -22,6 +23,7 @@ public class AccountController {
     // 가상투자 최초 시작 시 로그인한 사용자의 계좌 생성
     @PostMapping
     public ResponseEntity<Void> createAccount(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticatedUser,
             @RequestBody AccountCreateRequestDto request
             ) {

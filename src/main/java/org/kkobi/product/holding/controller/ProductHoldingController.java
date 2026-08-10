@@ -29,6 +29,7 @@ public class ProductHoldingController {
     // 로그인 사용자가 예금 또는 적금 상품에 가입
     @PostMapping
     public ResponseEntity<ProductSubscriptionResponseDto> subscribeProduct(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticateUser,
             @Valid @RequestBody ProductSubscriptionRequestDto request) {
         ProductSubscriptionResponseDto response =

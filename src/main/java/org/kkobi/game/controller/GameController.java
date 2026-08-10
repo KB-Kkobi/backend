@@ -1,5 +1,6 @@
 package org.kkobi.game.controller;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.service.GameAssessmentService;
 import org.kkobi.game.dto.GameActionRequest;
@@ -32,6 +33,7 @@ public class GameController {
 
     @GetMapping("/status")
     public ResponseEntity<GameStatusResponse> getGameStatus(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
         boolean completed = gameAssessmentService.existsCompletedGame(
                 authenticatedUser.getUserId()
@@ -41,6 +43,7 @@ public class GameController {
 
     @PostMapping("/start")
     public ResponseEntity<GameStartResponse> startGame(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticatedUser,
             @Valid @RequestBody GameStartRequest request) {
         return ResponseEntity.ok(gameStartService.startGame(
@@ -51,6 +54,7 @@ public class GameController {
 
     @PostMapping("/actions")
     public ResponseEntity<GameActionResponse> saveGameAction(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticatedUser,
             @Valid @RequestBody GameActionRequest request) {
         return ResponseEntity.ok(gameActionService.saveGameAction(
@@ -61,6 +65,7 @@ public class GameController {
 
     @PostMapping("/completion")
     public ResponseEntity<GameCompletionResponse> completeGame(
+            @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
         return ResponseEntity.ok(gameAssessmentService.completeGame(
                 authenticatedUser.getUserId()
