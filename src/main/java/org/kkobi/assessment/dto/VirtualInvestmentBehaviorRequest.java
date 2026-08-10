@@ -10,6 +10,8 @@ public class VirtualInvestmentBehaviorRequest {
 
     private Long userId;
     private Long accountId;
+    private String referenceType;
+    private Long referenceId;
     private String actionType;
     private String assetType;
     private Long securityId;

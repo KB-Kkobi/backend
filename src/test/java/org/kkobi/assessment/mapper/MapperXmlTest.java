@@ -34,6 +34,10 @@ class MapperXmlTest {
                 configuration,
                 "org/kkobi/assessment/mapper/AccountDailySnapshotMapper.xml"
         );
+        parseMapper(
+                configuration,
+                "org/kkobi/assessment/mapper/AssessmentSettlementMapper.xml"
+        );
 
         assertTrue(configuration.hasStatement(
                 "org.kkobi.game.mapper.ActionLogMapper.saveActionLog"
@@ -51,6 +55,14 @@ class MapperXmlTest {
         assertTrue(configuration.hasStatement(
                 "org.kkobi.assessment.mapper.AccountDailySnapshotMapper"
                         + ".saveAccountDailySnapshot"
+        ));
+        assertTrue(configuration.hasStatement(
+                "org.kkobi.assessment.mapper.AssessmentSettlementMapper"
+                        + ".saveProcessingAssessmentSettlement"
+        ));
+        assertTrue(configuration.hasStatement(
+                "org.kkobi.assessment.mapper.AssessmentSettlementMapper"
+                        + ".restartStaleAssessmentSettlement"
         ));
     }
 

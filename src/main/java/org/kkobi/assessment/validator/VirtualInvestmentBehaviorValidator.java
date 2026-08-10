@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.assessment.dto.VirtualInvestmentBehaviorRequest;
 import org.kkobi.assessment.enums.BehaviorActionType;
 import org.kkobi.assessment.enums.BehaviorAssetType;
+import org.kkobi.assessment.enums.VirtualInvestmentReferenceType;
 import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +20,10 @@ public class VirtualInvestmentBehaviorValidator {
 
         BehaviorActionType actionType = BehaviorActionType.getBehaviorActionType(request.getActionType());
         BehaviorAssetType assetType = BehaviorAssetType.getBehaviorAssetType(request.getAssetType());
+        VirtualInvestmentReferenceType referenceType = VirtualInvestmentReferenceType
+                .getReferenceType(request.getReferenceType());
         validateActionAssetType(actionType, assetType);
+        validateActionReferenceType(actionType, referenceType);
         validateAccount(request);
 
         if (assetType == BehaviorAssetType.SECURITY) {
@@ -35,16 +39,19 @@ public class VirtualInvestmentBehaviorValidator {
         }
         if (request.getUserId() == null
                 || request.getAccountId() == null
+                || request.getReferenceType() == null
+                || request.getReferenceId() == null
                 || request.getActionType() == null
                 || request.getAssetType() == null
                 || request.getActionAmount() == null
                 || request.getCurrentCash() == null
                 || request.getCurrentStockPrincipal() == null
                 || request.getCurrentDeposit() == null
-                || request.getCurrentPriceChangeRate() == null
-                || request.getDailyPriceRangeRate() == null
                 || request.getTradedAt() == null) {
             throw new IllegalArgumentException("가상투자 행동 요청의 필수값이 누락되었습니다.");
+        }
+        if (request.getReferenceId() <= 0) {
+            throw new IllegalArgumentException("원본 거래 ID는 0보다 커야 합니다.");
         }
     }
 
@@ -60,22 +67,41 @@ public class VirtualInvestmentBehaviorValidator {
     private void validateActionAssetType(
             BehaviorActionType actionType,
             BehaviorAssetType assetType) {
-        boolean securityAction = actionType == BehaviorActionType.BUY
-                || actionType == BehaviorActionType.SELL;
-        if (securityAction && assetType != BehaviorAssetType.SECURITY) {
+        if (isSecurityAction(actionType) && assetType != BehaviorAssetType.SECURITY) {
             throw new IllegalArgumentException("매수와 매도 행동의 assetType은 SECURITY여야 합니다.");
         }
 
-        boolean productAction = actionType == BehaviorActionType.JOIN_PRODUCT
-                || actionType == BehaviorActionType.CANCEL_PRODUCT
-                || actionType == BehaviorActionType.MATURITY;
-        if (productAction && assetType != BehaviorAssetType.PRODUCT) {
+        if (isProductAction(actionType) && assetType != BehaviorAssetType.PRODUCT) {
             throw new IllegalArgumentException("예적금 행동의 assetType은 PRODUCTS여야 합니다.");
         }
 
-        if (!securityAction && !productAction) {
+        if (!isSecurityAction(actionType) && !isProductAction(actionType)) {
             throw new IllegalArgumentException("가상투자에서 지원하지 않는 행동입니다: " + actionType);
         }
+    }
+
+    private void validateActionReferenceType(
+            BehaviorActionType actionType,
+            VirtualInvestmentReferenceType referenceType) {
+        if (isSecurityAction(actionType)
+                && referenceType != VirtualInvestmentReferenceType.SECURITY_ORDER) {
+            throw new IllegalArgumentException("증권 행동의 referenceType은 SECURITY_ORDER여야 합니다.");
+        }
+        if (isProductAction(actionType)
+                && referenceType != VirtualInvestmentReferenceType.PRODUCT_TRANSACTION) {
+            throw new IllegalArgumentException("예적금 행동의 referenceType은 PRODUCT_TRANSACTION이어야 합니다.");
+        }
+    }
+
+    private boolean isSecurityAction(BehaviorActionType actionType) {
+        return actionType == BehaviorActionType.BUY
+                || actionType == BehaviorActionType.SELL;
+    }
+
+    private boolean isProductAction(BehaviorActionType actionType) {
+        return actionType == BehaviorActionType.JOIN_PRODUCT
+                || actionType == BehaviorActionType.CANCEL_PRODUCT
+                || actionType == BehaviorActionType.MATURITY;
     }
 
     private void validateAccount(VirtualInvestmentBehaviorRequest request) {
@@ -95,11 +121,19 @@ public class VirtualInvestmentBehaviorValidator {
                 || request.getActionAmount() <= 0) {
             throw new IllegalArgumentException("증권 행동에는 증권 식별값, 수량, 거래 금액이 필요합니다.");
         }
+        validateSecurityPriceRates(request);
 
         if (!virtualInvestmentBehaviorMapper.existsSecurityByIdAndStockCode(
                 request.getSecurityId(),
                 request.getStockCode())) {
             throw new IllegalArgumentException("증권 ID와 종목 코드가 일치하지 않습니다.");
+        }
+    }
+
+    private void validateSecurityPriceRates(VirtualInvestmentBehaviorRequest request) {
+        if (request.getCurrentPriceChangeRate() == null
+                || request.getDailyPriceRangeRate() == null) {
+            throw new IllegalArgumentException("증권 행동에는 주가 등락률과 당일 변동률이 필요합니다.");
         }
     }
 
