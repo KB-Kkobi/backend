@@ -3,7 +3,7 @@ package org.kkobi.security.config;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.filter.JwtUsernamePasswordAuthenticationFilter;
 import org.kkobi.security.jwt.JwtAuthenticationFilter;
-import org.kkobi.security.jwt.JwtProvider;
+import org.kkobi.security.token.RefreshTokenService;
 import org.kkobi.security.util.JsonResponse;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
@@ -44,7 +44,7 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtProvider jwtProvider;
+    private final RefreshTokenService refreshTokenService;
 
     // Spring Security 필터보다 먼저 적용할 UTF-8 인코딩 필터를 생성
     public CharacterEncodingFilter encodingFilter() {
@@ -61,7 +61,7 @@ public class SecurityConfig {
             AuthenticationManager authenticationManager
     ) throws Exception {
         JwtUsernamePasswordAuthenticationFilter loginFilter =
-                new JwtUsernamePasswordAuthenticationFilter(authenticationManager, jwtProvider);
+                new JwtUsernamePasswordAuthenticationFilter(authenticationManager, refreshTokenService);
 
         http
                 .addFilterBefore(encodingFilter(), CsrfFilter.class)
@@ -87,6 +87,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/auth/login"),
                                 new AntPathRequestMatcher("/api/auth/signup"),
+                                new AntPathRequestMatcher("/api/auth/refresh"),
+                                new AntPathRequestMatcher("/api/auth/logout"),
                                 new AntPathRequestMatcher("/api/security/all"),
                                 new AntPathRequestMatcher("/api/games/scenarios/**"),
                                 new AntPathRequestMatcher("/api/stocks/**"),

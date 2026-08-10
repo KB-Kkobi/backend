@@ -74,6 +74,10 @@ public class JwtProvider {
         return parseClaims(token).getSubject();
     }
 
+    public String getTokenId(String token) {
+        return parseClaims(token).getId();
+    }
+
     public boolean validateAccessToken(String token) {
         return ACCESS_TOKEN_TYPE.equals(parseClaims(token).get(TOKEN_TYPE_CLAIM, String.class));
     }

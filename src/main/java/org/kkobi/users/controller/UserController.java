@@ -3,8 +3,11 @@ package org.kkobi.users.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.kkobi.security.token.RefreshTokenService;
+import org.kkobi.users.dto.request.RefreshTokenRequest;
 import org.kkobi.users.dto.request.SignupRequest;
 import org.kkobi.users.dto.response.MessageResponse;
+import org.kkobi.users.dto.response.TokenResponse;
 import org.kkobi.users.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,7 @@ public class UserController {
 
     // 회원가입 비즈니스 로직을 처리하는 서비스
     private final UserService userService;
+    private final RefreshTokenService refreshTokenService;
 
     // 회원가입 정보를 검증하고 새로운 사용자를 등록
     @Operation(
@@ -36,5 +40,18 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new MessageResponse("회원가입이 완료되었습니다."));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(TokenResponse.from(
+                refreshTokenService.reissue(request.getRefreshToken())
+        ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<MessageResponse> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        refreshTokenService.revoke(request.getRefreshToken());
+        return ResponseEntity.ok(new MessageResponse("로그아웃되었습니다."));
     }
 }

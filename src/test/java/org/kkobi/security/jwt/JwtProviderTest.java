@@ -27,6 +27,7 @@ class JwtProviderTest {
         assertNotEquals(token.getAccessToken(), token.getRefreshToken());
         assertEquals("user@example.com", jwtProvider.getSubject(token.getAccessToken()));
         assertEquals("user@example.com", jwtProvider.getSubject(token.getRefreshToken()));
+        assertFalse(jwtProvider.getTokenId(token.getRefreshToken()).isBlank());
         assertTrue(jwtProvider.validateAccessToken(token.getAccessToken()));
         assertTrue(jwtProvider.validateRefreshToken(token.getRefreshToken()));
         assertTrue(token.getRefreshTokenExpiresAt() > token.getAccessTokenExpiresAt());

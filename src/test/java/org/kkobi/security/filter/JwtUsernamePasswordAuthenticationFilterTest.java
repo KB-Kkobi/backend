@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.kkobi.security.jwt.JwtProvider;
+import org.kkobi.security.token.RefreshTokenService;
+import org.kkobi.security.token.RefreshTokenStore;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -13,7 +15,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 
 import javax.servlet.FilterChain;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -39,7 +44,9 @@ class JwtUsernamePasswordAuthenticationFilterTest {
             return new UsernamePasswordAuthenticationToken(
                     authentication.getName(), null, Collections.emptyList());
         };
-        filter = new JwtUsernamePasswordAuthenticationFilter(authenticationManager, jwtProvider);
+        RefreshTokenStore refreshTokenStore = new InMemoryRefreshTokenStore();
+        RefreshTokenService refreshTokenService = new RefreshTokenService(jwtProvider, refreshTokenStore);
+        filter = new JwtUsernamePasswordAuthenticationFilter(authenticationManager, refreshTokenService);
     }
 
     @Test
@@ -107,5 +114,19 @@ class JwtUsernamePasswordAuthenticationFilterTest {
         filter.doFilter(request, response, chain);
         assertFalse(response.getContentAsString().isEmpty());
         return response;
+    }
+
+    private static class InMemoryRefreshTokenStore implements RefreshTokenStore {
+        private final Map<String, String> tokens = new HashMap<>();
+
+        @Override
+        public void save(String tokenId, String tokenHash, Duration timeToLive) {
+            tokens.put(tokenId, tokenHash);
+        }
+
+        @Override
+        public boolean consume(String tokenId, String tokenHash) {
+            return tokens.remove(tokenId, tokenHash);
+        }
     }
 }

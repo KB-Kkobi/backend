@@ -45,6 +45,13 @@ public class CommonExceptionAdvice {
                 .body(new MessageResponse("이미 사용 중인 이메일 또는 닉네임입니다."));
     }
 
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
     // 비밀번호 등 비즈니스 규칙 검증 오류를 JSON으로 반환
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseBody
