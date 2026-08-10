@@ -46,6 +46,7 @@ services:
     image: redis:7
     container_name: kkobi-redis
     restart: unless-stopped
+    command: redis-server --appendonly yes
 
     ports:
       - "6379:6379"
@@ -75,6 +76,11 @@ services:
       JDBC_PASSWORD: ${MYSQL_PASSWORD}
       FINLIFE_API_KEY: ${FINLIFE_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      KIS_BASE_URL: ${KIS_BASE_URL:-https://openapi.koreainvestment.com:9443}
+      KIS_APP_KEY: ${KIS_APP_KEY}
+      KIS_APP_SECRET: ${KIS_APP_SECRET}
 
     ports:
       - "8080:8080"

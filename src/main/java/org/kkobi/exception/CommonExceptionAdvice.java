@@ -40,9 +40,16 @@ public class CommonExceptionAdvice {
     // 동시에 들어온 가입 요청이 DB 고유 제약조건과 충돌한 경우 JSON으로 반환
     @ExceptionHandler(DuplicateKeyException.class)
     @ResponseBody
-    public ResponseEntity<MessageResponse> handleDuplicateKey(DuplicateKeyException ex) {
+    public ResponseEntity<MessageResponse> handleDuplicateKey() {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new MessageResponse("이미 사용 중인 이메일 또는 닉네임입니다."));
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new MessageResponse(ex.getMessage()));
     }
 
     // 비밀번호 등 비즈니스 규칙 검증 오류를 JSON으로 반환
@@ -50,6 +57,15 @@ public class CommonExceptionAdvice {
     @ResponseBody
     public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(new MessageResponse(ex.getMessage()));
+    }
+
+    // KIS Open API 호출 실패를 JSON으로 반환
+    @ExceptionHandler(KisApiException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleKisApi(KisApiException ex) {
+        log.warn("KIS API 호출 실패: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(new MessageResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

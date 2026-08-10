@@ -8,10 +8,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.*;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.client.RestTemplate;
@@ -22,12 +19,32 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
+        "org.kkobi.assessment.calculator",
+        "org.kkobi.assessment.config",
+        "org.kkobi.assessment.scheduler",
+        "org.kkobi.assessment.service",
+        "org.kkobi.assessment.validator",
+        "org.kkobi.game.calculator",
+        "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",
-        "org.kkobi.product.saving.service"
+        "org.kkobi.product.saving.service",
+        "org.kkobi.product.holding.service",
+        "org.kkobi.product.service",
+        "org.kkobi.product.parser",
+        "org.kkobi.account.service",
+        "org.kkobi.external.kis.config",
+        "org.kkobi.external.kis.auth",
+        "org.kkobi.external.kis.client",
+        "org.kkobi.external.kis.service",
+        "org.kkobi.external.kis.realtime"
 })
 @MapperScan(basePackages = {
-        "org.kkobi.product.mapper"
+        "org.kkobi.assessment.mapper",
+        "org.kkobi.game.mapper",
+        "org.kkobi.product.mapper",
+        "org.kkobi.account.mapper"
 })
+@Import(RedisConfig.class)
 public class RootConfig {
     @Value("${jdbc.driver}") String driver;
     @Value("${jdbc.url}") String url;

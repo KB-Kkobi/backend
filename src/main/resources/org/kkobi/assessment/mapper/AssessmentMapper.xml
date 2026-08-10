@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.assessment.mapper.AssessmentMapper">
+
+    <select id="getLatestAssessmentScore"
+            resultType="org.kkobi.assessment.domain.AssessmentScore">
+        SELECT
+            rt_score,
+            lh_score,
+            rp_score
+        FROM results
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, result_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="getLatestAssessmentResultDetails"
+            resultType="org.kkobi.assessment.domain.AssessmentResultDetails">
+        SELECT
+            r.result_id,
+            p.axis_code,
+            p.persona_name,
+            p.description,
+            p.feature,
+            p.strength,
+            p.caution,
+            r.rt_score,
+            r.lh_score,
+            r.rp_score,
+            p.stock_ratio,
+            p.bond_ratio,
+            p.deposit_ratio,
+            r.created_at AS analyzed_at
+        FROM results r
+        JOIN personas p
+          ON p.persona_id = r.persona_id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.created_at DESC, r.result_id DESC
+        LIMIT 1
+    </select>
+
+    <select id="getPersonaIdByAxisCode" resultType="java.lang.Long">
+        SELECT persona_id
+        FROM personas
+        WHERE axis_code = #{axisCode}
+        ORDER BY persona_id
+        LIMIT 1
+    </select>
+
+    <insert id="saveAssessmentResult">
+        INSERT INTO results (
+            user_id,
+            persona_id,
+            rt_score,
+            lh_score,
+            rp_score
+        )
+        VALUES (
+            #{userId},
+            #{personaId},
+            #{score.rtScore},
+            #{score.lhScore},
+            #{score.rpScore}
+        )
+    </insert>
+</mapper>

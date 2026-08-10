@@ -29,6 +29,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final UserDetailsService userDetailsService;
 
+    // Refresh Token 자체로 검증하는 API는 만료된 Access Token 헤더의 영향을 받지 않게 제외
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        String path = request.getServletPath();
+        return "/api/auth/login".equals(path)
+                || "/api/auth/signup".equals(path)
+                || "/api/auth/refresh".equals(path)
+                || "/api/auth/logout".equals(path);
+    }
+
     // 유효한 JWT로 Spring Security 인증 객체를 생성
     private Authentication getAuthentication(String token) {
         String username = jwtProvider.getSubject(token);
@@ -42,8 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
-    )
-            throws ServletException, IOException {
+    ) throws ServletException, IOException {
         try {
             String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
 
