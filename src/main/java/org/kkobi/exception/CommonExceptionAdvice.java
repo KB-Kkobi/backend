@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.validation.BindException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
@@ -59,6 +61,39 @@ public class CommonExceptionAdvice {
         log.warn("KIS API 호출 실패: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new MessageResponse(ex.getMessage()));
+    }
+
+    // 요청한 종목이 존재하지 않을 때 JSON으로 반환
+    @ExceptionHandler(SecurityNotFoundException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleSecurityNotFound(SecurityNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
+    // @RequestParam·@PathVariable 타입 변환 실패를 JSON으로 반환
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String field = ex.getName();
+        Object value = ex.getValue();
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse(field + " 파라미터 값이 올바르지 않습니다: " + value));
+    }
+
+    // @ModelAttribute 바인딩 실패(예: enum 변환 실패)를 JSON으로 반환
+    @ExceptionHandler(BindException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleBind(BindException ex) {
+        FieldError fieldError = ex.getBindingResult().getFieldError();
+        String message;
+        if (fieldError == null) {
+            message = "요청 값을 확인해 주세요.";
+        } else {
+            message = fieldError.getField() + " 파라미터 값이 올바르지 않습니다: "
+                    + fieldError.getRejectedValue();
+        }
+        return ResponseEntity.badRequest().body(new MessageResponse(message));
     }
 
     @ExceptionHandler(Exception.class)

@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 public class StompSubscriptionListener {
 
     private static final Pattern DESTINATION_PATTERN =
-            Pattern.compile("^/topic/stocks/(\\d{6})$");
+            Pattern.compile("^/topic/stocks/([0-9A-Z]{6})$");
 
     private final StockSubscriptionManager subscriptionManager;
 

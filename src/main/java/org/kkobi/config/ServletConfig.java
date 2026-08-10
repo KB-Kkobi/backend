@@ -40,7 +40,8 @@ import java.util.List;
         "org.kkobi.account.controller",
         "org.kkobi.persona.controller",
         "org.kkobi.external.kis.controller",
-        "org.kkobi.external.kis.websocket"
+        "org.kkobi.external.kis.websocket",
+        "org.kkobi.securities.controller"
 })
 @Import({
         SpringDocConfigProperties.class,
