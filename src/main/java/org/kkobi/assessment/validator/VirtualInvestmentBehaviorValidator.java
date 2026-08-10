@@ -41,8 +41,6 @@ public class VirtualInvestmentBehaviorValidator {
                 || request.getCurrentCash() == null
                 || request.getCurrentStockPrincipal() == null
                 || request.getCurrentDeposit() == null
-                || request.getCurrentPriceChangeRate() == null
-                || request.getDailyPriceRangeRate() == null
                 || request.getTradedAt() == null) {
             throw new IllegalArgumentException("가상투자 행동 요청의 필수값이 누락되었습니다.");
         }
@@ -95,11 +93,19 @@ public class VirtualInvestmentBehaviorValidator {
                 || request.getActionAmount() <= 0) {
             throw new IllegalArgumentException("증권 행동에는 증권 식별값, 수량, 거래 금액이 필요합니다.");
         }
+        validateSecurityPriceRates(request);
 
         if (!virtualInvestmentBehaviorMapper.existsSecurityByIdAndStockCode(
                 request.getSecurityId(),
                 request.getStockCode())) {
             throw new IllegalArgumentException("증권 ID와 종목 코드가 일치하지 않습니다.");
+        }
+    }
+
+    private void validateSecurityPriceRates(VirtualInvestmentBehaviorRequest request) {
+        if (request.getCurrentPriceChangeRate() == null
+                || request.getDailyPriceRangeRate() == null) {
+            throw new IllegalArgumentException("증권 행동에는 주가 등락률과 당일 변동률이 필요합니다.");
         }
     }
 
