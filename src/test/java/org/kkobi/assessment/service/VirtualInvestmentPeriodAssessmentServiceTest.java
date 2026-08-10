@@ -8,6 +8,7 @@ import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.calculator.VirtualInvestmentPeriodCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.domain.BehaviorAnalysisResult;
 import org.kkobi.assessment.dto.AccountDailySnapshotDto;
 import org.kkobi.assessment.enums.AssessmentPeriodType;
 import org.kkobi.assessment.mapper.AccountDailySnapshotMapper;
@@ -21,6 +22,9 @@ import java.util.Set;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VirtualInvestmentPeriodAssessmentServiceTest {
 
@@ -179,18 +183,66 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
         assertScoreEquals("48.34", assessmentMapper.getLatestScore().getRpScore());
     }
 
+    @Test
+    @DisplayName("주기 분석 결과 저장이 실패하면 정산을 완료하지 않고 다시 실행한다.")
+    void retryFailedPeriodAssessment() {
+        LocalDate firstTradeDate = LocalDate.of(2026, 8, 1);
+        LocalDate assessmentDate = firstTradeDate.plusDays(6);
+        InMemoryAccountDailySnapshotMapper snapshotMapper =
+                new InMemoryAccountDailySnapshotMapper(
+                        firstTradeDate,
+                        createSnapshots(firstTradeDate, 7, 10L, 80L, 10L),
+                        1
+                );
+        InMemoryAssessmentSettlementService settlementService =
+                new InMemoryAssessmentSettlementService();
+        VirtualInvestmentPeriodAssessmentService assessmentService = createAssessmentService(
+                snapshotMapper,
+                settlementService,
+                new FailOnceVirtualInvestmentPeriodResultService()
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> assessmentService.calculateDailyAssessments(assessmentDate)
+        );
+        assertFalse(settlementService.isCompleted(
+                1L,
+                AssessmentPeriodType.SEVEN_DAY_ALLOCATION,
+                assessmentDate
+        ));
+
+        assertEquals(1, assessmentService.calculateDailyAssessments(assessmentDate));
+        assertTrue(settlementService.isCompleted(
+                1L,
+                AssessmentPeriodType.SEVEN_DAY_ALLOCATION,
+                assessmentDate
+        ));
+    }
+
     private VirtualInvestmentPeriodAssessmentService createAssessmentService(
             AccountDailySnapshotMapper snapshotMapper,
             AssessmentMapper assessmentMapper) {
-        return new VirtualInvestmentPeriodAssessmentService(
+        return createAssessmentService(
                 snapshotMapper,
-                new VirtualInvestmentPeriodCalculator(new AssetRatioCalculator()),
-                new BehaviorRuleEngine(),
                 new InMemoryAssessmentSettlementService(),
                 new VirtualInvestmentPeriodResultService(
                         new VirtualInvestmentScoreCalculator(),
                         new AssessmentResultService(assessmentMapper, new PersonaClassifier())
                 )
+        );
+    }
+
+    private VirtualInvestmentPeriodAssessmentService createAssessmentService(
+            AccountDailySnapshotMapper snapshotMapper,
+            AssessmentSettlementService assessmentSettlementService,
+            VirtualInvestmentPeriodResultService virtualInvestmentPeriodResultService) {
+        return new VirtualInvestmentPeriodAssessmentService(
+                snapshotMapper,
+                new VirtualInvestmentPeriodCalculator(new AssetRatioCalculator()),
+                new BehaviorRuleEngine(),
+                assessmentSettlementService,
+                virtualInvestmentPeriodResultService
         );
     }
 
@@ -300,6 +352,7 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
             extends AssessmentSettlementService {
 
         private final Set<String> settlementKeys = new HashSet<>();
+        private final Set<String> completedSettlementKeys = new HashSet<>();
 
         private InMemoryAssessmentSettlementService() {
             super(null);
@@ -322,6 +375,11 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
                 Long accountId,
                 AssessmentPeriodType assessmentPeriodType,
                 LocalDate periodDate) {
+            completedSettlementKeys.add(createSettlementKey(
+                    accountId,
+                    assessmentPeriodType,
+                    periodDate
+            ));
         }
 
         @Override
@@ -336,11 +394,42 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
             ));
         }
 
+        private boolean isCompleted(
+                Long accountId,
+                AssessmentPeriodType assessmentPeriodType,
+                LocalDate periodDate) {
+            return completedSettlementKeys.contains(createSettlementKey(
+                    accountId,
+                    assessmentPeriodType,
+                    periodDate
+            ));
+        }
+
         private String createSettlementKey(
                 Long accountId,
                 AssessmentPeriodType assessmentPeriodType,
                 LocalDate periodDate) {
             return accountId + ":" + assessmentPeriodType + ":" + periodDate;
+        }
+    }
+
+    private static class FailOnceVirtualInvestmentPeriodResultService
+            extends VirtualInvestmentPeriodResultService {
+
+        private boolean firstAttempt = true;
+
+        private FailOnceVirtualInvestmentPeriodResultService() {
+            super(null, null);
+        }
+
+        @Override
+        public void saveVirtualInvestmentPeriodResult(
+                Long userId,
+                BehaviorAnalysisResult analysisResult) {
+            if (firstAttempt) {
+                firstAttempt = false;
+                throw new IllegalStateException("정산 결과 저장 실패");
+            }
         }
     }
 
