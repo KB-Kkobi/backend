@@ -6,6 +6,7 @@ import org.kkobi.assessment.domain.AssessmentResult;
 import org.kkobi.assessment.domain.AssessmentResultDetails;
 import org.kkobi.assessment.domain.AssessmentScore;
 import org.kkobi.assessment.domain.RuleResult;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.enums.PersonaType;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,14 @@ public class AssessmentResultService {
             throw new IllegalStateException("저장된 성향 분석 결과를 찾을 수 없습니다.");
         }
         return resultDetails;
+    }
+
+    public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
+        AssessmentResultResponseDto result = assessmentMapper.getLatestAssessmentResult(userId);
+        if (result == null) {
+            throw new IllegalArgumentException("진단 이력이 없습니다.");
+        }
+        return result;
     }
 
     public AssessmentResult createAssessmentResult(

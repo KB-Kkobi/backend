@@ -42,6 +42,53 @@
         LIMIT 1
     </select>
 
+    <resultMap id="assessmentResultMap"
+               type="org.kkobi.assessment.dto.AssessmentResultResponseDto">
+        <id property="resultId" column="result_id" />
+        <result property="userId" column="user_id" />
+        <result property="rtScore" column="rt_score" />
+        <result property="lhScore" column="lh_score" />
+        <result property="rpScore" column="rp_score" />
+        <association property="persona" javaType="org.kkobi.persona.dto.PersonaResponseDto">
+            <id property="personaId" column="persona_id" />
+            <result property="personaName" column="persona_name" />
+            <result property="axisCode" column="axis_code" />
+            <result property="imagePath" column="image_path" />
+            <result property="description" column="description" />
+            <result property="feature" column="feature" />
+            <result property="strength" column="strength" />
+            <result property="caution" column="caution" />
+            <result property="stockRatio" column="stock_ratio" />
+            <result property="bondRatio" column="bond_ratio" />
+            <result property="depositRatio" column="deposit_ratio" />
+        </association>
+    </resultMap>
+
+    <select id="getLatestAssessmentResult" resultMap="assessmentResultMap">
+        SELECT
+            r.result_id,
+            r.user_id,
+            r.rt_score,
+            r.lh_score,
+            r.rp_score,
+            p.persona_id,
+            p.persona_name,
+            p.axis_code,
+            p.image_path,
+            p.description,
+            p.feature,
+            p.strength,
+            p.caution,
+            p.stock_ratio,
+            p.bond_ratio,
+            p.deposit_ratio
+        FROM results r
+        JOIN personas p ON p.persona_id = r.persona_id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.result_id DESC
+        LIMIT 1
+    </select>
+
     <select id="getPersonaIdByAxisCode" resultType="java.lang.Long">
         SELECT persona_id
         FROM personas

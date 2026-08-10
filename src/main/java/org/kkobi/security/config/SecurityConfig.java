@@ -90,6 +90,8 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/api/security/all"),
                                 new AntPathRequestMatcher("/api/games/scenarios/**"),
                                 new AntPathRequestMatcher("/api/stocks/**"),
+                                new AntPathRequestMatcher("/api/securities/**"),
+                                new AntPathRequestMatcher("/api/personas/**"),
                                 new AntPathRequestMatcher("/ws-stocks/**"))
                         .permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/health", HttpMethod.GET.name())).permitAll()
