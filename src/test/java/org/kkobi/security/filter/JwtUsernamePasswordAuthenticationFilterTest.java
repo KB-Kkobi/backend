@@ -22,6 +22,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JwtUsernamePasswordAuthenticationFilterTest {
@@ -55,7 +56,9 @@ class JwtUsernamePasswordAuthenticationFilterTest {
                 "{\"email\":\"user@example.com\",\"password\":\"correct-password\"}");
 
         assertEquals(200, response.getStatus());
-        assertTrue(response.getContentType().startsWith("application/json"));
+        String contentType = response.getContentType();
+        assertNotNull(contentType);
+        assertTrue(contentType.startsWith("application/json"));
 
         JsonNode body = objectMapper.readTree(response.getContentAsString());
         assertEquals("Bearer", body.get("tokenType").asText());
