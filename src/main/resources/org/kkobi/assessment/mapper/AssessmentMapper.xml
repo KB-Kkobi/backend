@@ -21,11 +21,15 @@
             resultType="org.kkobi.assessment.domain.AssessmentResultDetails">
         SELECT
             r.result_id,
+            p.axis_code,
             p.persona_name,
             p.description,
             p.feature,
             p.strength,
             p.caution,
+            r.rt_score,
+            r.lh_score,
+            r.rp_score,
             p.stock_ratio,
             p.bond_ratio,
             p.deposit_ratio,
