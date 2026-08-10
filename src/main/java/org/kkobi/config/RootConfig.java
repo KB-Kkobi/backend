@@ -32,6 +32,7 @@ import javax.sql.DataSource;
         "org.kkobi.product.service",
         "org.kkobi.product.parser",
         "org.kkobi.account.service",
+        "org.kkobi.persona.service",
         "org.kkobi.external.kis.config",
         "org.kkobi.external.kis.auth",
         "org.kkobi.external.kis.client",
@@ -42,7 +43,8 @@ import javax.sql.DataSource;
         "org.kkobi.assessment.mapper",
         "org.kkobi.game.mapper",
         "org.kkobi.product.mapper",
-        "org.kkobi.account.mapper"
+        "org.kkobi.account.mapper",
+        "org.kkobi.persona.mapper"
 })
 @Import(RedisConfig.class)
 public class RootConfig {
