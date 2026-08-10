@@ -1,3 +1,5 @@
+ALTER TABLE securities ADD CONSTRAINT uk_securities_ticker UNIQUE (ticker);
+
 -- 실시간 시세 조회 대상이 아닌 특수상품(공모펀드 F..., 채권 등) 제거.
 -- KRX 상장 종목코드는 6자리 [0-9A-Z] 형식이며, 이 이외는 실시간 시세 파이프라인에서 다루지 않는다.
 -- FK 자식(시세 이력)을 먼저 정리한 뒤 부모 행을 삭제한다.
