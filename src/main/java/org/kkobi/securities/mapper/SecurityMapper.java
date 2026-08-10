@@ -13,14 +13,17 @@ import java.util.List;
 @Mapper
 public interface SecurityMapper {
 
-    // 종목 리스트 조회 (type 필터, 페이지네이션)
+    // 종목 리스트 조회 (type 필터, keyword 검색, 페이지네이션)
     List<SecurityListItemResponse> getSecurityList(
             @Param("type") SecurityType type,
+            @Param("keyword") String keyword,
             @Param("offset") int offset,
             @Param("size") int size);
 
     // 종목 리스트 조건에 맞는 전체 개수 조회
-    long countSecurityList(@Param("type") SecurityType type);
+    long countSecurityList(
+            @Param("type") SecurityType type,
+            @Param("keyword") String keyword);
 
     // ticker로 종목 상세 조회 (없으면 null)
     SecurityDetailResponse getSecurityByTicker(@Param("ticker") String ticker);

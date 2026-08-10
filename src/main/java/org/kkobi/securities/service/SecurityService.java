@@ -31,10 +31,12 @@ public class SecurityService {
         int size = normalizeSize(request.getSize());
         int offset = (page - 1) * size;
 
-        List<SecurityListItemResponse> content =
-                securityMapper.getSecurityList(request.getType(), offset, size);
+        String keyword = request.getKeyword();
 
-        long totalElements = securityMapper.countSecurityList(request.getType());
+        List<SecurityListItemResponse> content =
+                securityMapper.getSecurityList(request.getType(), keyword, offset, size);
+
+        long totalElements = securityMapper.countSecurityList(request.getType(), keyword);
         int totalPages = calculateTotalPages(totalElements, size);
 
         SecurityListResponse response = new SecurityListResponse();

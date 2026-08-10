@@ -10,6 +10,9 @@ public class SecurityListRequest {
     // 종목 유형 필터 (없으면 전체)
     private SecurityType type;
 
+    // 검색 키워드 (name 또는 ticker 부분 일치, 없으면 전체)
+    private String keyword;
+
     // 페이지 번호 (1-based)
     private Integer page = 1;
 

@@ -1,4 +1,7 @@
-ALTER TABLE securities ADD CONSTRAINT uk_securities_ticker UNIQUE (ticker);
+-- 이전 브랜치에서 적용된 인덱스/컬럼 제거 후 재생성
+ALTER TABLE securities DROP INDEX idx_securities_kis_code;
+ALTER TABLE securities DROP INDEX uk_securities_ticker;
+ALTER TABLE securities DROP COLUMN kis_code;
 
 -- 실시간 시세 조회 대상이 아닌 특수상품(공모펀드 F..., 채권 등) 제거.
 -- KRX 상장 종목코드는 6자리 [0-9A-Z] 형식이며, 이 이외는 실시간 시세 파이프라인에서 다루지 않는다.
@@ -17,5 +20,7 @@ ALTER TABLE securities
 
 UPDATE securities
 SET kis_code = ticker;
+
+ALTER TABLE securities ADD CONSTRAINT uk_securities_ticker UNIQUE (ticker);
 
 CREATE INDEX idx_securities_kis_code ON securities (kis_code);
