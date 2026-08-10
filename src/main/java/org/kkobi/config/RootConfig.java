@@ -19,7 +19,11 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @PropertySource({"classpath:/application.properties"})
 @ComponentScan(basePackages = {
-        "org.kkobi.assessment",
+        "org.kkobi.assessment.calculator",
+        "org.kkobi.assessment.config",
+        "org.kkobi.assessment.scheduler",
+        "org.kkobi.assessment.service",
+        "org.kkobi.assessment.validator",
         "org.kkobi.game.calculator",
         "org.kkobi.game.service",
         "org.kkobi.product.deposit.service",

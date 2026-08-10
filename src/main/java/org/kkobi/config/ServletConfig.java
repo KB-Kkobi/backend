@@ -27,6 +27,7 @@ import java.util.List;
         "org.kkobi.product.saving.controller",
         "org.kkobi.product.holding.controller",
         "org.kkobi.game.controller",
+        "org.kkobi.assessment.controller",
         "org.kkobi.account.controller",
         "org.kkobi.external.kis.controller",
         "org.kkobi.external.kis.websocket"
