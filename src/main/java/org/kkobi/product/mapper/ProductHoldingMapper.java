@@ -4,8 +4,10 @@ import org.apache.ibatis.annotations.Param;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
+import org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ProductHoldingMapper {
@@ -44,4 +46,49 @@ public interface ProductHoldingMapper {
     List<ProductHoldingInfoDto> getHoldingProductsByUserId(
             @Param("userId") Long userId
     );
+
+    // 로그인 사용자의 예적금 해지 이력 조회
+    List<ProductHoldingHistoryResponseDto> getProductHoldingHistory(
+            @Param("userId") Long userId
+    );
+
+    // 로그인 사용자의 해지 대상 예적금 조회
+    ProductHoldingInfoDto getHoldingProductForTermination(
+            @Param("userId") Long userId,
+            @Param("holdingProductId") Long holdingProductId
+    );
+
+    // 해지 반환 금액만큼 계좌 현금 잔액 증가
+    int increaseAccountCashBalance(
+            @Param("accountId") Long accountId,
+            @Param("amount") BigDecimal amount
+    );
+
+    // 보유 예적금 상태를 해지로 변경
+    int terminateHoldingProduct(
+            @Param("holdingProductId") Long holdingProductId
+    );
+
+    // 예적금 해지 거래 내역 저장
+    int saveProductTerminationTransaction(
+            @Param("holdingProductId") Long holdingProductId,
+            @Param("amount") BigDecimal amount,
+            @Param("interestAmount") BigDecimal interestAmount,
+            @Param("interestTaxAmount") BigDecimal interestTaxAmount,
+            @Param("terminatedAt")LocalDateTime terminatedAt
+            );
+
+    // 예적금 해지로 발생한 계좌 입금 거래 내역 저장
+    int saveAccountDepositTransaction(
+            @Param("accountId") Long accountId,
+            @Param("amount") BigDecimal amount
+    );
+
+    // 해당 연도 누적 이자소득 조회
+    BigDecimal getAnnualInterestIncome(
+            @Param("userId") Long userId,
+            @Param("yearStart") LocalDateTime yearStart,
+            @Param("nextYearStart") LocalDateTime nextYearStart
+    );
+
 }

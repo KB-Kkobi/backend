@@ -133,8 +133,153 @@
                  INNER JOIN products p
                             ON p.product_id = po.product_id
         WHERE a.user_id = #{userId}
+          AND hp.status = 'ACTIVE'
         ORDER BY
             hp.created_at DESC,
+            hp.holding_product_id DESC
+    </select>
+
+    <!-- 로그인 사용자의 해지 대상 예적금 조회 -->
+    <select id="getHoldingProductForTermination"
+            resultType="org.kkobi.product.holding.dto.ProductHoldingInfoDto">
+        SELECT
+            hp.holding_product_id,
+            hp.account_id AS accountId,
+            hp.product_option_id,
+            p.product_type,
+            p.kor_co_nm AS financial_company_name,
+            p.fin_prdt_nm AS product_name,
+            po.rsrv_type_nm AS reserve_type_name,
+            hp.join_amount,
+            hp.applied_rate,
+            po.save_trm AS saving_term,
+            hp.total_installments,
+            hp.paid_installments,
+            hp.payment_date AS next_payment_date,
+            hp.start_date,
+            hp.maturity_date,
+            hp.status
+        FROM holding_products hp
+                 INNER JOIN accounts a
+                            ON a.account_id = hp.account_id
+                 INNER JOIN product_options po
+                            ON po.product_option_id = hp.product_option_id
+                 INNER JOIN products p
+                            ON p.product_id = po.product_id
+        WHERE hp.holding_product_id = #{holdingProductId}
+          AND a.user_id = #{userId}
+        LIMIT 1
+    </select>
+
+    <!-- 해지 반환 금액만큼 계좌 현금 잔액 증가 -->
+    <update id="increaseAccountCashBalance">
+        UPDATE accounts
+        SET cash_balance = cash_balance + #{amount},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE account_id = #{accountId}
+    </update>
+
+    <!-- 보유 예적금 상태를 해지로 변경 -->
+    <update id="terminateHoldingProduct">
+        UPDATE holding_products
+        SET status = 'TERMINATED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE holding_product_id = #{holdingProductId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <!-- 예적금 해지 거래 내역 저장 -->
+    <insert id="saveProductTerminationTransaction">
+        INSERT INTO product_transactions (
+            holding_product_id,
+            type,
+            amount,
+            interest_amount,
+            interest_tax_amount,
+            status,
+            terminated_at
+        )
+        VALUES (
+                   #{holdingProductId},
+                   'TERMINATE',
+                   #{amount},
+                   #{interestAmount},
+                   #{interestTaxAmount},
+                   'COMPLETED',
+                   #{terminatedAt}
+               )
+    </insert>
+
+    <!-- 예적금 해지로 발생한 계좌 입금 거래 내역 저장 -->
+    <insert id="saveAccountDepositTransaction">
+        INSERT INTO account_transactions (
+            account_id,
+            type,
+            amount,
+            created_at,
+            updated_at
+        )
+        VALUES (
+                   #{accountId},
+                   'IN',
+                   #{amount},
+                   CURRENT_TIMESTAMP,
+                   CURRENT_TIMESTAMP
+               )
+    </insert>
+
+    <!-- 해당 연도 누적 이자소득 조회 -->
+    <select id="getAnnualInterestIncome"
+            resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(pt.interest_amount), 0)
+        FROM product_transactions pt
+        INNER JOIN holding_products hp
+        ON hp.holding_product_id = pt.holding_product_id
+        INNER JOIN accounts a
+        ON a.account_id = hp.account_id
+        WHERE a.user_id = #{userId}
+        AND pt.type IN ('TERMINATE', 'MATURITY')
+        AND pt.status = 'COMPLETED'
+        AND pt.created_at >= #{yearStart}
+          AND pt.created_at &lt; #{nextYearStart}
+    </select>
+
+    <!-- 로그인 사용자의 예적금 해지 이력 조회 -->
+    <select id="getProductHoldingHistory"
+            resultType="org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto">
+        SELECT
+            hp.holding_product_id AS holdingProductId,
+            p.product_type AS productType,
+            p.kor_co_nm AS financialCompanyName,
+            p.fin_prdt_nm AS productName,
+            CASE
+                WHEN p.product_type = 'DEPOSIT'
+                    THEN hp.join_amount
+                WHEN p.product_type = 'SAVING'
+                    THEN hp.join_amount * hp.paid_installments
+                ELSE 0
+                END AS principal,
+            pt.interest_amount AS accruedInterest,
+            pt.interest_tax_amount AS interestTax,
+            pt.interest_amount - pt.interest_tax_amount AS afterTaxInterest,
+            pt.amount AS refundAmount,
+            pt.terminated_at AS terminatedAt,
+            hp.status AS status
+        FROM holding_products hp
+                 INNER JOIN accounts a
+                            ON a.account_id = hp.account_id
+                 INNER JOIN product_options po
+                            ON po.product_option_id = hp.product_option_id
+                 INNER JOIN products p
+                            ON p.product_id = po.product_id
+                 INNER JOIN product_transactions pt
+                            ON pt.holding_product_id = hp.holding_product_id
+                                AND pt.type = 'TERMINATE'
+                                AND pt.status = 'COMPLETED'
+        WHERE a.user_id = #{userId}
+          AND hp.status = 'TERMINATED'
+        ORDER BY
+            pt.terminated_at DESC,
             hp.holding_product_id DESC
     </select>
 

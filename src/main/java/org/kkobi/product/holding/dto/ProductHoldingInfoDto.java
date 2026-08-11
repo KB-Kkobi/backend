@@ -11,6 +11,9 @@ public class ProductHoldingInfoDto {
     // 보유 상품 식별자
     private Long holdingProductId;
 
+    // 계좌 식별자
+    private Long accountId;
+
     // 상품 옵션 식별자
     private Long productOptionId;
 
