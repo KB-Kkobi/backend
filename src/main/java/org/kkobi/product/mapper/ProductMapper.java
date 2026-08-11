@@ -60,8 +60,8 @@ public interface ProductMapper {
     List<ProductListItemResponseDto> getProductList(
             @Param("productType") String productType,
             @Param("keyword") String keyword,
-            @Param("savingTerm") Integer savingTerm,
-            @Param("reserveType") String reserveType,
+            @Param("savingTerms") List<Integer> savingTerms,
+            @Param("reserveTypes") List<String> reserveTypes,
             @Param("preferentialConditions")
             List<PreferentialConditionType> preferentialConditions,
             @Param("sortCode") Integer sortCode,
@@ -73,8 +73,8 @@ public interface ProductMapper {
     Long countProductList(
             @Param("productType") String productType,
             @Param("keyword") String keyword,
-            @Param("savingTerm") Integer savingTerm,
-            @Param("reserveType") String reserveType,
+            @Param("savingTerms") List<Integer> savingTerms,
+            @Param("reserveTypes") List<String> reserveTypes,
             @Param("preferentialConditions")
             List<PreferentialConditionType> preferentialConditions
     );

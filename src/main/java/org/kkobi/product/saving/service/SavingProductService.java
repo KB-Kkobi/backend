@@ -181,9 +181,15 @@ public class SavingProductService {
         // 요청값을 목록 조회 기준에 맞게 정리
         int page = normalizePage(request.getPage());
         int size = normalizeSize(request.getSize());
-        int savingTerm = normalizeSavingTerm(request.getSavingTerm());
+        List<Integer> savingTerms = normalizeSavingTerms(
+                request.getSavingTerms(),
+                request.getSavingTerm()
+        );
         String keyword = normalizeKeyword(request.getKeyword());
-        String reserveType = normalizeReserveType(request.getReserveType());
+        List<String> reserveTypes = normalizeReserveTypes(
+                request.getReserveTypes(),
+                request.getReserveType()
+        );
         int sortCode = convertSortCode(request.getSort());
 
         List<PreferentialConditionType> preferentailConditions =
@@ -199,8 +205,8 @@ public class SavingProductService {
                 productMapper.getProductList(
                         SAVING_PRODUCT_TYPE,
                         keyword,
-                        savingTerm,
-                        reserveType,
+                        savingTerms,
+                        reserveTypes,
                         preferentailConditions,
                         sortCode,
                         offset,
@@ -212,8 +218,8 @@ public class SavingProductService {
                 productMapper.countProductList(
                         SAVING_PRODUCT_TYPE,
                         keyword,
-                        savingTerm,
-                        reserveType,
+                        savingTerms,
+                        reserveTypes,
                         preferentailConditions
                 );
 
@@ -259,6 +265,28 @@ public class SavingProductService {
     // 가입 기간을 정상 범위로 보정
     private int normalizeSavingTerm(Integer savingTerm) {
         return savingTerm == null || savingTerm < 1 ? 12 : savingTerm;
+    }
+
+    // 복수 가입 기간이 있으면 중복을 제거하고, 없으면 기존 단일 값 규칙을 사용
+    private List<Integer> normalizeSavingTerms(
+            List<Integer> savingTerms,
+            Integer savingTerm
+    ) {
+        if(savingTerms == null || savingTerms.isEmpty()){
+            return List.of(normalizeSavingTerm(savingTerm));
+        }
+
+        return savingTerms.stream()
+                .map(term -> {
+                    if(term == null || term < 1){
+                        throw new IllegalArgumentException(
+                                "가입 기간은 1개월 이상이어야 합니다."
+                        );
+                    }
+                    return term;
+                })
+                .distinct()
+                .toList();
     }
 
     // 검색어 앞뒤 공백 제거
@@ -319,5 +347,24 @@ public class SavingProductService {
         }
 
         return normalizedReserveType;
+    }
+
+    // 복수 적립 유형이 있으면 검증 후 중복을 제거하고, 없으면 기존 단일 값 규칙을 사용
+    private List<String> normalizeReserveTypes(
+            List<String> reserveTypes,
+            String reserveType
+    ) {
+        if(reserveTypes == null || reserveTypes.isEmpty()){
+            String normalizedReserveType = normalizeReserveType(reserveType);
+            return normalizedReserveType == null
+                    ? null
+                    : List.of(normalizedReserveType);
+        }
+
+        return reserveTypes.stream()
+                .map(this::normalizeReserveType)
+                .filter(type -> type != null)
+                .distinct()
+                .toList();
     }
 }
