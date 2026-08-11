@@ -30,4 +30,24 @@
                )
     </insert>
 
+    <select id="getAccountAssetInfoByUserId"
+            resultType="org.kkobi.account.dto.AccountAssetInfoDto">
+        SELECT
+            a.account_id AS accountId,
+            a.seed_money AS seedMoney,
+            a.monthly_invest_amount AS monthlyInvestAmount,
+            a.cash_balance AS cashBalance,
+            COALESCE(SUM(hs.quantity * hs.average_price), 0) AS stockAsset
+        FROM accounts a
+        LEFT JOIN holding_securities hs
+          ON hs.account_id = a.account_id
+        WHERE a.user_id = #{userId}
+        GROUP BY
+            a.account_id,
+            a.seed_money,
+            a.monthly_invest_amount,
+            a.cash_balance
+        LIMIT 1
+    </select>
+
 </mapper>

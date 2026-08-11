@@ -246,25 +246,17 @@
 
     <!-- 로그인 사용자의 예적금 해지 이력 조회 -->
     <select id="getProductHoldingHistory"
-            resultType="org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto">
+            resultType="org.kkobi.product.holding.dto.response.ProductHoldingTransactionHistoryResponseDto">
         SELECT
+            pt.product_transaction_id AS productTransactionId,
             hp.holding_product_id AS holdingProductId,
+            pt.type AS transactionType,
             p.product_type AS productType,
             p.kor_co_nm AS financialCompanyName,
             p.fin_prdt_nm AS productName,
-            CASE
-                WHEN p.product_type = 'DEPOSIT'
-                    THEN hp.join_amount
-                WHEN p.product_type = 'SAVING'
-                    THEN hp.join_amount * hp.paid_installments
-                ELSE 0
-                END AS principal,
-            pt.interest_amount AS accruedInterest,
-            pt.interest_tax_amount AS interestTax,
-            pt.interest_amount - pt.interest_tax_amount AS afterTaxInterest,
-            pt.amount AS refundAmount,
-            pt.terminated_at AS terminatedAt,
-            hp.status AS status
+            pt.amount,
+            pt.status,
+            COALESCE(pt.terminated_at, pt.created_at) AS processedAt
         FROM holding_products hp
                  INNER JOIN accounts a
                             ON a.account_id = hp.account_id
@@ -274,13 +266,17 @@
                             ON p.product_id = po.product_id
                  INNER JOIN product_transactions pt
                             ON pt.holding_product_id = hp.holding_product_id
-                                AND pt.type = 'TERMINATE'
-                                AND pt.status = 'COMPLETED'
         WHERE a.user_id = #{userId}
-          AND hp.status = 'TERMINATED'
+          AND pt.type IN (
+              'SUBSCRIBE',
+              'PAYMENT',
+              'ADDITIONAL_PAYMENT',
+              'TERMINATE',
+              'MATURITY'
+          )
         ORDER BY
-            pt.terminated_at DESC,
-            hp.holding_product_id DESC
+            COALESCE(pt.terminated_at, pt.created_at) DESC,
+            pt.product_transaction_id DESC
     </select>
 
 </mapper>
