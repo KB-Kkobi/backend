@@ -12,6 +12,7 @@ import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentResult;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.dto.VirtualInvestmentBehaviorDto;
 import org.kkobi.assessment.dto.VirtualInvestmentBehaviorRequest;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
@@ -199,6 +200,11 @@ class VirtualInvestmentAssessmentServiceTest {
         @Override
         public org.kkobi.assessment.domain.AssessmentResultDetails
                 getLatestAssessmentResultDetails(Long userId) {
+            return null;
+        }
+
+        @Override
+        public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
             return null;
         }
 

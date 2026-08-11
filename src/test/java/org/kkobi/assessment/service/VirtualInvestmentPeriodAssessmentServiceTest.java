@@ -10,6 +10,7 @@ import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentScore;
 import org.kkobi.assessment.domain.BehaviorAnalysisResult;
 import org.kkobi.assessment.dto.AccountDailySnapshotDto;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.enums.AssessmentPeriodType;
 import org.kkobi.assessment.mapper.AccountDailySnapshotMapper;
 import org.kkobi.assessment.mapper.AssessmentMapper;
@@ -446,6 +447,11 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
         @Override
         public org.kkobi.assessment.domain.AssessmentResultDetails
                 getLatestAssessmentResultDetails(Long userId) {
+            return null;
+        }
+
+        @Override
+        public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
             return null;
         }
 
