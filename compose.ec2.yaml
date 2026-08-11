@@ -41,6 +41,23 @@ services:
       mysql:
         condition: service_healthy
 
+  flyway-repair:
+    image: flyway/flyway:12.10.0
+
+    command:
+      - "-url=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?allowPublicKeyRetrieval=true&sslMode=DISABLED"
+      - "-user=${MYSQL_USER}"
+      - "-password=${MYSQL_PASSWORD}"
+      - "-connectRetries=60"
+      - "repair"
+
+    volumes:
+      - ./migration:/flyway/sql:ro
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 
   redis:
     image: redis:7
