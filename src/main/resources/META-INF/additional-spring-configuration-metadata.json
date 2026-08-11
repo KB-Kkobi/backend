@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "redis.host",
+      "type": "java.lang.String",
+      "description": "Redis server host.",
+      "defaultValue": "localhost"
+    },
+    {
+      "name": "redis.port",
+      "type": "java.lang.Integer",
+      "description": "Redis server port.",
+      "defaultValue": 6379
+    }
+  ]
+}
