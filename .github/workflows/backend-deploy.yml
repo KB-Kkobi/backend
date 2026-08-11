@@ -110,8 +110,12 @@ jobs:
 
               "echo 'Pulling deployment images...'",
               "docker compose -f compose.ec2.yaml pull flyway backend",
+          
+              "echo 'Repairing Flyway schema history...'",
+              "docker compose -f compose.ec2.yaml run --rm flyway-repair",
 
               "echo 'Running Flyway migrations...'",
+          
               "docker compose -f compose.ec2.yaml run --rm flyway",
 
               "echo 'Deploying backend...'",
