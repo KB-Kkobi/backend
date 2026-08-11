@@ -42,6 +42,24 @@ public class ProductHoldingController {
                 .body(response);
     }
 
+    @Operation(
+            summary = "예적금 가입 예상 조회",
+            description = "가입 조건에 따른 세후 예상 만기금액을 조회합니다."
+    )
+    @PostMapping("/subscription-estimate")
+    public ResponseEntity<ProductSubscriptionEstimateResponseDto> estimateSubscription(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser,
+            @Valid @RequestBody ProductSubscriptionRequestDto request
+    ) {
+        ProductSubscriptionEstimateResponseDto response =
+                productHoldingService.estimateSubscription(
+                        authenticateUser.getUserId(),
+                        request
+                );
+        return ResponseEntity.ok(response);
+    }
+
     // 로그인 사용자의 보유 예적금을 해지
     @Operation(
             summary = "예적금 상품 해지",
@@ -59,6 +77,42 @@ public class ProductHoldingController {
                         holdingProductId
                 );
 
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "예적금 해지 예상 조회",
+            description = "실제 해지 없이 만기 유지와 현재 해지 결과를 비교 조회합니다."
+    )
+    @GetMapping("/{holdingProductId}/termination-estimate")
+    public ResponseEntity<ProductTerminationEstimateResponseDto> getTerminationEstimate(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser,
+            @PathVariable Long holdingProductId
+    ) {
+        ProductTerminationEstimateResponseDto response =
+                productHoldingService.getTerminationEstimate(
+                        authenticateUser.getUserId(),
+                        holdingProductId
+                );
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "보유 예적금 단건 조회",
+            description = "로그인 사용자가 보유한 예금 또는 적금의 상세 정보를 조회합니다."
+    )
+    @GetMapping("/{holdingProductId}")
+    public ResponseEntity<ProductHoldingListItemResponseDto> getHoldingProduct(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser,
+            @PathVariable Long holdingProductId
+    ) {
+        ProductHoldingListItemResponseDto response =
+                productHoldingService.getHoldingProductDetail(
+                        authenticateUser.getUserId(),
+                        holdingProductId
+                );
         return ResponseEntity.ok(response);
     }
 
@@ -96,15 +150,15 @@ public class ProductHoldingController {
             description = "로그인한 사용자의 예금 및 적금 해지 이력을 조회합니다."
     )
     @GetMapping("/history")
-    public ResponseEntity<List<ProductHoldingHistoryResponseDto>> getProductHoldingHistory(
+    public ResponseEntity<List<ProductHoldingTransactionHistoryResponseDto>> getProductHoldingHistory(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails authenticateUser
     ) {
-        List<ProductHoldingHistoryResponseDto> resopnse =
+        List<ProductHoldingTransactionHistoryResponseDto> response =
                 productHoldingService.getProductHoldingHistory(
                         authenticateUser.getUserId()
                 );
 
-        return ResponseEntity.ok(resopnse);
+        return ResponseEntity.ok(response);
     }
 }

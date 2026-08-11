@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.kkobi.account.dto.AccountAssetStatusResponseDto;
 import org.kkobi.account.dto.AccountCreateRequestDto;
 import org.kkobi.account.service.AccountService;
 import org.kkobi.security.principal.CustomUserDetails;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,5 +43,21 @@ public class AccountController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .build();
+    }
+
+    @Operation(
+            summary = "가상투자 계좌 자산 조회",
+            description = "로그인 사용자의 현금, 주식, 예적금 자산과 비중을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<AccountAssetStatusResponseDto> getAccountAssetStatus(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
+    ) {
+        AccountAssetStatusResponseDto response =
+                accountService.getAccountAssetStatus(
+                        authenticatedUser.getUserId()
+                );
+        return ResponseEntity.ok(response);
     }
 }

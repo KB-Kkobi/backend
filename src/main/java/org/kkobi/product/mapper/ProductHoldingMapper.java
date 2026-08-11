@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Param;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
-import org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto;
+import org.kkobi.product.holding.dto.response.ProductHoldingTransactionHistoryResponseDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,7 +48,7 @@ public interface ProductHoldingMapper {
     );
 
     // 로그인 사용자의 예적금 해지 이력 조회
-    List<ProductHoldingHistoryResponseDto> getProductHoldingHistory(
+    List<ProductHoldingTransactionHistoryResponseDto> getProductHoldingHistory(
             @Param("userId") Long userId
     );
 
