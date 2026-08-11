@@ -15,11 +15,17 @@ public class ProductListRequestDto {
     // 가입 기간
     private Integer savingTerm;
 
+    // 복수 가입 기간
+    private List<Integer> savingTerms;
+
     // 우대조건 유형
     private List<PreferentialConditionType> preferentialConditions;
 
     // 적립 유형 코드
     private String reserveType;
+
+    // 복수 적립 유형 코드
+    private List<String> reserveTypes;
 
     // 페이지 번호
     private Integer page = 1;
