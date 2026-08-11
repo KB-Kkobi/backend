@@ -85,6 +85,9 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/error"))
                         .permitAll()
                         .requestMatchers(
+                                new AntPathRequestMatcher("/api/securities/*/orderable"))
+                        .authenticated()
+                        .requestMatchers(
                                 new AntPathRequestMatcher("/api/auth/login"),
                                 new AntPathRequestMatcher("/api/auth/signup"),
                                 new AntPathRequestMatcher("/api/security/all"),

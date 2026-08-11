@@ -209,6 +209,12 @@ class GameAssessmentFlowTest {
         }
 
         @Override
+        public org.kkobi.assessment.dto.AssessmentResultResponseDto
+                getLatestAssessmentResult(Long userId) {
+            return null;
+        }
+
+        @Override
         public Long getPersonaIdByAxisCode(String axisCode) {
             return 7L;
         }

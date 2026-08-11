@@ -7,6 +7,7 @@ import org.kkobi.external.kis.config.KisApiConfig.KisApiProperties;
 import org.kkobi.external.kis.realtime.KisApprovalKeyManager;
 import org.kkobi.external.kis.realtime.KisTickFrameParser;
 import org.kkobi.external.kis.realtime.dto.StockTick;
+import org.kkobi.trade.engine.TickMatchingEngine;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,7 @@ public class KisWebSocketClient {
     private final KisApprovalKeyManager approvalKeyManager;
     private final KisTickFrameParser tickFrameParser;
     private final SimpMessagingTemplate messagingTemplate;
+    private final TickMatchingEngine tickMatchingEngine;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final Set<String> activeCodes = new CopyOnWriteArraySet<>();
@@ -58,11 +60,13 @@ public class KisWebSocketClient {
             KisApiProperties properties,
             KisApprovalKeyManager approvalKeyManager,
             KisTickFrameParser tickFrameParser,
-            SimpMessagingTemplate messagingTemplate) {
+            SimpMessagingTemplate messagingTemplate,
+            TickMatchingEngine tickMatchingEngine) {
         this.properties = properties;
         this.approvalKeyManager = approvalKeyManager;
         this.tickFrameParser = tickFrameParser;
         this.messagingTemplate = messagingTemplate;
+        this.tickMatchingEngine = tickMatchingEngine;
     }
 
     @PostConstruct
@@ -166,6 +170,7 @@ public class KisWebSocketClient {
             List<StockTick> ticks = tickFrameParser.parse(frame);
             for (StockTick tick : ticks) {
                 messagingTemplate.convertAndSend("/topic/stocks/" + tick.stockCode(), tick);
+                tickMatchingEngine.onTick(tick.stockCode(), tick.price().longValue());
             }
             return;
         }

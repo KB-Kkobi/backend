@@ -85,7 +85,7 @@ class StockSubscriptionManagerTest {
         final List<String> events = new ArrayList<>();
 
         RecordingKisClient() {
-            super(null, null, null, null);
+            super(null, null, null, null, null);
         }
 
         @Override

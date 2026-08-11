@@ -8,6 +8,7 @@ import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.domain.AssessmentResult;
 import org.kkobi.assessment.domain.AssessmentResultDetails;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.game.dto.ActionLogDto;
@@ -148,6 +149,11 @@ class GameAssessmentServiceTest {
             }
 
             @Override
+            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
+                return null;
+            }
+
+            @Override
             public Long getPersonaIdByAxisCode(String axisCode) {
                 return 1L;
             }
@@ -191,6 +197,11 @@ class GameAssessmentServiceTest {
             @Override
             public Long getPersonaIdByAxisCode(String axisCode) {
                 return 1L;
+            }
+
+            @Override
+            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
+                return null;
             }
 
             @Override
