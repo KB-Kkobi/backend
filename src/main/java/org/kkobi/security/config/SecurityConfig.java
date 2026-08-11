@@ -3,10 +3,12 @@ package org.kkobi.security.config;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.filter.JwtUsernamePasswordAuthenticationFilter;
 import org.kkobi.security.jwt.JwtAuthenticationFilter;
-import org.kkobi.security.jwt.JwtProvider;
+import org.kkobi.security.token.RefreshTokenCookieManager;
+import org.kkobi.security.token.RefreshTokenService;
 import org.kkobi.security.util.JsonResponse;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -25,10 +27,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.filter.CorsFilter;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -44,7 +49,11 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final JwtProvider jwtProvider;
+    private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenCookieManager refreshTokenCookieManager;
+
+    @Value("${cors.allowed-origin-patterns:http://localhost:3000,http://localhost:5173}")
+    private String allowedOriginPatterns;
 
     // Spring Security 필터보다 먼저 적용할 UTF-8 인코딩 필터를 생성
     public CharacterEncodingFilter encodingFilter() {
@@ -61,7 +70,11 @@ public class SecurityConfig {
             AuthenticationManager authenticationManager
     ) throws Exception {
         JwtUsernamePasswordAuthenticationFilter loginFilter =
-                new JwtUsernamePasswordAuthenticationFilter(authenticationManager, jwtProvider);
+                new JwtUsernamePasswordAuthenticationFilter(
+                        authenticationManager,
+                        refreshTokenService,
+                        refreshTokenCookieManager
+                );
 
         http
                 .addFilterBefore(encodingFilter(), CsrfFilter.class)
@@ -90,12 +103,29 @@ public class SecurityConfig {
                         .requestMatchers(
                                 new AntPathRequestMatcher("/api/auth/login"),
                                 new AntPathRequestMatcher("/api/auth/signup"),
+                                new AntPathRequestMatcher("/api/auth/refresh"),
+                                new AntPathRequestMatcher("/api/auth/logout"),
                                 new AntPathRequestMatcher("/api/security/all"),
                                 new AntPathRequestMatcher("/api/games/scenarios/**"),
                                 new AntPathRequestMatcher("/api/stocks/**"),
                                 new AntPathRequestMatcher("/api/securities/**"),
                                 new AntPathRequestMatcher("/api/personas/**"),
                                 new AntPathRequestMatcher("/ws-stocks/**"))
+                        .permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher(
+                                        "/api/products/deposits",
+                                        HttpMethod.GET.name()
+                                ),
+                                new AntPathRequestMatcher(
+                                        "/api/products/savings",
+                                        HttpMethod.GET.name()
+                                ),
+                                new RegexRequestMatcher(
+                                        "^/api/products/(deposits|savings)/\\d+$",
+                                        HttpMethod.GET.name()
+                                )
+                        )
                         .permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/health", HttpMethod.GET.name())).permitAll()
                         .anyRequest().authenticated())
@@ -128,7 +158,10 @@ public class SecurityConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*");
+        config.setAllowedOriginPatterns(Arrays.stream(allowedOriginPatterns.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList());
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

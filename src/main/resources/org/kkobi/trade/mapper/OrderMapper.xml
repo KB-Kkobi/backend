@@ -96,7 +96,11 @@
         FROM security_orders so
         JOIN securities sec ON so.security_id = sec.security_id
         <include refid="orderSearchWhere"/>
-        ORDER BY so.ordered_at DESC
+        ORDER BY so.ordered_at
+        <choose>
+            <when test="sort == 'asc'">ASC</when>
+            <otherwise>DESC</otherwise>
+        </choose>
         LIMIT #{size} OFFSET #{offset}
     </select>
 

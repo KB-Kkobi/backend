@@ -2,13 +2,13 @@ package org.kkobi.product.holding.service;
 
 
 import lombok.RequiredArgsConstructor;
+import org.kkobi.account.dto.AccountAssetInfoDto;
+import org.kkobi.account.mapper.AccountMapper;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
-import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
+import org.kkobi.product.holding.dto.response.*;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
-import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
-import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.mapper.ProductHoldingMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -30,10 +30,17 @@ public class ProductHoldingService {
     private static final String SAVING = "SAVING";
     private static final String ACTIVE = "ACTIVE";
 
+    private static final String TERMINATED = "TERMINATED";
+
+    // 금융소득 안내 기준
+    private static final BigDecimal INTEREST_INCOME_THRESHOLD =
+            new BigDecimal("20000000");
+
     private static final ZoneId KOREA_ZONE_ID =
             ZoneId.of("Asia/Seoul");
 
     private final ProductHoldingMapper productHoldingMapper;
+    private final AccountMapper accountMapper;
 
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
 
@@ -100,7 +107,141 @@ public class ProductHoldingService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public ProductSubscriptionEstimateResponseDto estimateSubscription(
+            Long userId,
+            ProductSubscriptionRequestDto request
+    ) {
+        validateUserId(userId);
+        validateRequest(request);
+
+        ProductSubscriptionInfoDto subscriptionInfo =
+                productHoldingMapper.getProductSubscriptionInfo(
+                        userId,
+                        request.getProductOptionId()
+                );
+        validateSubscriptionInfo(subscriptionInfo);
+        validateProductRequest(subscriptionInfo, request);
+
+        BigDecimal appliedRate =
+                calculateAppliedRate(subscriptionInfo, request);
+        LocalDate startDate = LocalDate.now(KOREA_ZONE_ID);
+        LocalDate maturityDate =
+                startDate.plusMonths(subscriptionInfo.getSavingTerm());
+
+        return createSubscriptionEstimateResponse(
+                subscriptionInfo,
+                request,
+                appliedRate,
+                startDate,
+                maturityDate
+        );
+    }
+
+    // 로그인 사용자의 보유 예적금을 해지
+    @Transactional
+    public ProductTerminationResponseDto terminateProduct(
+            Long userId,
+            Long holdingProductId
+    ){
+        validateUserId(userId);
+        validateHoldingProductId(holdingProductId);
+
+        ProductHoldingInfoDto holdingProduct = getHoldingProduct(
+                userId,
+                holdingProductId
+        );
+
+        LocalDateTime terminatedAt =
+                LocalDateTime.now(KOREA_ZONE_ID);
+
+        LocalDate terminationDate =
+                terminatedAt.toLocalDate();
+
+        validateTerminationProduct(holdingProduct, terminationDate);
+
+        // 현재까지 납입한 원금 계산
+        TerminationAmounts terminationAmounts =
+                calculateTerminationAmounts(
+                        holdingProduct,
+                        terminationDate
+                );
+
+        // 해지일까지 발생한 이자 계산
+        terminateHoldingProduct(
+                holdingProductId
+        );
+
+        increaseAccountCashBalance(
+                holdingProduct.getAccountId(),
+                terminationAmounts.refundAmount()
+        );
+
+        saveTerminationTransactions(
+                holdingProduct.getAccountId(),
+                holdingProductId,
+                terminationAmounts.refundAmount(),
+                terminationAmounts.accruedInterest(),
+                terminationAmounts.interestTax(),
+                terminatedAt
+        );
+
+        LocalDateTime yearStart =
+                terminationDate
+                        .withDayOfYear(1)
+                        .atStartOfDay();
+
+        LocalDateTime nextYearStart =
+                yearStart.plusYears(1);
+
+        BigDecimal annualInterestIncome =
+                productHoldingMapper.getAnnualInterestIncome(
+                        userId,
+                        yearStart,
+                        nextYearStart
+                );
+
+        boolean thresholdExceeded =
+                annualInterestIncome.compareTo(
+                        INTEREST_INCOME_THRESHOLD
+                ) > 0;
+
+        return createTerminationResponse(
+                holdingProduct,
+                terminationAmounts,
+                annualInterestIncome,
+                thresholdExceeded,
+                terminatedAt
+        );
+    }
+
     // 로그인 사용자의 보유 예적금 목록 조회
+    @Transactional(readOnly = true)
+    public ProductTerminationEstimateResponseDto getTerminationEstimate(
+            Long userId,
+            Long holdingProductId
+    ) {
+        validateUserId(userId);
+        validateHoldingProductId(holdingProductId);
+
+        ProductHoldingInfoDto holdingProduct = getHoldingProduct(
+                userId,
+                holdingProductId
+        );
+        LocalDate today = LocalDate.now(KOREA_ZONE_ID);
+        validateTerminationProduct(holdingProduct, today);
+
+        TerminationAmounts terminationAmounts =
+                calculateTerminationAmounts(holdingProduct, today);
+
+        return createTerminationEstimateResponse(
+                userId,
+                holdingProduct,
+                terminationAmounts,
+                today
+        );
+    }
+
     @Transactional(readOnly = true)
     public List<ProductHoldingListItemResponseDto> getHoldingProducts(Long userId){
         validateUserId(userId);
@@ -110,6 +251,27 @@ public class ProductHoldingService {
         return holdingProducts.stream()
                 .map(this::createHoldingListItemResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductHoldingListItemResponseDto getHoldingProductDetail(
+            Long userId,
+            Long holdingProductId
+    ) {
+        validateUserId(userId);
+        validateHoldingProductId(holdingProductId);
+
+        return createHoldingListItemResponse(
+                getHoldingProduct(userId, holdingProductId)
+        );
+    }
+
+    // 로그인 사용자의 예적금 해지 이력 조회
+    @Transactional(readOnly = true)
+    public List<ProductHoldingTransactionHistoryResponseDto> getProductHoldingHistory(Long userId){
+        validateUserId(userId);
+
+        return productHoldingMapper.getProductHoldingHistory(userId);
     }
 
     // 로그인 사용자의 전체 저축 자산 현황 조회
@@ -281,15 +443,15 @@ public class ProductHoldingService {
 
     // 현재까지 발생한 예상 이자 계산
     private BigDecimal calculateAccruedInterest(ProductHoldingInfoDto holdingProduct, LocalDate today){
-        LocalDate evaluetionDate = today.isAfter(holdingProduct.getMaturityDate()) ? holdingProduct.getMaturityDate() : today;
+        LocalDate evaluationDate = today.isAfter(holdingProduct.getMaturityDate()) ? holdingProduct.getMaturityDate() : today;
 
-        if(evaluetionDate.isBefore(holdingProduct.getStartDate())) {
+        if(evaluationDate.isBefore(holdingProduct.getStartDate())) {
             return BigDecimal.ZERO;
         }
 
         if(DEPOSIT.equals(holdingProduct.getProductType())) {
             long interestDays = ChronoUnit.DAYS.between(
-                    holdingProduct.getStartDate(), evaluetionDate);
+                    holdingProduct.getStartDate(), evaluationDate);
 
             return calculateSimpleInterest(
                     holdingProduct.getJoinAmount(),
@@ -300,7 +462,7 @@ public class ProductHoldingService {
 
         return calculateSavingAccruedInterest(
                 holdingProduct,
-                evaluetionDate
+                evaluationDate
         );
     }
 
@@ -412,16 +574,15 @@ public class ProductHoldingService {
     // 이자소득세를 반영한 후 세후 이자 계산
     private BigDecimal calculateAfterTaxInterest(
             BigDecimal accruedInterest
-    ){
-        if(accruedInterest == null || accruedInterest.compareTo(BigDecimal.ZERO) <= 0){
+    ) {
+        if (accruedInterest == null
+                || accruedInterest.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal tax = accruedInterest
-                .multiply(INTEREST_TAX_RATE)
-                .setScale(0,RoundingMode.DOWN);
-
-        return accruedInterest.subtract(tax);
+        return accruedInterest.subtract(
+                calculateInterestTax(accruedInterest)
+        );
     }
 
     // 현재 원금 대비 세후 평가금액의 수익률 계산
@@ -489,6 +650,65 @@ public class ProductHoldingService {
     private void validateUserId(Long userId) {
         if(userId == null){
             throw new IllegalArgumentException("사용자 정보가 없습니다.");
+        }
+    }
+
+    // 발생한 이자에 대한 이자소득세 계산
+    private BigDecimal calculateInterestTax(
+            BigDecimal accruedInterest
+    ){
+        if(accruedInterest == null
+        || accruedInterest.compareTo(BigDecimal.ZERO)<= 0){
+            return BigDecimal.ZERO;
+        }
+
+        return accruedInterest
+                .multiply(INTEREST_TAX_RATE)
+                .setScale(0, RoundingMode.DOWN);
+    }
+
+    // 보유 상품 식별자 확인
+    private void validateHoldingProductId(Long holdingProductId) {
+        if(holdingProductId == null || holdingProductId <= 0){
+            throw new IllegalArgumentException(
+                    "보유 상품 ID가 올바르지 않습니다."
+            );
+        }
+    }
+
+    // 예적금 해지 가능 여부 확인
+    private void validateTerminationProduct(
+            ProductHoldingInfoDto holdingProduct,
+            LocalDate terminationDate
+    ) {
+        if(holdingProduct == null){
+            throw new IllegalArgumentException(
+                    "해지할 보유 상품을 찾을 수 없습니다."
+            );
+        }
+
+        if(!ACTIVE.equals(holdingProduct.getStatus())){
+            throw new IllegalArgumentException(
+                    "이미 해지되었거나 해지할 수 없는 상품입니다."
+            );
+        }
+
+        if(holdingProduct.getAccountId() == null){
+            throw new IllegalArgumentException(
+                    "연결된 계좌 정보를 찾을 수 없습니다."
+            );
+        }
+
+        if(holdingProduct.getMaturityDate() == null){
+            throw new IllegalArgumentException(
+                    "상품 만기 정보를 찾을 수 없습니다."
+            );
+        }
+
+        if(!terminationDate.isBefore(holdingProduct.getMaturityDate())) {
+            throw new IllegalArgumentException(
+                    "만기된 상품은 해지할 수 없습니다."
+            );
         }
     }
 
@@ -648,6 +868,71 @@ public class ProductHoldingService {
         }
     }
 
+    // 보유 예적금 상태를 해지로 변경
+    private void terminateHoldingProduct(Long holdingProductId) {
+        int updateCount = productHoldingMapper.terminateHoldingProduct(
+                holdingProductId
+        );
+
+        if(updateCount != 1){
+            throw new IllegalArgumentException(
+                    "예적금 해지 처리에 실패했습니다."
+            );
+        }
+    }
+
+    // 해지 반환 금액을 계좌에 입금
+    private void increaseAccountCashBalance(Long accountId, BigDecimal amount){
+        int updateCount =
+                productHoldingMapper.increaseAccountCashBalance(
+                        accountId,
+                        amount
+                );
+
+        if(updateCount != 1){
+            throw new IllegalArgumentException(
+                    "해지 금액 반환에 실패했습니다."
+            );
+        }
+    }
+
+    // 상품 해지 및 계좌 입금 거래 내역 저장
+    private void saveTerminationTransactions(
+            Long accountId,
+            Long holdingProductId,
+            BigDecimal refundAmount,
+            BigDecimal interestAmount,
+            BigDecimal interestTaxAmount,
+            LocalDateTime terminatedAt
+    ) {
+        int productTransactionCount =
+                productHoldingMapper.saveProductTerminationTransaction(
+                        holdingProductId,
+                        refundAmount,
+                        interestAmount,
+                        interestTaxAmount,
+                        terminatedAt
+                );
+
+        if(productTransactionCount != 1){
+            throw new IllegalArgumentException(
+                    "상품 해지 거래 내역 저장에 실패했습니다."
+            );
+        }
+
+        int accountTransactionCount =
+                productHoldingMapper.saveAccountDepositTransaction(
+                        accountId,
+                        refundAmount
+                );
+
+        if(accountTransactionCount != 1){
+            throw new IllegalArgumentException(
+                    "계좌 입금 거래 내역 저장에 실패했습니다."
+            );
+        }
+    }
+
     // 상품 거래 및 계좌 거래 내역 저장
     private void saveTransactions(Long accountId, Long holdingProductId, BigDecimal amount, Integer installmentNumber) {
         int productTransactionCount = productHoldingMapper.saveProductSubscriptionTransaction(
@@ -668,6 +953,65 @@ public class ProductHoldingService {
     }
 
     // 가입 결과 응답 생성
+    private ProductSubscriptionEstimateResponseDto createSubscriptionEstimateResponse(
+            ProductSubscriptionInfoDto subscriptionInfo,
+            ProductSubscriptionRequestDto request,
+            BigDecimal appliedRate,
+            LocalDate startDate,
+            LocalDate maturityDate
+    ) {
+        ProductHoldingInfoDto holdingProduct = new ProductHoldingInfoDto();
+        holdingProduct.setProductType(subscriptionInfo.getProductType());
+        holdingProduct.setJoinAmount(request.getJoinAmount());
+        holdingProduct.setAppliedRate(appliedRate);
+        holdingProduct.setSavingTerm(subscriptionInfo.getSavingTerm());
+        holdingProduct.setStartDate(startDate);
+        holdingProduct.setMaturityDate(maturityDate);
+
+        if (SAVING.equals(subscriptionInfo.getProductType())) {
+            holdingProduct.setTotalInstallments(
+                    subscriptionInfo.getSavingTerm()
+            );
+            holdingProduct.setNextPaymentDate(
+                    calculateNextPaymentDate(
+                            startDate,
+                            request.getPaymentDay()
+                    )
+            );
+        }
+
+        BigDecimal expectedPrincipal =
+                calculateExpectedPrincipal(holdingProduct);
+        BigDecimal expectedInterest =
+                calculateExpectedInterest(holdingProduct);
+        BigDecimal expectedInterestTax =
+                calculateInterestTax(expectedInterest);
+        BigDecimal expectedAfterTaxInterest =
+                expectedInterest.subtract(expectedInterestTax);
+
+        ProductSubscriptionEstimateResponseDto response =
+                new ProductSubscriptionEstimateResponseDto();
+        response.setProductOptionId(subscriptionInfo.getProductOptionId());
+        response.setProductType(subscriptionInfo.getProductType());
+        response.setFinancialCompanyName(
+                subscriptionInfo.getFinancialCompanyName()
+        );
+        response.setProductName(subscriptionInfo.getProductName());
+        response.setJoinAmount(request.getJoinAmount());
+        response.setAppliedRate(appliedRate);
+        response.setSavingTerm(subscriptionInfo.getSavingTerm());
+        response.setStartDate(startDate);
+        response.setMaturityDate(maturityDate);
+        response.setExpectedPrincipal(expectedPrincipal);
+        response.setExpectedInterest(expectedInterest);
+        response.setExpectedInterestTax(expectedInterestTax);
+        response.setExpectedAfterTaxInterest(expectedAfterTaxInterest);
+        response.setExpectedMaturityAmount(
+                expectedPrincipal.add(expectedAfterTaxInterest)
+        );
+        return response;
+    }
+
     private ProductSubscriptionResponseDto createResponse(ProductSubscriptionInfoDto subscriptionInfo, ProductHoldingCreateDto holdingProduct){
         ProductSubscriptionResponseDto response = new ProductSubscriptionResponseDto();
 
@@ -711,5 +1055,342 @@ public class ProductHoldingService {
                 holdingProduct.getStatus()
         );
         return response;
+    }
+
+    // 예적금 해지 결과 응답 생성
+    private ProductHoldingInfoDto getHoldingProduct(
+            Long userId,
+            Long holdingProductId
+    ) {
+        ProductHoldingInfoDto holdingProduct =
+                productHoldingMapper.getHoldingProductForTermination(
+                        userId,
+                        holdingProductId
+                );
+
+        if (holdingProduct == null) {
+            throw new IllegalArgumentException(
+                    "보유 상품을 찾을 수 없습니다."
+            );
+        }
+        return holdingProduct;
+    }
+
+    private TerminationAmounts calculateTerminationAmounts(
+            ProductHoldingInfoDto holdingProduct,
+            LocalDate terminationDate
+    ) {
+        BigDecimal currentPrincipal =
+                calculateCurrentPrincipal(holdingProduct);
+        BigDecimal accruedInterest =
+                calculateAccruedInterest(
+                        holdingProduct,
+                        terminationDate
+                );
+        BigDecimal interestTax =
+                calculateInterestTax(accruedInterest);
+        BigDecimal afterTaxInterest =
+                accruedInterest.subtract(interestTax);
+        BigDecimal refundAmount =
+                currentPrincipal.add(afterTaxInterest);
+
+        BigDecimal expectedPrincipal =
+                calculateExpectedPrincipal(holdingProduct);
+        BigDecimal expectedInterest =
+                calculateExpectedInterest(holdingProduct);
+        BigDecimal expectedInterestTax =
+                calculateInterestTax(expectedInterest);
+        BigDecimal expectedAfterTaxInterest =
+                expectedInterest.subtract(expectedInterestTax);
+        BigDecimal expectedMaturityAmount =
+                expectedPrincipal.add(expectedAfterTaxInterest);
+        BigDecimal foregoneInterest =
+                expectedAfterTaxInterest
+                        .subtract(afterTaxInterest)
+                        .max(BigDecimal.ZERO);
+
+        return new TerminationAmounts(
+                currentPrincipal,
+                accruedInterest,
+                interestTax,
+                afterTaxInterest,
+                refundAmount,
+                expectedPrincipal,
+                expectedInterest,
+                expectedInterestTax,
+                expectedAfterTaxInterest,
+                expectedMaturityAmount,
+                foregoneInterest
+        );
+    }
+
+    private ProductTerminationEstimateResponseDto createTerminationEstimateResponse(
+            Long userId,
+            ProductHoldingInfoDto holdingProduct,
+            TerminationAmounts terminationAmounts,
+            LocalDate today
+    ) {
+        AssetRatioChange assetRatioChange = calculateAssetRatioChange(
+                userId,
+                holdingProduct,
+                terminationAmounts
+        );
+
+        ProductTerminationEstimateResponseDto response =
+                new ProductTerminationEstimateResponseDto();
+        setTerminationProductSummary(response, holdingProduct, today);
+        setTerminationFinancialComparison(response, terminationAmounts);
+        response.setCurrentSavingsRatio(
+                assetRatioChange.currentSavingsRatio()
+        );
+        response.setAfterTerminationSavingsRatio(
+                assetRatioChange.afterTerminationSavingsRatio()
+        );
+        return response;
+    }
+
+    private void setTerminationProductSummary(
+            ProductTerminationEstimateResponseDto response,
+            ProductHoldingInfoDto holdingProduct,
+            LocalDate today
+    ) {
+        response.setHoldingProductId(holdingProduct.getHoldingProductId());
+        response.setProductType(holdingProduct.getProductType());
+        response.setFinancialCompanyName(
+                holdingProduct.getFinancialCompanyName()
+        );
+        response.setProductName(holdingProduct.getProductName());
+        response.setJoinAmount(holdingProduct.getJoinAmount());
+        response.setAppliedRate(holdingProduct.getAppliedRate());
+        response.setSavingTerm(holdingProduct.getSavingTerm());
+        response.setTotalInstallments(holdingProduct.getTotalInstallments());
+        response.setPaidInstallments(holdingProduct.getPaidInstallments());
+        Integer remainingInstallments =
+                calculateRemainingInstallments(holdingProduct);
+        response.setRemainingInstallments(remainingInstallments);
+        response.setRemainingContributionAmount(
+                calculateRemainingContributionAmount(
+                        holdingProduct,
+                        remainingInstallments
+                )
+        );
+        response.setStartDate(holdingProduct.getStartDate());
+        response.setMaturityDate(holdingProduct.getMaturityDate());
+        response.setRemainingDays(
+                calculateRemainingDays(
+                        holdingProduct.getMaturityDate(),
+                        today
+                )
+        );
+        response.setMaturityProgressRate(
+                calculateMaturityProgressRate(
+                        holdingProduct.getStartDate(),
+                        holdingProduct.getMaturityDate(),
+                        today
+                )
+        );
+    }
+
+    private void setTerminationFinancialComparison(
+            ProductTerminationEstimateResponseDto response,
+            TerminationAmounts terminationAmounts
+    ) {
+        response.setCurrentPrincipal(
+                terminationAmounts.currentPrincipal()
+        );
+        response.setTerminationInterest(
+                terminationAmounts.accruedInterest()
+        );
+        response.setTerminationInterestTax(
+                terminationAmounts.interestTax()
+        );
+        response.setTerminationAfterTaxInterest(
+                terminationAmounts.afterTaxInterest()
+        );
+        response.setTerminationRefundAmount(
+                terminationAmounts.refundAmount()
+        );
+        response.setExpectedMaturityPrincipal(
+                terminationAmounts.expectedPrincipal()
+        );
+        response.setExpectedMaturityInterest(
+                terminationAmounts.expectedInterest()
+        );
+        response.setExpectedMaturityInterestTax(
+                terminationAmounts.expectedInterestTax()
+        );
+        response.setExpectedMaturityAfterTaxInterest(
+                terminationAmounts.expectedAfterTaxInterest()
+        );
+        response.setExpectedMaturityAmount(
+                terminationAmounts.expectedMaturityAmount()
+        );
+        response.setForegoneInterest(
+                terminationAmounts.foregoneInterest()
+        );
+    }
+
+    private AssetRatioChange calculateAssetRatioChange(
+            Long userId,
+            ProductHoldingInfoDto holdingProduct,
+            TerminationAmounts terminationAmounts
+    ) {
+        ProductHoldingListItemResponseDto holding =
+                createHoldingListItemResponse(holdingProduct);
+        SavingsAssetStatusResponseDto savingsAssetStatus =
+                getSavingAssetStatus(userId);
+        AccountAssetInfoDto account =
+                accountMapper.getAccountAssetInfoByUserId(userId);
+
+        if (account == null) {
+            throw new IllegalArgumentException(
+                    "가상투자 계좌를 찾을 수 없습니다."
+            );
+        }
+
+        BigDecimal cashBalance = defaultZero(account.getCashBalance());
+        BigDecimal stockAsset = defaultZero(account.getStockAsset());
+        BigDecimal currentSavingsAsset = defaultZero(
+                savingsAssetStatus.getTotalAfterTaxCurrentValue()
+        );
+        BigDecimal afterTerminationSavingsAsset =
+                currentSavingsAsset
+                        .subtract(defaultZero(holding.getAfterTaxCurrentValue()))
+                        .max(BigDecimal.ZERO);
+        BigDecimal currentTotalAsset =
+                cashBalance.add(stockAsset).add(currentSavingsAsset);
+        BigDecimal afterTerminationTotalAsset =
+                cashBalance
+                        .add(terminationAmounts.refundAmount())
+                        .add(stockAsset)
+                        .add(afterTerminationSavingsAsset);
+
+        return new AssetRatioChange(
+                calculateAssetRatio(
+                        currentSavingsAsset,
+                        currentTotalAsset
+                ),
+                calculateAssetRatio(
+                        afterTerminationSavingsAsset,
+                        afterTerminationTotalAsset
+                )
+        );
+    }
+
+    private Integer calculateRemainingInstallments(
+            ProductHoldingInfoDto holdingProduct
+    ) {
+        if (!SAVING.equals(holdingProduct.getProductType())) {
+            return null;
+        }
+
+        int totalInstallments = holdingProduct.getTotalInstallments() == null
+                ? 0 : holdingProduct.getTotalInstallments();
+        int paidInstallments = holdingProduct.getPaidInstallments() == null
+                ? 0 : holdingProduct.getPaidInstallments();
+        return Math.max(totalInstallments - paidInstallments, 0);
+    }
+
+    private BigDecimal calculateRemainingContributionAmount(
+            ProductHoldingInfoDto holdingProduct,
+            Integer remainingInstallments
+    ) {
+        if (remainingInstallments == null) {
+            return null;
+        }
+
+        return holdingProduct.getJoinAmount()
+                .multiply(BigDecimal.valueOf(remainingInstallments));
+    }
+
+    private BigDecimal calculateAssetRatio(
+            BigDecimal amount,
+            BigDecimal totalAsset
+    ) {
+        if (amount == null || totalAsset == null
+                || totalAsset.compareTo(BigDecimal.ZERO) <= 0) {
+            return new BigDecimal("0.00");
+        }
+
+        return amount
+                .multiply(ONE_HUNDRED)
+                .divide(totalAsset, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal defaultZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private ProductTerminationResponseDto createTerminationResponse(
+            ProductHoldingInfoDto holdingProduct,
+            TerminationAmounts terminationAmounts,
+            BigDecimal annualInterestIncome,
+            boolean thresholdExceeded,
+            LocalDateTime terminatedAt
+    ) {
+        ProductTerminationResponseDto response =
+                new ProductTerminationResponseDto();
+
+        response.setHoldingProductId(
+                holdingProduct.getHoldingProductId()
+        );
+        response.setProductType(
+                holdingProduct.getProductType()
+        );
+        response.setFinancialCompanyName(
+                holdingProduct.getFinancialCompanyName()
+        );
+        response.setProductName(
+                holdingProduct.getProductName()
+        );
+
+        response.setPrincipal(terminationAmounts.currentPrincipal());
+        response.setAccruedInterest(terminationAmounts.accruedInterest());
+        response.setInterestTax(terminationAmounts.interestTax());
+        response.setAfterTaxInterest(terminationAmounts.afterTaxInterest());
+        response.setRefundAmount(terminationAmounts.refundAmount());
+
+        response.setAnnualInterestIncome(
+                annualInterestIncome
+        );
+        response.setInterestIncomeThresholdExceeded(
+                thresholdExceeded
+        );
+
+        if (thresholdExceeded) {
+            response.setTaxNotice(
+                    "연간 이자소득이 2,000만 원을 초과했습니다."
+            );
+        }
+
+        response.setTerminatedAt(
+                terminatedAt
+        );
+        response.setStatus(
+                TERMINATED
+        );
+
+        return response;
+    }
+
+    private record AssetRatioChange(
+            BigDecimal currentSavingsRatio,
+            BigDecimal afterTerminationSavingsRatio
+    ) {
+    }
+
+    private record TerminationAmounts(
+            BigDecimal currentPrincipal,
+            BigDecimal accruedInterest,
+            BigDecimal interestTax,
+            BigDecimal afterTaxInterest,
+            BigDecimal refundAmount,
+            BigDecimal expectedPrincipal,
+            BigDecimal expectedInterest,
+            BigDecimal expectedInterestTax,
+            BigDecimal expectedAfterTaxInterest,
+            BigDecimal expectedMaturityAmount,
+            BigDecimal foregoneInterest
+    ) {
     }
 }

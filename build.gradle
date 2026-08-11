@@ -106,6 +106,8 @@ dependencies {
 
     // 테스트 관련 설정
     testImplementation "org.springframework:spring-test:${springVersion}"
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+    testImplementation 'com.jayway.jsonpath:json-path:2.7.0'
     testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 

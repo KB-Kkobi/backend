@@ -13,6 +13,7 @@ public class OrderSearchCondition {
     private Long securityId;
     private LocalDate from;
     private LocalDate to;
+    private String sort;        // "asc" | "desc"
     private int offset;
     private int size;
 }

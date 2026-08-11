@@ -195,13 +195,13 @@ class GameAssessmentServiceTest {
             }
 
             @Override
-            public Long getPersonaIdByAxisCode(String axisCode) {
-                return 1L;
+            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
+                return null;
             }
 
             @Override
-            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
-                return null;
+            public Long getPersonaIdByAxisCode(String axisCode) {
+                return 1L;
             }
 
             @Override

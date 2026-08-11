@@ -1,6 +1,7 @@
 package org.kkobi.account.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.dto.AccountCreateRequestDto;
 
 public interface AccountMapper {
@@ -14,4 +15,8 @@ public interface AccountMapper {
             @Param("userId") Long userId,
             @Param("request")AccountCreateRequestDto request
             );
+
+    AccountAssetInfoDto getAccountAssetInfoByUserId(
+            @Param("userId") Long userId
+    );
 }

@@ -8,6 +8,7 @@ import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.MarketStateCalculator;
 import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.assessment.service.AssessmentResultService;
 import org.kkobi.game.dto.ActionLogDto;
@@ -137,8 +138,7 @@ class GameStartServiceTest {
             }
 
             @Override
-            public org.kkobi.assessment.dto.AssessmentResultResponseDto
-                    getLatestAssessmentResult(Long userId) {
+            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
                 return null;
             }
 

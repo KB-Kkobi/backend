@@ -35,8 +35,14 @@ public class OrderQueryService {
             throw new IllegalStateException("계좌가 없습니다.");
         }
 
+        if (req.getFrom() != null && req.getTo() != null && req.getFrom().isAfter(req.getTo())) {
+            throw new IllegalArgumentException("from 날짜는 to 날짜보다 이후일 수 없습니다.");
+        }
+
         int page = req.getPage() != null && req.getPage() >= 0 ? req.getPage() : 0;
         int size = req.getSize() != null && req.getSize() > 0 ? req.getSize() : DEFAULT_SIZE;
+
+        String sort = "asc".equalsIgnoreCase(req.getSort()) ? "asc" : "desc";
 
         OrderSearchCondition condition = new OrderSearchCondition();
         condition.setAccountId(account.getAccountId());
@@ -44,6 +50,7 @@ public class OrderQueryService {
         condition.setSecurityId(req.getSecurityId());
         condition.setFrom(req.getFrom());
         condition.setTo(req.getTo());
+        condition.setSort(sort);
         condition.setOffset(page * size);
         condition.setSize(size);
 

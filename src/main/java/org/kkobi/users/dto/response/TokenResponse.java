@@ -10,7 +10,6 @@ import org.kkobi.security.jwt.JwtToken;
 @AllArgsConstructor
 public class TokenResponse {
     private String accessToken;
-    private String refreshToken;
     private String tokenType;
     private long accessTokenExpiresAt;
     private long refreshTokenExpiresAt;
@@ -18,7 +17,6 @@ public class TokenResponse {
     public static TokenResponse from(JwtToken token) {
         return new TokenResponse(
                 token.getAccessToken(),
-                token.getRefreshToken(),
                 token.getTokenType(),
                 token.getAccessTokenExpiresAt(),
                 token.getRefreshTokenExpiresAt()

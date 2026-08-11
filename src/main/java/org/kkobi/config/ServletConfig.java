@@ -15,6 +15,8 @@ import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.format.FormatterRegistry;
+import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar;
 import org.springframework.web.multipart.MultipartResolver;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -75,6 +77,15 @@ public class ServletConfig implements WebMvcConfigurer {
         bean.setSuffix(".jsp");
 
         registry.viewResolver(bean);
+    }
+
+    // @ModelAttribute 바인딩 시 LocalDate 등 java.time 타입을 ISO 포맷(yyyy-MM-dd)으로 파싱.
+    // @EnableWebMvc 기본 ConversionService는 로케일 기반 SHORT 포맷을 사용하므로 명시적으로 등록 필요.
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        DateTimeFormatterRegistrar registrar = new DateTimeFormatterRegistrar();
+        registrar.setUseIsoFormat(true);
+        registrar.registerFormatters(registry);
     }
 
     @Bean

@@ -11,6 +11,7 @@ import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
 import org.kkobi.assessment.domain.AssessmentResult;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.enums.PersonaType;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.game.calculator.GamePriceRateCalculator;
@@ -209,8 +210,7 @@ class GameAssessmentFlowTest {
         }
 
         @Override
-        public org.kkobi.assessment.dto.AssessmentResultResponseDto
-                getLatestAssessmentResult(Long userId) {
+        public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
             return null;
         }
 

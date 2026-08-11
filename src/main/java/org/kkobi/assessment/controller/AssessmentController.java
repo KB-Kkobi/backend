@@ -7,6 +7,8 @@ import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.dto.LatestAssessmentResponse;
 import org.kkobi.assessment.service.AssessmentResultService;
 import org.kkobi.security.principal.CustomUserDetails;
+import org.kkobi.users.dto.response.MessageResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,10 +23,14 @@ public class AssessmentController {
     private final AssessmentResultService assessmentResultService;
 
     @GetMapping("/me/latest")
-    public ResponseEntity<LatestAssessmentResponse> getLatestAssessmentResult(
+    public ResponseEntity<?> getLatestAssessmentResult(
             @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
         AssessmentResultDetails resultDetails = assessmentResultService
                 .getLatestAssessmentResultDetails(authenticatedUser.getUserId());
+        if (resultDetails == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new MessageResponse("성향 진단 이력이 없습니다."));
+        }
         return ResponseEntity.ok(new LatestAssessmentResponse(resultDetails));
     }
 

@@ -32,12 +32,7 @@ public class AssessmentResultService {
     }
 
     public AssessmentResultDetails getLatestAssessmentResultDetails(Long userId) {
-        AssessmentResultDetails resultDetails = assessmentMapper
-                .getLatestAssessmentResultDetails(userId);
-        if (resultDetails == null) {
-            throw new IllegalStateException("저장된 성향 분석 결과를 찾을 수 없습니다.");
-        }
-        return resultDetails;
+        return assessmentMapper.getLatestAssessmentResultDetails(userId);
     }
 
     public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {

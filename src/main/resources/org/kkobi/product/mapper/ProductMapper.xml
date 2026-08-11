@@ -247,7 +247,13 @@
         INNER JOIN product_options po
         ON p.product_id = po.product_id
         WHERE p.product_type = #{productType}
-        AND po.save_trm = #{savingTerm}
+
+        <if test="savingTerms != null and savingTerms.size() > 0">
+            AND po.save_trm IN
+            <foreach collection="savingTerms" item="savingTerm" open="(" separator="," close=")">
+                #{savingTerm}
+            </foreach>
+        </if>
 
         <if test="keyword != null and keyword != ''">
             AND (
@@ -256,8 +262,11 @@
             )
         </if>
 
-        <if test="reserveType != null and reserveType != ''">
-            AND po.rsrv_type = #{reserveType}
+        <if test="reserveTypes != null and reserveTypes.size() > 0">
+            AND po.rsrv_type IN
+            <foreach collection="reserveTypes" item="reserveType" open="(" separator="," close=")">
+                #{reserveType}
+            </foreach>
         </if>
 
         <!-- 선택한 우대조건을 모두 만족하는 상품만 조회 -->
@@ -358,7 +367,13 @@
         INNER JOIN product_options po
         ON p.product_id = po.product_id
         WHERE p.product_type = #{productType}
-        AND po.save_trm = #{savingTerm}
+
+        <if test="savingTerms != null and savingTerms.size() > 0">
+            AND po.save_trm IN
+            <foreach collection="savingTerms" item="savingTerm" open="(" separator="," close=")">
+                #{savingTerm}
+            </foreach>
+        </if>
 
         <if test="keyword != null and keyword != ''">
             AND (
@@ -367,8 +382,11 @@
             )
         </if>
 
-        <if test="reserveType != null and reserveType != ''">
-            AND po.rsrv_type = #{reserveType}
+        <if test="reserveTypes != null and reserveTypes.size() > 0">
+            AND po.rsrv_type IN
+            <foreach collection="reserveTypes" item="reserveType" open="(" separator="," close=")">
+                #{reserveType}
+            </foreach>
         </if>
 
         <!-- 선택한 우대조건을 모두 만족하는 상품만 조회 -->
