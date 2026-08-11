@@ -5,10 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
-import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
-import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
-import org.kkobi.product.holding.dto.response.ProductTerminationResponseDto;
-import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
+import org.kkobi.product.holding.dto.response.*;
 import org.springframework.web.bind.annotation.*;
 import org.kkobi.product.holding.service.ProductHoldingService;
 import org.kkobi.security.principal.CustomUserDetails;
@@ -91,5 +88,23 @@ public class ProductHoldingController {
                 productHoldingService.getSavingAssetStatus(authenticateUser.getUserId());
 
         return ResponseEntity.ok(response);
+    }
+
+    // 로그인 사용자의 예적금 해지 이력 조회
+    @Operation(
+            summary = "예적금 해지 이력 조회",
+            description = "로그인한 사용자의 예금 및 적금 해지 이력을 조회합니다."
+    )
+    @GetMapping("/history")
+    public ResponseEntity<List<ProductHoldingHistoryResponseDto>> getProductHoldingHistory(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticateUser
+    ) {
+        List<ProductHoldingHistoryResponseDto> resopnse =
+                productHoldingService.getProductHoldingHistory(
+                        authenticateUser.getUserId()
+                );
+
+        return ResponseEntity.ok(resopnse);
     }
 }

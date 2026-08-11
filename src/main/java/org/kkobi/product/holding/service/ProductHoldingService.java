@@ -5,11 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
-import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
+import org.kkobi.product.holding.dto.response.*;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
-import org.kkobi.product.holding.dto.response.ProductHoldingListItemResponseDto;
-import org.kkobi.product.holding.dto.response.ProductTerminationResponseDto;
-import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.mapper.ProductHoldingMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -211,6 +208,14 @@ public class ProductHoldingService {
         return holdingProducts.stream()
                 .map(this::createHoldingListItemResponse)
                 .toList();
+    }
+
+    // 로그인 사용자의 예적금 해지 이력 조회
+    @Transactional(readOnly = true)
+    public List<ProductHoldingHistoryResponseDto> getProductHoldingHistory(Long userId){
+        validateUserId(userId);
+
+        return productHoldingMapper.getProductHoldingHistory(userId);
     }
 
     // 로그인 사용자의 전체 저축 자산 현황 조회

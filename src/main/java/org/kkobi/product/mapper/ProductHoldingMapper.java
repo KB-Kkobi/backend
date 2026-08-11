@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Param;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
+import org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,6 +47,11 @@ public interface ProductHoldingMapper {
             @Param("userId") Long userId
     );
 
+    // 로그인 사용자의 예적금 해지 이력 조회
+    List<ProductHoldingHistoryResponseDto> getProductHoldingHistory(
+            @Param("userId") Long userId
+    );
+
     // 로그인 사용자의 해지 대상 예적금 조회
     ProductHoldingInfoDto getHoldingProductForTermination(
             @Param("userId") Long userId,
@@ -81,7 +87,7 @@ public interface ProductHoldingMapper {
     // 해당 연도 누적 이자소득 조회
     BigDecimal getAnnualInterestIncome(
             @Param("userId") Long userId,
-            @Param("yearsStart") LocalDateTime yearStart,
+            @Param("yearStart") LocalDateTime yearStart,
             @Param("nextYearStart") LocalDateTime nextYearStart
     );
 

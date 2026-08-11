@@ -133,6 +133,7 @@
                  INNER JOIN products p
                             ON p.product_id = po.product_id
         WHERE a.user_id = #{userId}
+          AND hp.status = 'ACTIVE'
         ORDER BY
             hp.created_at DESC,
             hp.holding_product_id DESC
@@ -143,6 +144,7 @@
             resultType="org.kkobi.product.holding.dto.ProductHoldingInfoDto">
         SELECT
             hp.holding_product_id,
+            hp.account_id AS accountId,
             hp.product_option_id,
             p.product_type,
             p.kor_co_nm AS financial_company_name,
@@ -242,5 +244,43 @@
           AND pt.created_at &lt; #{nextYearStart}
     </select>
 
+    <!-- 로그인 사용자의 예적금 해지 이력 조회 -->
+    <select id="getProductHoldingHistory"
+            resultType="org.kkobi.product.holding.dto.response.ProductHoldingHistoryResponseDto">
+        SELECT
+            hp.holding_product_id AS holdingProductId,
+            p.product_type AS productType,
+            p.kor_co_nm AS financialCompanyName,
+            p.fin_prdt_nm AS productName,
+            CASE
+                WHEN p.product_type = 'DEPOSIT'
+                    THEN hp.join_amount
+                WHEN p.product_type = 'SAVING'
+                    THEN hp.join_amount * hp.paid_installments
+                ELSE 0
+                END AS principal,
+            pt.interest_amount AS accruedInterest,
+            pt.interest_tax_amount AS interestTax,
+            pt.interest_amount - pt.interest_tax_amount AS afterTaxInterest,
+            pt.amount AS refundAmount,
+            pt.terminated_at AS terminatedAt,
+            hp.status AS status
+        FROM holding_products hp
+                 INNER JOIN accounts a
+                            ON a.account_id = hp.account_id
+                 INNER JOIN product_options po
+                            ON po.product_option_id = hp.product_option_id
+                 INNER JOIN products p
+                            ON p.product_id = po.product_id
+                 INNER JOIN product_transactions pt
+                            ON pt.holding_product_id = hp.holding_product_id
+                                AND pt.type = 'TERMINATE'
+                                AND pt.status = 'COMPLETED'
+        WHERE a.user_id = #{userId}
+          AND hp.status = 'TERMINATED'
+        ORDER BY
+            pt.terminated_at DESC,
+            hp.holding_product_id DESC
+    </select>
 
 </mapper>
