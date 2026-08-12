@@ -37,6 +37,9 @@ public class AssessmentController {
             @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
         AssessmentResultResponseDto result = assessmentResultService
                 .getLatestAssessmentResult(authenticatedUser.getUserId());
+        if (result == null) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(result);
     }
 }

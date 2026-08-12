@@ -4,14 +4,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.security.jwt.JwtToken;
+import org.kkobi.security.principal.CustomUserDetails;
 import org.kkobi.security.token.RefreshTokenCookieManager;
 import org.kkobi.security.token.RefreshTokenService;
 import org.kkobi.users.dto.request.SignupRequest;
 import org.kkobi.users.dto.response.MessageResponse;
 import org.kkobi.users.dto.response.TokenResponse;
+import org.kkobi.users.dto.response.UserInfoResponse;
 import org.kkobi.users.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +48,17 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new MessageResponse("회원가입이 완료되었습니다."));
+    }
+
+    @Operation(
+            summary = "내 정보 조회",
+            description = "로그인한 사용자의 기본 정보(닉네임 등)를 조회합니다."
+    )
+    @GetMapping("/me")
+    public ResponseEntity<UserInfoResponse> getMyInfo(
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
+        UserInfoResponse response = userService.getUserInfo(authenticatedUser.getUserId());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
