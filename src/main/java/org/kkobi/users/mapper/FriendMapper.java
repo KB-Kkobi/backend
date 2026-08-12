@@ -44,4 +44,10 @@ public interface FriendMapper {
     List<FriendResponseDto> findFriends(
             @Param("userId") Long userId
     );
+
+    // 친구 관계를 삭제
+    int deleteFriend(
+            @Param("userId") Long userId,
+            @Param("friendUserId") Long friendUserId
+    );
 }

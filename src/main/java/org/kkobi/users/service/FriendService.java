@@ -22,4 +22,7 @@ public interface FriendService {
 
     // 친구 목록을 조회
     List<FriendResponseDto> getFriend(Long userId);
+
+    // 친구 관계를 삭제
+    void deleteFriend(Long userId, Long friendUserId);
 }
