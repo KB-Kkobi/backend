@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -32,6 +33,7 @@ public class KisApiClient {
     private static final String TR_ID_DAILY_CHART = "FHKST03010100";
     private static final String PATH_PRICE = "/uapi/domestic-stock/v1/quotations/inquire-price";
     private static final String PATH_DAILY_CHART = "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice";
+    private static final String ERROR_CODE_TOKEN_EXPIRED = "EGW00123";
 
     private final RestTemplate restTemplate;
     private final KisTokenManager tokenManager;
@@ -92,14 +94,29 @@ public class KisApiClient {
     }
 
     private JsonNode call(URI uri, String trId) {
+        return callInternal(uri, trId, false);
+    }
+
+    private JsonNode callInternal(URI uri, String trId, boolean isRetry) {
         HttpHeaders headers = buildHeaders(trId);
-        log.debug("KIS 요청 uri={} tr_id={}", uri, trId);
+        log.debug("KIS 요청 uri={} tr_id={} isRetry={}", uri, trId, isRetry);
 
         ResponseEntity<String> response;
         try {
             response = restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        } catch (HttpStatusCodeException ex) {
+            String status = ex.getStatusCode().toString();
+            String body = ex.getResponseBodyAsString();
+            if (body.contains(ERROR_CODE_TOKEN_EXPIRED) && !isRetry) {
+                log.warn("KIS 토큰 만료 감지(HTTP 오류) status={} body={} 토큰 무효화 후 재시도", status, body);
+                tokenManager.invalidate();
+                return callInternal(uri, trId, true);
+            }
+            log.error("KIS HTTP 오류 status={} body={}", status, body, ex);
+            throw new KisApiException("KIS HTTP 오류 status=" + status + " body=" + body, ex);
         } catch (RestClientException ex) {
-            throw new KisApiException("KIS 요청에 실패했습니다: " + ex.getMessage(), ex);
+            log.error("KIS 요청 실패", ex);
+            throw new KisApiException("KIS 요청에 실패했습니다.", ex);
         }
 
         JsonNode root;
@@ -111,8 +128,15 @@ public class KisApiClient {
 
         String rtCd = textOrEmpty(root, "rt_cd");
         if (!"0".equals(rtCd)) {
+            String msgCd = textOrEmpty(root, "msg_cd");
             String msg = textOrEmpty(root, "msg1");
-            throw new KisApiException("KIS 오류 rt_cd=" + rtCd + ", msg1=" + msg);
+            log.error("KIS 오류 tr_id={} rt_cd={} msg_cd={} msg1={}", trId, rtCd, msgCd, msg);
+            if (ERROR_CODE_TOKEN_EXPIRED.equals(msgCd) && !isRetry) {
+                log.warn("KIS 토큰 만료 감지(rt_cd 오류) 토큰 무효화 후 재시도");
+                tokenManager.invalidate();
+                return callInternal(uri, trId, true);
+            }
+            throw new KisApiException("KIS 오류 rt_cd=" + rtCd + " msg_cd=" + msgCd + " msg1=" + msg);
         }
 
         log.debug("KIS 응답 성공 tr_id={} rt_cd={}", trId, rtCd);

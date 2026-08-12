@@ -218,9 +218,7 @@ public class PortfolioService {
     }
 
     private TradeAccountDto findAccount(Long userId) {
-        log.info("[DEBUG] findAccount userId={}", userId);
         TradeAccountDto account = accountMapper.findByUserId(userId);
-        log.info("[DEBUG] findAccount result={}", account);
         if (account == null) {
             throw new IllegalStateException("계좌가 없습니다.");
         }
