@@ -193,7 +193,8 @@
             spcl_cnd AS preferential_conditions,
             join_member,
             etc_note AS additional_note,
-            max_limit
+            max_limit,
+            apply_url
         FROM products
         WHERE product_id = #{productId}
           AND product_type = #{productType}
