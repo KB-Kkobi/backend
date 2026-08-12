@@ -31,6 +31,57 @@
         )
     </select>
 
+    <select id="getProductBehaviorRequest"
+            resultType="org.kkobi.assessment.dto.VirtualInvestmentBehaviorRequest">
+        SELECT
+            account.user_id AS user_id,
+            account.account_id AS account_id,
+            'PRODUCT_TRANSACTION' AS reference_type,
+            product_transaction.product_transaction_id AS reference_id,
+            CASE product_transaction.type
+                WHEN 'SUBSCRIBE' THEN 'JOIN_PRODUCTS'
+                WHEN 'TERMINATE' THEN 'CANCEL_PRODUCTS'
+                WHEN 'MATURITY' THEN 'MATURITY'
+            END AS action_type,
+            'PRODUCTS' AS asset_type,
+            holding_product.product_option_id AS product_option_id,
+            product_transaction.amount AS action_amount,
+            account.cash_balance AS current_cash,
+            COALESCE((
+                SELECT SUM(holding_security.quantity * holding_security.average_price)
+                FROM holding_securities holding_security
+                WHERE holding_security.account_id = account.account_id
+            ), 0) AS current_stock_principal,
+            COALESCE((
+                SELECT SUM(
+                    CASE product.product_type
+                        WHEN 'DEPOSIT' THEN active_holding.join_amount
+                        ELSE active_holding.join_amount * COALESCE(active_holding.paid_installments, 0)
+                    END
+                )
+                FROM holding_products active_holding
+                JOIN product_options product_option
+                  ON product_option.product_option_id = active_holding.product_option_id
+                JOIN products product
+                  ON product.product_id = product_option.product_id
+                WHERE active_holding.account_id = account.account_id
+                  AND active_holding.status = 'ACTIVE'
+            ), 0) AS current_deposit,
+            COALESCE(
+                product_transaction.terminated_at,
+                product_transaction.created_at
+            ) AS traded_at
+        FROM product_transactions product_transaction
+        JOIN holding_products holding_product
+          ON holding_product.holding_product_id = product_transaction.holding_product_id
+        JOIN accounts account
+          ON account.account_id = holding_product.account_id
+        WHERE account.user_id = #{userId}
+          AND product_transaction.product_transaction_id = #{productTransactionId}
+          AND product_transaction.status = 'COMPLETED'
+          AND product_transaction.type IN ('SUBSCRIBE', 'TERMINATE', 'MATURITY')
+    </select>
+
     <select id="getPreviousVirtualInvestmentBehaviors"
             resultType="org.kkobi.assessment.dto.VirtualInvestmentBehaviorDto">
         SELECT

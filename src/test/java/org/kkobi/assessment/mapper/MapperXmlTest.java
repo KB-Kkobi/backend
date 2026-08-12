@@ -59,6 +59,10 @@ class MapperXmlTest {
                         + ".getPreviousVirtualInvestmentBehaviors"
         ));
         assertTrue(configuration.hasStatement(
+                "org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper"
+                        + ".getProductBehaviorRequest"
+        ));
+        assertTrue(configuration.hasStatement(
                 "org.kkobi.assessment.mapper.AccountDailySnapshotMapper"
                         + ".saveAccountDailySnapshot"
         ));

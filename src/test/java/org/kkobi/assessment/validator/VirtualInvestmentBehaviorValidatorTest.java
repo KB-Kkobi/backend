@@ -145,6 +145,13 @@ class VirtualInvestmentBehaviorValidatorTest {
         }
 
         @Override
+        public VirtualInvestmentBehaviorRequest getProductBehaviorRequest(
+                Long userId,
+                Long productTransactionId) {
+            return null;
+        }
+
+        @Override
         public List<VirtualInvestmentBehaviorDto> getPreviousVirtualInvestmentBehaviors(
                 Long accountId,
                 Timestamp tradedAt) {
