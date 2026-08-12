@@ -99,7 +99,7 @@
         )
         VALUES (
                    #{accountId},
-                   'OUT',
+                   'WITHDRAW',
                    #{amount},
                    CURRENT_TIMESTAMP,
                    CURRENT_TIMESTAMP
@@ -221,7 +221,7 @@
         )
         VALUES (
                    #{accountId},
-                   'IN',
+                   'DEPOSIT',
                    #{amount},
                    CURRENT_TIMESTAMP,
                    CURRENT_TIMESTAMP

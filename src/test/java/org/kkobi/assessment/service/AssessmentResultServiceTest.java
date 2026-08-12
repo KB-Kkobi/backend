@@ -11,7 +11,9 @@ import org.kkobi.assessment.mapper.AssessmentMapper;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AssessmentResultServiceTest {
 
@@ -40,6 +42,66 @@ class AssessmentResultServiceTest {
         AssessmentResultResponseDto result = assessmentResultService.getLatestAssessmentResult(1L);
 
         assertNull(result);
+    }
+
+    @Test
+    @DisplayName("저장된 진단 이력이 있으면 최신 상세 결과를 반환한다.")
+    void returnsLatestAssessmentResultDetailsWhenExists() {
+        AssessmentResultDetails storedDetails = new AssessmentResultDetails();
+        storedDetails.setResultId(42L);
+        storedDetails.setAxisCode("AA");
+        AssessmentResultService assessmentResultService =
+                createAssessmentResultServiceWithDetails(storedDetails);
+
+        AssessmentResultDetails result =
+                assessmentResultService.getLatestAssessmentResultDetails(1L);
+
+        assertNotNull(result);
+        assertEquals(42L, result.getResultId());
+    }
+
+    @Test
+    @DisplayName("저장된 진단 이력이 없으면 null을 반환한다.")
+    void returnsNullWhenNoAssessmentResultDetails() {
+        AssessmentResultService assessmentResultService =
+                createAssessmentResultServiceWithDetails(null);
+
+        AssessmentResultDetails result =
+                assessmentResultService.getLatestAssessmentResultDetails(1L);
+
+        assertNull(result);
+    }
+
+    private AssessmentResultService createAssessmentResultServiceWithDetails(
+            AssessmentResultDetails details) {
+        AssessmentMapper assessmentMapper = new AssessmentMapper() {
+            @Override
+            public AssessmentScore getLatestAssessmentScore(Long userId) {
+                return null;
+            }
+
+            @Override
+            public AssessmentResultDetails getLatestAssessmentResultDetails(Long userId) {
+                return details;
+            }
+
+            @Override
+            public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
+                return null;
+            }
+
+            @Override
+            public Long getPersonaIdByAxisCode(String axisCode) {
+                return 1L;
+            }
+
+            @Override
+            public int saveAssessmentResult(Long userId, Long personaId,
+                    AssessmentScore assessmentScore) {
+                return 1;
+            }
+        };
+        return new AssessmentResultService(assessmentMapper, new PersonaClassifier());
     }
 
     private AssessmentResultService createAssessmentResultService(
