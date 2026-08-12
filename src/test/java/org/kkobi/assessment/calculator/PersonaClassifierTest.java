@@ -6,8 +6,10 @@ import org.kkobi.assessment.domain.AssessmentScore;
 import org.kkobi.assessment.enums.PersonaType;
 
 import java.math.BigDecimal;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -33,11 +35,72 @@ class PersonaClassifierTest {
         );
     }
 
+    @Test
+    @DisplayName("50점은 High이며 49.99점과 50.01점을 정확히 구분한다.")
+    void calculatePersonaAtHighLowBoundary() {
+        assertEquals(PersonaType.LLL, personaClassifier.calculatePersona(
+                createScore("49.99", "49.99", "49.99")
+        ));
+        assertEquals(PersonaType.HLL, personaClassifier.calculatePersona(
+                createScore("50.00", "49.99", "49.99")
+        ));
+        assertEquals(PersonaType.HLL, personaClassifier.calculatePersona(
+                createScore("50.01", "49.99", "49.99")
+        ));
+
+        assertEquals(PersonaType.LLL, personaClassifier.calculatePersona(
+                createScore("49.99", "49.99", "49.99")
+        ));
+        assertEquals(PersonaType.LHL, personaClassifier.calculatePersona(
+                createScore("49.99", "50.00", "49.99")
+        ));
+        assertEquals(PersonaType.LHL, personaClassifier.calculatePersona(
+                createScore("49.99", "50.01", "49.99")
+        ));
+
+        assertEquals(PersonaType.LLL, personaClassifier.calculatePersona(
+                createScore("49.99", "49.99", "49.99")
+        ));
+        assertEquals(PersonaType.LLH, personaClassifier.calculatePersona(
+                createScore("49.99", "49.99", "50.00")
+        ));
+        assertEquals(PersonaType.LLH, personaClassifier.calculatePersona(
+                createScore("49.99", "49.99", "50.01")
+        ));
+    }
+
+    @Test
+    @DisplayName("High와 Low의 모든 조합은 8가지 성향 유형에 빠짐없이 매핑된다.")
+    void calculateEveryPersonaTypeWithoutMappingBias() {
+        Set<PersonaType> calculatedPersonas = EnumSet.noneOf(PersonaType.class);
+        String[] boundaryScores = {"49.99", "50.01"};
+
+        for (String rtScore : boundaryScores) {
+            for (String lhScore : boundaryScores) {
+                for (String rpScore : boundaryScores) {
+                    calculatedPersonas.add(personaClassifier.calculatePersona(
+                            createScore(rtScore, lhScore, rpScore)
+                    ));
+                }
+            }
+        }
+
+        assertEquals(EnumSet.allOf(PersonaType.class), calculatedPersonas);
+    }
+
     private AssessmentScore createScore(int rtScore, int lhScore, int rpScore) {
         return new AssessmentScore(
                 BigDecimal.valueOf(rtScore),
                 BigDecimal.valueOf(lhScore),
                 BigDecimal.valueOf(rpScore)
+        );
+    }
+
+    private AssessmentScore createScore(String rtScore, String lhScore, String rpScore) {
+        return new AssessmentScore(
+                new BigDecimal(rtScore),
+                new BigDecimal(lhScore),
+                new BigDecimal(rpScore)
         );
     }
 }

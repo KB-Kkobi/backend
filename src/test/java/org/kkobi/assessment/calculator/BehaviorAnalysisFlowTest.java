@@ -37,7 +37,7 @@ class BehaviorAnalysisFlowTest {
                 List.of()
         );
         BehaviorAnalysisResult analysisResult = behaviorRuleEngine
-                .calculateVirtualInvestmentBehaviorAnalysis(behaviorContext);
+                .calculateGameBehaviorAnalysis(behaviorContext);
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(
                 List.of(analysisResult.getTotalScoreDelta())
         );
@@ -54,6 +54,49 @@ class BehaviorAnalysisFlowTest {
         assertEquals(0, new BigDecimal("40.00").compareTo(assessmentScore.getLhScore()));
         assertEquals(0, new BigDecimal("60.00").compareTo(assessmentScore.getRpScore()));
         assertEquals(PersonaType.HLH, personaType);
+    }
+
+    @Test
+    @DisplayName("초기 현금 비중을 높게 배분한 행동은 LHL 성향으로 판정한다.")
+    void calculateLiquidityFocusedPersona() {
+        BehaviorContext behaviorContext = new BehaviorContext();
+        behaviorContext.setInitialAllocation(true);
+        behaviorContext.setCashRatio(new BigDecimal("30"));
+
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(behaviorContext);
+        AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(
+                List.of(analysisResult.getTotalScoreDelta())
+        );
+
+        assertEquals(0, new BigDecimal("45.00").compareTo(assessmentScore.getRtScore()));
+        assertEquals(0, new BigDecimal("60.00").compareTo(assessmentScore.getLhScore()));
+        assertEquals(0, new BigDecimal("45.00").compareTo(assessmentScore.getRpScore()));
+        assertEquals(PersonaType.LHL, personaClassifier.calculatePersona(assessmentScore));
+    }
+
+    @Test
+    @DisplayName("초기 예금 비중과 만기 유지 행동은 LLL 성향으로 판정한다.")
+    void calculateConservativePersona() {
+        BehaviorContext initialAllocationContext = new BehaviorContext();
+        initialAllocationContext.setInitialAllocation(true);
+        initialAllocationContext.setDepositRatio(new BigDecimal("50"));
+        BehaviorContext depositMaturityContext = new BehaviorContext();
+        depositMaturityContext.setDepositMatured(true);
+
+        BehaviorAnalysisResult initialAllocationResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(initialAllocationContext);
+        BehaviorAnalysisResult depositMaturityResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(depositMaturityContext);
+        AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(List.of(
+                initialAllocationResult.getTotalScoreDelta(),
+                depositMaturityResult.getTotalScoreDelta()
+        ));
+
+        assertEquals(0, new BigDecimal("35.00").compareTo(assessmentScore.getRtScore()));
+        assertEquals(0, new BigDecimal("35.00").compareTo(assessmentScore.getLhScore()));
+        assertEquals(0, new BigDecimal("40.00").compareTo(assessmentScore.getRpScore()));
+        assertEquals(PersonaType.LLL, personaClassifier.calculatePersona(assessmentScore));
     }
 
     private BehaviorEvent createCrashBuyEvent() {
