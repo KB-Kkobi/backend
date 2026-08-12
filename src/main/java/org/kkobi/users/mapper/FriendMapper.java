@@ -2,6 +2,7 @@ package org.kkobi.users.mapper;
 
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
+import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
 import org.springframework.security.core.parameters.P;
 
@@ -37,5 +38,10 @@ public interface FriendMapper {
     int rejectFriendRequest(
             @Param("friendshipId") Long friendshipId,
             @Param("receiverId") Long receiverId
+    );
+
+    // 친구 목록을 조회
+    List<FriendResponseDto> findFriends(
+            @Param("userId") Long userId
     );
 }

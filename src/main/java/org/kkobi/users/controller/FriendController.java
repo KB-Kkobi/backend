@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.security.principal.CustomUserDetails;
 import org.kkobi.users.dto.request.FriendRequestDto;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
+import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.MessageResponse;
 import org.kkobi.users.service.FriendService;
 import org.springframework.http.HttpStatus;
@@ -102,5 +103,21 @@ public class FriendController {
         return ResponseEntity.ok(
                 new MessageResponse("친구 요청을 거절했습니다.")
         );
+    }
+
+    // 친구 목록을 조회
+    @Operation(
+            summary = "친구 목록 조회",
+            description = "로그인한 사용자의 친구 목록을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<List<FriendResponseDto>> getFriends(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
+    ) {
+        List<FriendResponseDto> friends =
+                friendService.getFriend(authenticatedUser.getUserId());
+
+        return ResponseEntity.ok(friends);
     }
 }

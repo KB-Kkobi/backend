@@ -62,4 +62,24 @@
           AND status = 'PENDING'
     </delete>
 
+    <!-- 친구 목록을 조회 -->
+    <select id="findFriends"
+            resultType="org.kkobi.users.dto.response.FriendResponseDto">
+        SELECT
+            u.user_id AS userId,
+            u.nickname AS nickname
+        FROM friendships f
+                 INNER JOIN users u
+                            ON u.user_id =
+                               CASE
+                                   WHEN f.requester_id = #{userId}
+                                       THEN f.receiver_id
+                                   ELSE f.requester_id
+                                   END
+        WHERE (f.requester_id = #{userId}
+            OR f.receiver_id = #{userId})
+          AND f.status = 'ACCEPTED'
+        ORDER BY u.nickname ASC
+    </select>
+
 </mapper>
