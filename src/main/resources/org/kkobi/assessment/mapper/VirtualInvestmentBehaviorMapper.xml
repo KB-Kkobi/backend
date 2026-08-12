@@ -79,7 +79,7 @@
                       AND price_history.trade_date &lt; DATE(security_order.executed_at)
                 )
             WHERE security_order.account_id = #{accountId}
-              AND security_order.status = 'COMPLETED'
+              AND security_order.status = 'FILLED'
               AND security_order.executed_at IS NOT NULL
               AND security_order.executed_at &lt; #{tradedAt}
 

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.exception.DuplicateUserException;
 import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.dto.request.SignupRequest;
+import org.kkobi.users.dto.response.UserInfoResponse;
 import org.kkobi.users.mapper.UserMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,16 @@ public class UserServiceImpl implements UserService {
         }
 
         return user.getUserId();
+    }
+
+    // 사용자 ID로 기본 정보를 조회
+    @Override
+    public UserInfoResponse getUserInfo(Long userId) {
+        UserVO user = userMapper.findById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+        }
+        return UserInfoResponse.from(user);
     }
 
     // 비밀번호에 로그인 아이디인 이메일이 포함됐는지 검사
