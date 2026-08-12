@@ -63,7 +63,8 @@ public class GameActionService {
                 currentEvent,
                 previousEvents
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(behaviorContext);
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(behaviorContext);
         ActionLogDto actionLog = createActionLog(request, behaviorContext, analysisResult);
 
         actionLogService.saveActionLog(actionLog);

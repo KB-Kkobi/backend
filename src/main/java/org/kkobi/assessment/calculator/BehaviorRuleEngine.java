@@ -35,11 +35,22 @@ public class BehaviorRuleEngine {
     private static final BigDecimal LOW_TRADE_FREQUENCY = BigDecimal.valueOf(0.2);
     private static final int CASH_MAINTENANCE_DAYS = 5;
 
-    public BehaviorAnalysisResult calculateBehaviorAnalysis(BehaviorContext behaviorContext) {
+    public BehaviorAnalysisResult calculateGameBehaviorAnalysis(BehaviorContext behaviorContext) {
         List<RuleResult> appliedRules = new ArrayList<>();
 
         calculateInitialAllocationRules(behaviorContext, appliedRules);
-        calculateMarketActionRules(behaviorContext, appliedRules);
+        calculateMarketActionRules(behaviorContext, appliedRules, false);
+        calculateDepositRules(behaviorContext, appliedRules);
+        calculateReturnResponseRules(behaviorContext, appliedRules);
+
+        return new BehaviorAnalysisResult(applyConsecutiveActionMultiplier(behaviorContext, appliedRules));
+    }
+
+    public BehaviorAnalysisResult calculateVirtualInvestmentBehaviorAnalysis(
+            BehaviorContext behaviorContext) {
+        List<RuleResult> appliedRules = new ArrayList<>();
+
+        calculateMarketActionRules(behaviorContext, appliedRules, true);
         calculateDepositRules(behaviorContext, appliedRules);
         calculateHoldingPeriodRules(behaviorContext, appliedRules);
         calculateReturnResponseRules(behaviorContext, appliedRules);
@@ -103,7 +114,8 @@ public class BehaviorRuleEngine {
 
     private void calculateMarketActionRules(
             BehaviorContext context,
-            List<RuleResult> appliedRules) {
+            List<RuleResult> appliedRules,
+            boolean includeVolatileDayTrade) {
         BehaviorEvent event = context.getCurrentEvent();
         if (event == null || event.getAssetType() != BehaviorAssetType.SECURITY) {
             return;
@@ -129,7 +141,8 @@ public class BehaviorRuleEngine {
             addRule(appliedRules, BehaviorRuleCode.BULL_PROFIT_SELL, 0, 5, 5,
                     "급등 상황에서 수익을 실현했습니다.");
         }
-        if (context.isSameDayTrade()
+        if (includeVolatileDayTrade
+                && context.isSameDayTrade()
                 && isGreaterThanOrEqual(event.getDailyPriceRangeRate(), VOLATILE_RATE_THRESHOLD)) {
             addRule(appliedRules, BehaviorRuleCode.VOLATILE_DAY_TRADE, 5, 5, 10,
                     "변동폭 5% 이상인 날에 당일 매매했습니다.");

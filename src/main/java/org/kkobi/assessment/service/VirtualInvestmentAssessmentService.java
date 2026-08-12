@@ -60,7 +60,7 @@ public class VirtualInvestmentAssessmentService {
                 previousEvents
         );
         BehaviorAnalysisResult analysisResult = behaviorRuleEngine
-                .calculateBehaviorAnalysis(behaviorContext);
+                .calculateVirtualInvestmentBehaviorAnalysis(behaviorContext);
         AssessmentScore currentScore = assessmentResultService.getLatestAssessmentScore(request.getUserId());
         if (!analysisResult.existsAppliedRule()) {
             return assessmentResultService.createAssessmentResult(currentScore, List.of());

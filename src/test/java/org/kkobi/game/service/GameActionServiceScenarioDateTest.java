@@ -187,6 +187,16 @@ class GameActionServiceScenarioDateTest {
         }
 
         @Override
+        public boolean existsCompletedGame(Long userId) {
+            return false;
+        }
+
+        @Override
+        public Long lockUserById(Long userId) {
+            return userId;
+        }
+
+        @Override
         public int deleteActionLogsByUserId(Long userId) {
             int previousSize = actionLogs.size();
             actionLogs.removeIf(actionLog -> userId.equals(actionLog.getUserId()));

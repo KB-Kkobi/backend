@@ -87,6 +87,25 @@ class GameStartServiceTest {
     }
 
     @Test
+    @DisplayName("다른 성향 결과만 있는 사용자는 게임을 시작할 수 있다.")
+    void startGameAllowsUserWithoutGameCompletionResult() {
+        InMemoryActionLogMapper actionLogMapper = new InMemoryActionLogMapper();
+        GameStartService gameStartService = createGameStartService(
+                actionLogMapper,
+                AssessmentScore.createInitialScore(),
+                false
+        );
+
+        GameStartResponse response = gameStartService.startGame(
+                1L,
+                createGameStartRequest("20", "50", "30")
+        );
+
+        assertEquals(10_000_000L, response.getSeedMoney());
+        assertEquals(1, actionLogMapper.getActionLogsByUserId(1L).size());
+    }
+
+    @Test
     @DisplayName("미완료 사용자가 다시 시작하면 이전 행동 로그를 초기화한다.")
     void startGameDeletesPreviousIncompleteActionLogs() {
         InMemoryActionLogMapper actionLogMapper = new InMemoryActionLogMapper();
@@ -109,6 +128,18 @@ class GameStartServiceTest {
     private GameStartService createGameStartService(
             InMemoryActionLogMapper actionLogMapper,
             AssessmentScore latestAssessmentScore) {
+        return createGameStartService(
+                actionLogMapper,
+                latestAssessmentScore,
+                latestAssessmentScore != null
+        );
+    }
+
+    private GameStartService createGameStartService(
+            InMemoryActionLogMapper actionLogMapper,
+            AssessmentScore latestAssessmentScore,
+            boolean completedGame) {
+        actionLogMapper.setCompletedGame(completedGame);
         AssessmentResultService assessmentResultService = new AssessmentResultService(
                 createAssessmentMapper(latestAssessmentScore),
                 new PersonaClassifier()
@@ -172,6 +203,7 @@ class GameStartServiceTest {
 
         private final List<ActionLogDto> actionLogs = new ArrayList<>();
         private long nextActionLogId = 1L;
+        private boolean completedGame;
 
         @Override
         public int saveActionLog(ActionLogDto actionLog) {
@@ -188,10 +220,24 @@ class GameStartServiceTest {
         }
 
         @Override
+        public boolean existsCompletedGame(Long userId) {
+            return completedGame;
+        }
+
+        @Override
+        public Long lockUserById(Long userId) {
+            return userId;
+        }
+
+        @Override
         public int deleteActionLogsByUserId(Long userId) {
             int previousSize = actionLogs.size();
             actionLogs.removeIf(actionLog -> userId.equals(actionLog.getUserId()));
             return previousSize - actionLogs.size();
+        }
+
+        private void setCompletedGame(boolean completedGame) {
+            this.completedGame = completedGame;
         }
     }
 }

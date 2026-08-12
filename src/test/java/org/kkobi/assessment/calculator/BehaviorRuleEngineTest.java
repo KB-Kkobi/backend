@@ -35,7 +35,7 @@ class BehaviorRuleEngineTest {
         context.setDepositRatio(BigDecimal.ZERO);
         context.setCashRatio(new BigDecimal("30.00"));
 
-        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehaviorAnalysis(context);
+        BehaviorAnalysisResult result = behaviorRuleEngine.calculateGameBehaviorAnalysis(context);
 
         Set<BehaviorRuleCode> appliedRuleCodes = result.getAppliedRules()
                 .stream()
@@ -66,7 +66,7 @@ class BehaviorRuleEngineTest {
         context.setMarketState(MarketState.CRASH);
         context.setConsecutiveActionCount(2);
 
-        BehaviorAnalysisResult result = behaviorRuleEngine.calculateBehaviorAnalysis(context);
+        BehaviorAnalysisResult result = behaviorRuleEngine.calculateGameBehaviorAnalysis(context);
 
         assertEquals(2, result.getAppliedRules().size());
         assertScoreEquals("30.00", result.getTotalScoreDelta().getRtDelta());
@@ -107,7 +107,8 @@ class BehaviorRuleEngineTest {
         BehaviorContext gameContext = new BehaviorContext();
         gameContext.setCurrentEvent(gameSellEvent);
         gameContext.setAverageHoldingDays(BigDecimal.valueOf(2));
-        BehaviorAnalysisResult gameResult = behaviorRuleEngine.calculateBehaviorAnalysis(gameContext);
+        BehaviorAnalysisResult gameResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(gameContext);
 
         BehaviorEvent virtualInvestmentSellEvent = new BehaviorEvent();
         virtualInvestmentSellEvent.setActionType(BehaviorActionType.SELL);
@@ -117,7 +118,7 @@ class BehaviorRuleEngineTest {
         virtualInvestmentShortHoldingContext.setCurrentEvent(virtualInvestmentSellEvent);
         virtualInvestmentShortHoldingContext.setAverageHoldingDays(BigDecimal.valueOf(2));
         BehaviorAnalysisResult virtualInvestmentShortHoldingResult = behaviorRuleEngine
-                .calculateBehaviorAnalysis(virtualInvestmentShortHoldingContext);
+                .calculateVirtualInvestmentBehaviorAnalysis(virtualInvestmentShortHoldingContext);
 
         BehaviorContext virtualInvestmentLongHoldingContext = new BehaviorContext();
         virtualInvestmentLongHoldingContext.setAverageHoldingDays(BigDecimal.valueOf(30));
@@ -129,6 +130,49 @@ class BehaviorRuleEngineTest {
                 virtualInvestmentShortHoldingResult.getAppliedRules().get(0).getRuleCode());
         assertEquals(BehaviorRuleCode.LONG_SECURITY_HOLDING,
                 virtualInvestmentLongHoldingResult.getAppliedRules().get(0).getRuleCode());
+    }
+
+    @Test
+    @DisplayName("게임 분석에서는 가상투자 전용 규칙을 적용하지 않는다.")
+    void calculateGameAnalysisExcludesVirtualInvestmentRules() {
+        BehaviorEvent gameEvent = new BehaviorEvent();
+        gameEvent.setActionType(BehaviorActionType.SELL);
+        gameEvent.setAssetType(BehaviorAssetType.SECURITY);
+        gameEvent.setGameTick(12);
+        gameEvent.setDailyPriceRangeRate(new BigDecimal("10.00"));
+
+        BehaviorContext context = new BehaviorContext();
+        context.setCurrentEvent(gameEvent);
+        context.setMarketState(MarketState.NORMAL);
+        context.setSameDayTrade(true);
+        context.setStockRotation(true);
+        context.setAverageHoldingDays(BigDecimal.ONE);
+        context.setSevenDayAverageStockRatio(new BigDecimal("80.00"));
+        context.setMaintainedCashRatioDays(5);
+        context.setCashRatio(new BigDecimal("60.00"));
+        context.setAverageDailyTradeCount(new BigDecimal("10.00"));
+
+        BehaviorAnalysisResult result = behaviorRuleEngine.calculateGameBehaviorAnalysis(context);
+
+        assertEquals(0, result.getAppliedRules().size());
+    }
+
+    @Test
+    @DisplayName("가상투자 즉시 분석에서는 게임 초기 배분 규칙을 적용하지 않는다.")
+    void calculateVirtualInvestmentAnalysisExcludesGameInitialAllocationRules() {
+        BehaviorEvent event = new BehaviorEvent();
+        event.setActionType(BehaviorActionType.INITIAL_ALLOCATION);
+        event.setAssetType(BehaviorAssetType.ALL);
+
+        BehaviorContext context = new BehaviorContext();
+        context.setCurrentEvent(event);
+        context.setInitialAllocation(true);
+        context.setStockRatio(new BigDecimal("100.00"));
+
+        BehaviorAnalysisResult result = behaviorRuleEngine
+                .calculateVirtualInvestmentBehaviorAnalysis(context);
+
+        assertEquals(0, result.getAppliedRules().size());
     }
 
     private BehaviorContext createPeriodContext() {

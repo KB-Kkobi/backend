@@ -13,17 +13,17 @@ class MarketStateCalculatorTest {
     private final MarketStateCalculator marketStateCalculator = new MarketStateCalculator();
 
     @Test
-    @DisplayName("급락, 급등, 변동성, 평범장 순서로 시장 상태를 판정한다.")
+    @DisplayName("변동성, 급락, 급등, 평범장 우선순위로 시장 상태를 판정한다.")
     void calculateMarketState() {
         assertEquals(
-                MarketState.CRASH,
+                MarketState.VOLATILE,
                 marketStateCalculator.calculateMarketState(
                         new BigDecimal("-5.00"),
                         new BigDecimal("8.00")
                 )
         );
         assertEquals(
-                MarketState.BULL,
+                MarketState.VOLATILE,
                 marketStateCalculator.calculateMarketState(
                         new BigDecimal("3.00"),
                         new BigDecimal("8.00")
@@ -48,6 +48,25 @@ class MarketStateCalculatorTest {
                 marketStateCalculator.calculateMarketState(
                         new BigDecimal("-6.00"),
                         null
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("변동성 조건과 등락 조건이 겹치면 변동성장을 우선한다.")
+    void calculateMarketStatePrioritizesVolatileMarket() {
+        assertEquals(
+                MarketState.VOLATILE,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("-7.00"),
+                        new BigDecimal("5.00")
+                )
+        );
+        assertEquals(
+                MarketState.VOLATILE,
+                marketStateCalculator.calculateMarketState(
+                        new BigDecimal("7.00"),
+                        new BigDecimal("5.00")
                 )
         );
     }

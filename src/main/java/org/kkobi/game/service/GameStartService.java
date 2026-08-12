@@ -37,6 +37,7 @@ public class GameStartService {
     @Transactional
     public GameStartResponse startGame(Long userId, GameStartRequest request) {
         validateGameStart(userId, request);
+        actionLogService.lockGameUser(userId);
         validateCompletedGame(userId);
 
         long stockAmount = calculateAssetAmount(request.getStockRatio());
@@ -87,7 +88,7 @@ public class GameStartService {
     }
 
     private void validateCompletedGame(Long userId) {
-        if (assessmentResultService.existsAssessmentResult(userId)) {
+        if (actionLogService.existsCompletedGame(userId)) {
             throw new IllegalStateException("이미 완료한 게임입니다.");
         }
     }
@@ -114,7 +115,7 @@ public class GameStartService {
                 initialAllocation,
                 List.of()
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateGameBehaviorAnalysis(
                 behaviorContext
         );
 
