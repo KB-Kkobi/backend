@@ -34,13 +34,9 @@ public class AssessmentResultService {
     public AssessmentResultDetails getLatestAssessmentResultDetails(Long userId) {
         return assessmentMapper.getLatestAssessmentResultDetails(userId);
     }
-
+    
     public AssessmentResultResponseDto getLatestAssessmentResult(Long userId) {
-        AssessmentResultResponseDto result = assessmentMapper.getLatestAssessmentResult(userId);
-        if (result == null) {
-            throw new IllegalArgumentException("진단 이력이 없습니다.");
-        }
-        return result;
+        return assessmentMapper.getLatestAssessmentResult(userId);
     }
 
     public AssessmentResult createAssessmentResult(

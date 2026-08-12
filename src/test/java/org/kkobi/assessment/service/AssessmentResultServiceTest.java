@@ -35,14 +35,13 @@ class AssessmentResultServiceTest {
     }
 
     @Test
-    @DisplayName("저장된 진단 이력이 없으면 예외를 발생시킨다.")
-    void throwsExceptionWhenNoAssessmentResultExists() {
+    @DisplayName("저장된 진단 이력이 없으면 null을 반환한다.")
+    void returnsNullWhenNoAssessmentResultExists() {
         AssessmentResultService assessmentResultService = createAssessmentResultService(null);
 
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> assessmentResultService.getLatestAssessmentResult(1L)
-        );
+        AssessmentResultResponseDto result = assessmentResultService.getLatestAssessmentResult(1L);
+
+        assertNull(result);
     }
 
     @Test
