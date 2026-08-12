@@ -36,6 +36,9 @@ public interface ProductHoldingMapper {
             @Param("installmentNumber") Integer installmentNumber
     );
 
+    // 마지막으로 저장된 예적금 거래 ID 조회
+    Long getLastInsertedProductTransactionId();
+
     // 계좌 출금 거래 내역 저장
     int saveAccountWithdrawalTransaction(
             @Param("accountId") Long accountId,

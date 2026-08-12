@@ -76,6 +76,30 @@ class VirtualInvestmentAssessmentServiceTest {
         assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
     }
 
+    @Test
+    @DisplayName("예적금 거래 ID로 요청값을 조회하고 성향 점수를 재산정한다")
+    void updateProductTransactionAssessmentRecalculatesScore() {
+        VirtualInvestmentBehaviorRequest maturityRequest = createMaturityRequest();
+        VirtualInvestmentBehaviorMapper behaviorMapper = createBehaviorMapper(
+                List.of(),
+                maturityRequest
+        );
+        InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
+        VirtualInvestmentAssessmentService assessmentService = createAssessmentService(
+                behaviorMapper,
+                assessmentMapper
+        );
+
+        AssessmentResult result = assessmentService.updateProductTransactionAssessment(1L, 30L);
+
+        assertTrue(result.getAppliedRules().stream()
+                .anyMatch(rule -> rule.getRuleCode() == BehaviorRuleCode.DEPOSIT_MATURITY));
+        assertScoreEquals("48.34", result.getAssessmentScore().getRtScore());
+        assertScoreEquals("46.67", result.getAssessmentScore().getLhScore());
+        assertScoreEquals("48.34", result.getAssessmentScore().getRpScore());
+        assertEquals(1, assessmentMapper.getSavedResultCount());
+    }
+
     private VirtualInvestmentAssessmentService createAssessmentService(
             VirtualInvestmentBehaviorMapper behaviorMapper,
             AssessmentMapper assessmentMapper) {
@@ -142,6 +166,23 @@ class VirtualInvestmentAssessmentServiceTest {
         return request;
     }
 
+    private VirtualInvestmentBehaviorRequest createMaturityRequest() {
+        VirtualInvestmentBehaviorRequest request = new VirtualInvestmentBehaviorRequest();
+        request.setUserId(1L);
+        request.setAccountId(1L);
+        request.setReferenceType("PRODUCT_TRANSACTION");
+        request.setReferenceId(30L);
+        request.setActionType("MATURITY");
+        request.setAssetType("PRODUCTS");
+        request.setProductOptionId(1L);
+        request.setActionAmount(1_000L);
+        request.setCurrentCash(1_000L);
+        request.setCurrentStockPrincipal(0L);
+        request.setCurrentDeposit(0L);
+        request.setTradedAt(LocalDateTime.of(2026, 8, 12, 9, 0));
+        return request;
+    }
+
     private VirtualInvestmentBehaviorMapper createBehaviorMapper() {
         VirtualInvestmentBehaviorDto previousBuy = new VirtualInvestmentBehaviorDto();
         previousBuy.setActionType("BUY");
@@ -158,6 +199,12 @@ class VirtualInvestmentAssessmentServiceTest {
 
     private VirtualInvestmentBehaviorMapper createBehaviorMapper(
             List<VirtualInvestmentBehaviorDto> previousBehaviors) {
+        return createBehaviorMapper(previousBehaviors, null);
+    }
+
+    private VirtualInvestmentBehaviorMapper createBehaviorMapper(
+            List<VirtualInvestmentBehaviorDto> previousBehaviors,
+            VirtualInvestmentBehaviorRequest productBehaviorRequest) {
         return new VirtualInvestmentBehaviorMapper() {
             @Override
             public boolean existsAccountByUserId(Long accountId, Long userId) {
@@ -172,6 +219,13 @@ class VirtualInvestmentAssessmentServiceTest {
             @Override
             public boolean existsProductOption(Long productOptionId) {
                 return true;
+            }
+
+            @Override
+            public VirtualInvestmentBehaviorRequest getProductBehaviorRequest(
+                    Long userId,
+                    Long productTransactionId) {
+                return productBehaviorRequest;
             }
 
             @Override

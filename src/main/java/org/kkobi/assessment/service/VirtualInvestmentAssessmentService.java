@@ -77,6 +77,23 @@ public class VirtualInvestmentAssessmentService {
         );
     }
 
+    @Transactional
+    public AssessmentResult updateProductTransactionAssessment(
+            Long userId,
+            Long productTransactionId) {
+        if (userId == null || productTransactionId == null || productTransactionId <= 0) {
+            throw new IllegalArgumentException("예적금 성향 재산정에 필요한 거래 정보가 올바르지 않습니다.");
+        }
+
+        VirtualInvestmentBehaviorRequest request = virtualInvestmentBehaviorMapper
+                .getProductBehaviorRequest(userId, productTransactionId);
+        if (request == null) {
+            throw new IllegalArgumentException("성향 분석이 가능한 예적금 거래를 찾을 수 없습니다.");
+        }
+
+        return updateVirtualInvestmentAssessment(request);
+    }
+
     private BehaviorEvent createBehaviorEvent(VirtualInvestmentBehaviorRequest request) {
         BehaviorEvent event = new BehaviorEvent();
         event.setUserId(request.getUserId());

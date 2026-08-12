@@ -4,6 +4,7 @@ package org.kkobi.product.holding.service;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.mapper.AccountMapper;
+import org.kkobi.assessment.service.VirtualInvestmentAssessmentService;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
@@ -41,6 +42,7 @@ public class ProductHoldingService {
 
     private final ProductHoldingMapper productHoldingMapper;
     private final AccountMapper accountMapper;
+    private final VirtualInvestmentAssessmentService virtualInvestmentAssessmentService;
 
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
 
@@ -94,11 +96,16 @@ public class ProductHoldingService {
         Integer installmentNumber =
                 SAVING.equals(subscriptionInfo.getProductType()) ? 1 : null;
 
-        saveTransactions(
+        Long productTransactionId = saveTransactions(
                 subscriptionInfo.getAccountId(),
                 holdingProduct.getHoldingProductId(),
                 request.getJoinAmount(),
                 installmentNumber
+        );
+
+        virtualInvestmentAssessmentService.updateProductTransactionAssessment(
+                userId,
+                productTransactionId
         );
 
         return createResponse(
@@ -177,13 +184,18 @@ public class ProductHoldingService {
                 terminationAmounts.refundAmount()
         );
 
-        saveTerminationTransactions(
+        Long productTransactionId = saveTerminationTransactions(
                 holdingProduct.getAccountId(),
                 holdingProductId,
                 terminationAmounts.refundAmount(),
                 terminationAmounts.accruedInterest(),
                 terminationAmounts.interestTax(),
                 terminatedAt
+        );
+
+        virtualInvestmentAssessmentService.updateProductTransactionAssessment(
+                userId,
+                productTransactionId
         );
 
         LocalDateTime yearStart =
@@ -897,7 +909,7 @@ public class ProductHoldingService {
     }
 
     // 상품 해지 및 계좌 입금 거래 내역 저장
-    private void saveTerminationTransactions(
+    private Long saveTerminationTransactions(
             Long accountId,
             Long holdingProductId,
             BigDecimal refundAmount,
@@ -920,6 +932,8 @@ public class ProductHoldingService {
             );
         }
 
+        Long productTransactionId = getLastInsertedProductTransactionId();
+
         int accountTransactionCount =
                 productHoldingMapper.saveAccountDepositTransaction(
                         accountId,
@@ -931,10 +945,11 @@ public class ProductHoldingService {
                     "계좌 입금 거래 내역 저장에 실패했습니다."
             );
         }
+        return productTransactionId;
     }
 
     // 상품 거래 및 계좌 거래 내역 저장
-    private void saveTransactions(Long accountId, Long holdingProductId, BigDecimal amount, Integer installmentNumber) {
+    private Long saveTransactions(Long accountId, Long holdingProductId, BigDecimal amount, Integer installmentNumber) {
         int productTransactionCount = productHoldingMapper.saveProductSubscriptionTransaction(
                 holdingProductId,
                 amount,
@@ -945,11 +960,23 @@ public class ProductHoldingService {
             throw new IllegalArgumentException("상품 거래 내역 저장에 실패했습니다.");
         }
 
+        Long productTransactionId = getLastInsertedProductTransactionId();
+
         int accountTransactionCount = productHoldingMapper.saveAccountWithdrawalTransaction(accountId, amount);
 
         if(accountTransactionCount != 1) {
             throw new IllegalArgumentException("계좌 거래 내역 저장에 실패했습니다.");
         }
+        return productTransactionId;
+    }
+
+    // 마지막으로 저장된 예적금 거래 ID 검증 및 반환
+    private Long getLastInsertedProductTransactionId() {
+        Long productTransactionId = productHoldingMapper.getLastInsertedProductTransactionId();
+        if (productTransactionId == null || productTransactionId <= 0) {
+            throw new IllegalStateException("저장된 예적금 거래 ID를 확인할 수 없습니다.");
+        }
+        return productTransactionId;
     }
 
     // 가입 결과 응답 생성

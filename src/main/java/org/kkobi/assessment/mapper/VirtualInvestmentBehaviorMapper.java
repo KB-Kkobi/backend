@@ -2,6 +2,7 @@ package org.kkobi.assessment.mapper;
 
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.assessment.dto.VirtualInvestmentBehaviorDto;
+import org.kkobi.assessment.dto.VirtualInvestmentBehaviorRequest;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -19,6 +20,11 @@ public interface VirtualInvestmentBehaviorMapper {
     );
 
     boolean existsProductOption(@Param("productOptionId") Long productOptionId);
+
+    VirtualInvestmentBehaviorRequest getProductBehaviorRequest(
+            @Param("userId") Long userId,
+            @Param("productTransactionId") Long productTransactionId
+    );
 
     List<VirtualInvestmentBehaviorDto> getPreviousVirtualInvestmentBehaviors(
             @Param("accountId") Long accountId,
