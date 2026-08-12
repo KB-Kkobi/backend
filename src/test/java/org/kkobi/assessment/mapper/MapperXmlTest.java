@@ -49,6 +49,12 @@ class MapperXmlTest {
                 "org.kkobi.assessment.mapper.AssessmentMapper.saveAssessmentResult"
         ));
         assertTrue(configuration.hasStatement(
+                "org.kkobi.game.mapper.ActionLogMapper.existsCompletedGame"
+        ));
+        assertTrue(configuration.hasStatement(
+                "org.kkobi.game.mapper.ActionLogMapper.lockUserById"
+        ));
+        assertTrue(configuration.hasStatement(
                 "org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper"
                         + ".getPreviousVirtualInvestmentBehaviors"
         ));

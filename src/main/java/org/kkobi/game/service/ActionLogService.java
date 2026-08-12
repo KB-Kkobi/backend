@@ -22,6 +22,16 @@ public class ActionLogService {
         return actionLogMapper.getActionLogsByUserId(userId);
     }
 
+    public boolean existsCompletedGame(Long userId) {
+        return actionLogMapper.existsCompletedGame(userId);
+    }
+
+    public void lockGameUser(Long userId) {
+        if (actionLogMapper.lockUserById(userId) == null) {
+            throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+        }
+    }
+
     public int deleteActionLogsByUserId(Long userId) {
         return actionLogMapper.deleteActionLogsByUserId(userId);
     }

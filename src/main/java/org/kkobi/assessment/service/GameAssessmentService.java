@@ -28,11 +28,13 @@ public class GameAssessmentService {
     private final AssessmentResultService assessmentResultService;
 
     public boolean existsCompletedGame(Long userId) {
-        return assessmentResultService.existsAssessmentResult(userId);
+        return actionLogService.existsCompletedGame(userId);
     }
 
     @Transactional
     public GameCompletionResponse completeGame(Long userId) {
+        validateUserId(userId);
+        actionLogService.lockGameUser(userId);
         validateGameCompletion(userId);
         AssessmentResult assessmentResult = calculateGameAssessment(userId);
         AssessmentResultDetails resultDetails = assessmentResultService
@@ -59,9 +61,6 @@ public class GameAssessmentService {
     }
 
     private void validateGameCompletion(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
-        }
         if (existsCompletedGame(userId)) {
             throw new IllegalStateException("이미 완료된 게임입니다.");
         }
@@ -70,6 +69,12 @@ public class GameAssessmentService {
                 .anyMatch(actionLog -> "INITIAL_ALLOCATION".equals(actionLog.getActionType()));
         if (!existsInitialAllocation) {
             throw new IllegalStateException("게임 시작 기록을 찾을 수 없습니다.");
+        }
+    }
+
+    private void validateUserId(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 필수입니다.");
         }
     }
 

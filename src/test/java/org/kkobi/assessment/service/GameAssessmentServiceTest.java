@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameAssessmentServiceTest {
@@ -48,8 +49,25 @@ class GameAssessmentServiceTest {
     }
 
     @Test
+    @DisplayName("게임 완료 API를 다시 요청하면 결과를 중복 저장하지 않는다.")
+    void completeGameRejectsDuplicateRequest() {
+        AssessmentMapper assessmentMapper = createCompletionAssessmentMapper();
+        GameAssessmentService gameAssessmentService = createGameAssessmentService(
+                List.of(createActionLog("INITIAL_ALLOCATION", 0L)),
+                assessmentMapper
+        );
+
+        gameAssessmentService.completeGame(1L);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> gameAssessmentService.completeGame(1L)
+        );
+    }
+
+    @Test
     @DisplayName("저장된 성향 결과가 있으면 게임을 완료한 것으로 판단한다.")
-    void existsCompletedGameReturnsTrueWhenAssessmentResultExists() {
+    void existsCompletedGameReturnsTrueWhenGameResultExists() {
         GameAssessmentService gameAssessmentService = createGameAssessmentService(
                 List.of(),
                 createAssessmentMapper(AssessmentScore.createInitialScore())
@@ -60,7 +78,7 @@ class GameAssessmentServiceTest {
 
     @Test
     @DisplayName("저장된 성향 결과가 없으면 게임을 완료하지 않은 것으로 판단한다.")
-    void existsCompletedGameReturnsFalseWhenAssessmentResultDoesNotExist() {
+    void existsCompletedGameReturnsFalseWhenGameResultDoesNotExist() {
         GameAssessmentService gameAssessmentService = createGameAssessmentService(
                 List.of(),
                 createAssessmentMapper(null)
@@ -117,6 +135,16 @@ class GameAssessmentServiceTest {
             @Override
             public List<ActionLogDto> getActionLogsByUserId(Long userId) {
                 return actionLogs;
+            }
+
+            @Override
+            public boolean existsCompletedGame(Long userId) {
+                return assessmentMapper.getLatestAssessmentScore(userId) != null;
+            }
+
+            @Override
+            public Long lockUserById(Long userId) {
+                return userId;
             }
 
             @Override

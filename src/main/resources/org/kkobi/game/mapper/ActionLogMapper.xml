@@ -69,4 +69,25 @@
         DELETE FROM action_logs
         WHERE user_id = #{userId}
     </delete>
+
+    <select id="existsCompletedGame" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM results r
+            WHERE r.user_id = #{userId}
+              AND r.created_at &gt;= (
+                  SELECT MAX(al.created_at)
+                  FROM action_logs al
+                  WHERE al.user_id = #{userId}
+                    AND al.action_type = 'INITIAL_ALLOCATION'
+              )
+        )
+    </select>
+
+    <select id="lockUserById" resultType="java.lang.Long">
+        SELECT user_id
+        FROM users
+        WHERE user_id = #{userId}
+        FOR UPDATE
+    </select>
 </mapper>
