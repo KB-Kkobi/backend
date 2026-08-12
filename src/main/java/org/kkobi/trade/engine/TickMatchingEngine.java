@@ -98,6 +98,9 @@ public class TickMatchingEngine {
 
             try {
                 orderMatchTransactionService.matchSingleOrder(order, currentPrice);
+                // TODO: Path B 성향 채점 연결 미구현
+                //       체결 완료 후 SecurityOrderFilledEvent를 발행해야 한다.
+                //       KIS 틱에 changeRate/open/high/low가 없으면 별도 REST 조회로 dailyPriceRangeRate를 계산할 것.
                 log.info("지정가 주문 체결 securityOrderId={} orderType={} orderPrice={} executedPrice={}",
                         order.getSecurityOrderId(), order.getOrderType(),
                         order.getOrderPrice(), currentPrice);

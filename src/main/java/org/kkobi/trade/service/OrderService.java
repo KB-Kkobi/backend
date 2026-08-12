@@ -1,6 +1,7 @@
 package org.kkobi.trade.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.kkobi.external.kis.dto.StockPriceResponse;
 import org.kkobi.external.kis.service.StockQuoteService;
 import org.kkobi.trade.dto.CancelOrderResult;
@@ -13,6 +14,7 @@ import org.kkobi.trade.dto.TradeStockDto;
 import org.kkobi.trade.enums.OrderMethod;
 import org.kkobi.trade.enums.OrderStatus;
 import org.kkobi.trade.enums.OrderType;
+import org.kkobi.trade.event.SecurityOrderFilledEvent;
 import org.kkobi.trade.exception.TradeErrorCode;
 import org.kkobi.trade.exception.TradeException;
 import org.kkobi.trade.mapper.HoldingMapper;
@@ -20,11 +22,15 @@ import org.kkobi.trade.mapper.OrderMapper;
 import org.kkobi.trade.mapper.TradeAccountMapper;
 import org.kkobi.trade.mapper.TradeStockMapper;
 import org.kkobi.trade.policy.MarketHoursPolicy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -36,6 +42,7 @@ public class OrderService {
     private final StockQuoteService stockQuoteService;
     private final MarketHoursPolicy marketHoursPolicy;
     private final OrderExecutionService executionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PlaceOrderResult placeOrder(Long userId, PlaceOrderRequest req) {
@@ -60,7 +67,8 @@ public class OrderService {
             throw new TradeException(TradeErrorCode.SECURITY_NOT_FOUND);
         }
 
-        long currentPrice = fetchCurrentPrice(stock.getKisCode());
+        StockPriceResponse priceResp = fetchStockPrice(stock.getKisCode());
+        long currentPrice = priceResp.price().longValue();
 
         TradeAccountDto account = accountMapper.findByUserId(userId);
         if (account == null) {
@@ -69,14 +77,15 @@ public class OrderService {
         accountMapper.findByAccountIdForUpdate(account.getAccountId());
 
         return switch (req.getOrderMethod()) {
-            case MARKET -> placeMarketOrder(account, stock, req, currentPrice);
-            case LIMIT  -> placeLimitOrder(account, stock, req, currentPrice);
+            case MARKET -> placeMarketOrder(account, stock, req, currentPrice, priceResp, userId);
+            case LIMIT  -> placeLimitOrder(account, stock, req, currentPrice, priceResp, userId);
         };
     }
 
     private PlaceOrderResult placeMarketOrder(
             TradeAccountDto account, TradeStockDto stock,
-            PlaceOrderRequest req, long currentPrice) {
+            PlaceOrderRequest req, long currentPrice,
+            StockPriceResponse priceResp, Long userId) {
 
         int qty = req.getQuantity();
         long amount = currentPrice * qty;
@@ -94,13 +103,15 @@ public class OrderService {
         order.setStatus(OrderStatus.PENDING);
         orderMapper.insert(order);
         executionService.execute(order, currentPrice, false);
+        publishFilledEvent(userId, account, stock, order, currentPrice, priceResp);
 
         return buildResult(order, stock, currentPrice, OrderStatus.FILLED);
     }
 
     private PlaceOrderResult placeLimitOrder(
             TradeAccountDto account, TradeStockDto stock,
-            PlaceOrderRequest req, long currentPrice) {
+            PlaceOrderRequest req, long currentPrice,
+            StockPriceResponse priceResp, Long userId) {
 
         long limitPrice = req.getPrice();
         int qty = req.getQuantity();
@@ -125,6 +136,7 @@ public class OrderService {
             order.setStatus(OrderStatus.PENDING);
             orderMapper.insert(order);
             executionService.execute(order, currentPrice, false);
+            publishFilledEvent(userId, account, stock, order, currentPrice, priceResp);
             return buildResult(order, stock, currentPrice, OrderStatus.FILLED);
         } else {
             order.setStatus(OrderStatus.PENDING);
@@ -180,7 +192,36 @@ public class OrderService {
         return result;
     }
 
-    private long fetchCurrentPrice(String kisCode) {
+    private void publishFilledEvent(Long userId, TradeAccountDto account, TradeStockDto stock,
+                                    OrderDto order, long currentPrice, StockPriceResponse priceResp) {
+        BigDecimal open = priceResp.open();
+        BigDecimal high = priceResp.high();
+        BigDecimal low = priceResp.low();
+        if (open == null || high == null || low == null
+                || open.compareTo(BigDecimal.ZERO) == 0) {
+            log.debug("시가 정보 없음, 성향 이벤트 생략 securityOrderId={}", order.getSecurityOrderId());
+            return;
+        }
+        BigDecimal dailyPriceRangeRate = high.subtract(low)
+                .divide(open, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+        SecurityOrderFilledEvent event = new SecurityOrderFilledEvent(
+                userId,
+                account.getAccountId(),
+                order.getSecurityOrderId(),
+                order.getOrderType().name(),
+                stock.getSecurityId(),
+                stock.getTicker(),
+                order.getQuantity(),
+                currentPrice * order.getQuantity(),
+                LocalDateTime.now(),
+                priceResp.changeRate(),
+                dailyPriceRangeRate
+        );
+        eventPublisher.publishEvent(event);
+    }
+
+    private StockPriceResponse fetchStockPrice(String kisCode) {
         if (kisCode == null || kisCode.isBlank()) {
             throw new TradeException(TradeErrorCode.QUOTE_UNAVAILABLE);
         }
@@ -189,7 +230,7 @@ public class OrderService {
             if (resp == null || resp.price() == null) {
                 throw new TradeException(TradeErrorCode.QUOTE_UNAVAILABLE);
             }
-            return resp.price().longValue();
+            return resp;
         } catch (TradeException e) {
             throw e;
         } catch (Exception e) {

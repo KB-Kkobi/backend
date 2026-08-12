@@ -94,4 +94,7 @@ public interface ProductHoldingMapper {
             @Param("nextYearStart") LocalDateTime nextYearStart
     );
 
+    // 계좌의 활성 예적금 가입금액 합계 조회
+    Long sumActiveDepositByAccountId(@Param("accountId") Long accountId);
+
 }
