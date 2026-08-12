@@ -165,10 +165,14 @@ DEALLOCATE PREPARE stmt;
 -- 6. account_transactions.type → ENUM('DEPOSIT','WITHDRAW')
 --    account_transactions 는 현금 입출금 전용
 --    기존 'IN' → 'DEPOSIT', 'OUT' → 'WITHDRAW'
+--
+--    순서가 중요:
+--      6-1. 기존 CHECK(type IN ('IN','OUT')) 삭제 — 먼저 해야 UPDATE가 허용됨
+--      6-2. 데이터 마이그레이션
+--      6-3. 컬럼 타입을 ENUM으로 확정
 -- =========================================================
-UPDATE account_transactions SET type = 'DEPOSIT'  WHERE type = 'IN';
-UPDATE account_transactions SET type = 'WITHDRAW' WHERE type = 'OUT';
 
+-- 6-1. 기존 CHECK 제약 삭제
 SET @chk_trans_type = (
     SELECT cc.CONSTRAINT_NAME
     FROM information_schema.CHECK_CONSTRAINTS cc
@@ -190,6 +194,11 @@ PREPARE stmt FROM @drop_trans_chk;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 6-2. 데이터 마이그레이션
+UPDATE account_transactions SET type = 'DEPOSIT'  WHERE type = 'IN';
+UPDATE account_transactions SET type = 'WITHDRAW' WHERE type = 'OUT';
+
+-- 6-3. 컬럼 타입 확정
 ALTER TABLE account_transactions
     MODIFY COLUMN type ENUM('DEPOSIT','WITHDRAW') NOT NULL;
 
