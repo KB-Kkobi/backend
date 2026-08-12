@@ -29,4 +29,37 @@
                )
     </insert>
 
+    <!-- 받은 친구 요청 목록을 조회 -->
+    <select id="findReceivedFriendRequests"
+            resultType="org.kkobi.users.dto.response.FriendRequestResponseDto">
+        SELECT
+            f.friendship_id AS friendshipId,
+            f.requester_id AS requesterId,
+            u.nickname AS nickname,
+            f.created_at AS createdAt
+        FROM friendships f
+                 INNER JOIN users u
+                            ON u.user_id = f.requester_id
+        WHERE f.receiver_id = #{userId}
+          AND f.status = 'PENDING'
+        ORDER BY f.created_at DESC
+    </select>
+
+    <!-- 받은 친구 요청을 수락 -->
+    <update id="acceptFriendRequest">
+        UPDATE friendships
+        SET status = 'ACCEPTED'
+        WHERE friendship_id = #{friendshipId}
+          AND receiver_id = #{receiverId}
+          AND status = 'PENDING'
+    </update>
+
+    <!-- 받은 친구 요청을 거절 -->
+    <delete id="rejectFriendRequest">
+        DELETE FROM friendships
+        WHERE friendship_id = #{friendshipId}
+          AND receiver_id = #{receiverId}
+          AND status = 'PENDING'
+    </delete>
+
 </mapper>

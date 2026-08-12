@@ -3,11 +3,14 @@ package org.kkobi.users.service;
 import lombok.RequiredArgsConstructor;
 import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.dto.request.FriendRequestDto;
+import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
 import org.kkobi.users.mapper.FriendMapper;
 import org.kkobi.users.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +47,43 @@ public class FriendServiceImpl implements FriendService{
 
         if(insertRows != 1){
             throw new IllegalArgumentException("친구 요청 저장에 실패했습니다.");
+        }
+    }
+
+    // 받은 친구 요청 목록을 조회
+    @Override
+    @Transactional(readOnly = true)
+    public List<FriendRequestResponseDto> getReceiverFriendRequests(Long userId) {
+        return friendMapper.findReceivedFriendRequests(userId);
+    }
+
+    // 받은 친구 요청을 수락
+    @Override
+    @Transactional
+    public void acceptFriendRequest(Long userId, Long friendshipId) {
+
+        int updateRows = friendMapper.acceptFriendRequest(
+                friendshipId,
+                userId
+        );
+
+        if (updateRows != 1) {
+            throw new IllegalArgumentException("처리할 수 없는 친구 요청입니다.");
+        }
+    }
+
+    // 받은 친구 요청을 거절
+    @Override
+    @Transactional
+    public void rejectFriendRequest(Long userId, Long friendshipId) {
+
+        int deletedRows = friendMapper.rejectFriendRequest(
+                friendshipId,
+                userId
+        );
+
+        if(deletedRows != 1){
+            throw new IllegalArgumentException("처리할 수 없는 친구 요청입니다.");
         }
     }
 }
