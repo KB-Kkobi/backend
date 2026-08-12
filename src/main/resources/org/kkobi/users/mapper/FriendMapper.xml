@@ -82,4 +82,15 @@
         ORDER BY u.nickname ASC
     </select>
 
+    <!-- 친구 관계를 삭제 -->
+    <delete id="deleteFriend">
+        DELETE FROM friendships
+        WHERE status = 'ACCEPTED'
+          AND (
+            (requester_id = #{userId}
+                AND receiver_id = #{friendUserId})
+                OR (requester_id = #{friendUserId}
+                AND receiver_id = #{userId})
+            )
+    </delete>
 </mapper>

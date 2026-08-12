@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.annotations.Param;
 import org.kkobi.security.principal.CustomUserDetails;
 import org.kkobi.users.dto.request.FriendRequestDto;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
@@ -119,5 +120,26 @@ public class FriendController {
                 friendService.getFriend(authenticatedUser.getUserId());
 
         return ResponseEntity.ok(friends);
+    }
+
+    // 친구 관계를 삭제
+    @Operation(
+            summary = "친구 삭제",
+            description = "로그인한 사용자의 친구 관계를 삭제합니다."
+    )
+    @DeleteMapping("/{friendUserId}")
+    public ResponseEntity<MessageResponse> deleteFriend(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser,
+            @PathVariable("friendUserId") Long friendUserId
+    ){
+        friendService.deleteFriend(
+                authenticatedUser.getUserId(),
+                friendUserId
+        );
+
+        return ResponseEntity.ok(
+                new MessageResponse("친구를 삭제했습니다.")
+        );
     }
 }

@@ -94,4 +94,19 @@ public class FriendServiceImpl implements FriendService{
     public List<FriendResponseDto> getFriend(Long userId) {
         return friendMapper.findFriends(userId);
     }
+
+    // 친구 관계를 삭제
+    @Override
+    @Transactional
+    public void deleteFriend(Long userId, Long friendUserId) {
+
+        int deletedRows = friendMapper.deleteFriend(
+                userId,
+                friendUserId
+        );
+
+        if (deletedRows != 1){
+            throw new IllegalArgumentException("삭제할 수 없는 친구 관계입니다.");
+        }
+    }
 }
