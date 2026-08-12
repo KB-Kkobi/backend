@@ -38,6 +38,9 @@ public class ProductDetailResponseDto {
     // 최고 가입 한도
     private Long maxLimit;
 
+    // 상품 신청 페이지 URL (등록된 URL이 없으면 null)
+    private String applyUrl;
+
     // 상품 금리 옵션 목록
     private List<ProductOptionResponseDto> options;
 }
