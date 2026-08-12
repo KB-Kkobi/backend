@@ -98,7 +98,7 @@ class AccountServiceTest {
         private StubProductHoldingService(
                 SavingsAssetStatusResponseDto savings
         ) {
-            super(null, null);
+            super(null, null, null);
             this.savings = savings;
         }
 

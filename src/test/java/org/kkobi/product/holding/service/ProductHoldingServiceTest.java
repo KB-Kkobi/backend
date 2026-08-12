@@ -4,10 +4,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.mapper.AccountMapper;
+import org.kkobi.assessment.service.VirtualInvestmentAssessmentService;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
 import org.kkobi.product.holding.dto.response.ProductSubscriptionEstimateResponseDto;
+import org.kkobi.product.holding.dto.response.ProductSubscriptionResponseDto;
 import org.kkobi.product.holding.dto.response.ProductTerminationEstimateResponseDto;
 import org.kkobi.product.holding.dto.response.ProductTerminationResponseDto;
 import org.kkobi.product.mapper.ProductHoldingMapper;
@@ -20,6 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class ProductHoldingServiceTest {
 
@@ -29,6 +33,8 @@ class ProductHoldingServiceTest {
         ProductHoldingInfoDto holding = createDepositHolding();
         AccountAssetInfoDto account = createAccount();
         AtomicInteger terminationUpdateCount = new AtomicInteger();
+        VirtualInvestmentAssessmentService assessmentService =
+                mock(VirtualInvestmentAssessmentService.class);
 
         ProductHoldingMapper productMapper = createProductMapper(
                 holding,
@@ -37,13 +43,16 @@ class ProductHoldingServiceTest {
         );
         ProductHoldingService service = new ProductHoldingService(
                 productMapper,
-                createAccountMapper(account)
+                createAccountMapper(account),
+                assessmentService
         );
 
         ProductTerminationEstimateResponseDto estimate =
                 service.getTerminationEstimate(10L, 1L);
         ProductTerminationResponseDto termination =
                 service.terminateProduct(10L, 1L);
+
+        verify(assessmentService).updateProductTransactionAssessment(10L, 100L);
 
         assertEquals(
                 0,
@@ -88,7 +97,8 @@ class ProductHoldingServiceTest {
                         subscriptionInfo,
                         new AtomicInteger()
                 ),
-                createAccountMapper(createAccount())
+                createAccountMapper(createAccount()),
+                mock(VirtualInvestmentAssessmentService.class)
         );
 
         ProductSubscriptionEstimateResponseDto response =
@@ -100,6 +110,39 @@ class ProductHoldingServiceTest {
                 .compareTo(BigDecimal.ZERO) > 0);
         assertTrue(response.getExpectedMaturityAmount()
                 .compareTo(response.getExpectedPrincipal()) > 0);
+    }
+
+    @Test
+    @DisplayName("예적금 가입 거래 저장 후 성향 점수를 재산정한다")
+    void updateAssessmentAfterSubscription() {
+        ProductSubscriptionInfoDto subscriptionInfo = new ProductSubscriptionInfoDto();
+        subscriptionInfo.setAccountId(1L);
+        subscriptionInfo.setCashBalance(new BigDecimal("10000000"));
+        subscriptionInfo.setProductOptionId(20L);
+        subscriptionInfo.setProductType("DEPOSIT");
+        subscriptionInfo.setFinancialCompanyName("테스트 은행");
+        subscriptionInfo.setProductName("테스트 예금");
+        subscriptionInfo.setSavingTerm(12);
+        subscriptionInfo.setInterestRate(new BigDecimal("3.00"));
+        subscriptionInfo.setMaximumInterestRate(new BigDecimal("3.00"));
+
+        ProductSubscriptionRequestDto request = new ProductSubscriptionRequestDto();
+        request.setProductOptionId(20L);
+        request.setJoinAmount(new BigDecimal("3000000"));
+        request.setPreferentialRateApplied(false);
+
+        VirtualInvestmentAssessmentService assessmentService =
+                mock(VirtualInvestmentAssessmentService.class);
+        ProductHoldingService service = new ProductHoldingService(
+                createProductMapper(null, subscriptionInfo, new AtomicInteger()),
+                createAccountMapper(createAccount()),
+                assessmentService
+        );
+
+        ProductSubscriptionResponseDto response = service.subscribeProduct(10L, request);
+
+        assertEquals(20L, response.getProductOptionId());
+        verify(assessmentService).updateProductTransactionAssessment(10L, 100L);
     }
 
     private ProductHoldingInfoDto createDepositHolding() {
@@ -143,6 +186,20 @@ class ProductHoldingServiceTest {
                     case "getHoldingProductsByUserId" ->
                             holding == null ? List.of() : List.of(holding);
                     case "getProductSubscriptionInfo" -> subscriptionInfo;
+                    case "getLastInsertedProductTransactionId" -> 100L;
+                    case "saveHoldingProduct" -> {
+                        org.kkobi.product.holding.dto.ProductHoldingCreateDto holdingProduct =
+                                (org.kkobi.product.holding.dto.ProductHoldingCreateDto) arguments[0];
+                        holdingProduct.setHoldingProductId(1L);
+                        updateCount.incrementAndGet();
+                        yield 1;
+                    }
+                    case "decreaseAccountCashBalance",
+                            "saveProductSubscriptionTransaction",
+                            "saveAccountWithdrawalTransaction" -> {
+                        updateCount.incrementAndGet();
+                        yield 1;
+                    }
                     case "terminateHoldingProduct",
                             "increaseAccountCashBalance",
                             "saveProductTerminationTransaction",

@@ -88,6 +88,12 @@
                )
     </insert>
 
+    <!-- 마지막으로 저장된 예적금 거래 ID 조회 -->
+    <select id="getLastInsertedProductTransactionId"
+            resultType="java.lang.Long">
+        SELECT LAST_INSERT_ID()
+    </select>
+
     <!-- 예적금 가입으로 발생한 계좌 출금 거래 내역 저장 -->
     <insert id="saveAccountWithdrawalTransaction">
         INSERT INTO account_transactions (
