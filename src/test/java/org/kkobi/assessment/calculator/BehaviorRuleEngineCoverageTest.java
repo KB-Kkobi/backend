@@ -481,7 +481,10 @@ class BehaviorRuleEngineCoverageTest {
         if (periodRule) {
             return behaviorRuleEngine.calculateVirtualInvestmentPeriodAnalysis(List.of(context));
         }
-        return behaviorRuleEngine.calculateBehaviorAnalysis(context);
+        if (context.isInitialAllocation()) {
+            return behaviorRuleEngine.calculateGameBehaviorAnalysis(context);
+        }
+        return behaviorRuleEngine.calculateVirtualInvestmentBehaviorAnalysis(context);
     }
 
     private BehaviorAnalysisResult calculateConsecutiveCrashBuy(int consecutiveActionCount) {
@@ -490,7 +493,7 @@ class BehaviorRuleEngineCoverageTest {
                 BehaviorActionType.BUY
         );
         context.setConsecutiveActionCount(consecutiveActionCount);
-        return behaviorRuleEngine.calculateBehaviorAnalysis(context);
+        return behaviorRuleEngine.calculateGameBehaviorAnalysis(context);
     }
 
     private BehaviorContext createInitialAllocationContext(

@@ -15,6 +15,11 @@ public class MarketStateCalculator {
     public MarketState calculateMarketState(
             BigDecimal currentPriceChangeRate,
             BigDecimal dailyPriceRangeRate) {
+        if (dailyPriceRangeRate != null
+                && dailyPriceRangeRate.compareTo(VOLATILE_RATE) >= 0) {
+            return MarketState.VOLATILE;
+        }
+
         if (currentPriceChangeRate != null
                 && currentPriceChangeRate.compareTo(CRASH_RATE) <= 0) {
             return MarketState.CRASH;
@@ -23,11 +28,6 @@ public class MarketStateCalculator {
         if (currentPriceChangeRate != null
                 && currentPriceChangeRate.compareTo(BULL_RATE) >= 0) {
             return MarketState.BULL;
-        }
-
-        if (dailyPriceRangeRate != null
-                && dailyPriceRangeRate.compareTo(VOLATILE_RATE) >= 0) {
-            return MarketState.VOLATILE;
         }
 
         return MarketState.NORMAL;

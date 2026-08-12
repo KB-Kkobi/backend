@@ -115,7 +115,7 @@ public class GameStartService {
                 initialAllocation,
                 List.of()
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateGameBehaviorAnalysis(
                 behaviorContext
         );
 

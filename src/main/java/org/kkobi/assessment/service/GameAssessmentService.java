@@ -81,7 +81,7 @@ public class GameAssessmentService {
     private BehaviorAnalysisResult calculateGameCompletionAnalysis(List<ActionLogDto> actionLogs) {
         BehaviorContext gameCompletionContext = new BehaviorContext();
         gameCompletionContext.setDepositMatured(existsMaturedDeposit(actionLogs));
-        return behaviorRuleEngine.calculateBehaviorAnalysis(gameCompletionContext);
+        return behaviorRuleEngine.calculateGameBehaviorAnalysis(gameCompletionContext);
     }
 
     private boolean existsMaturedDeposit(List<ActionLogDto> actionLogs) {

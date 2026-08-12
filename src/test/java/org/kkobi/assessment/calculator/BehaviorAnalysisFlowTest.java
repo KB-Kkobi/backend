@@ -36,9 +36,8 @@ class BehaviorAnalysisFlowTest {
                 currentEvent,
                 List.of()
         );
-        BehaviorAnalysisResult analysisResult = behaviorRuleEngine.calculateBehaviorAnalysis(
-                behaviorContext
-        );
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateVirtualInvestmentBehaviorAnalysis(behaviorContext);
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(
                 List.of(analysisResult.getTotalScoreDelta())
         );
