@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.leaderboard.dto.LeaderboardCacheDto;
 import org.kkobi.leaderboard.dto.LeaderboardItemResponseDto;
 import org.kkobi.leaderboard.dto.LeaderboardResponseDto;
+import org.kkobi.users.dto.response.FriendResponseDto;
+import org.kkobi.users.service.FriendService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -15,6 +18,8 @@ import java.util.List;
 public class LeaderboardService {
 
     private final LeaderboardRedisService leaderboardRedisService;
+
+    private final FriendService friendService;
 
     // 로그인 사용자의 투자 성향 리더보드를 조회
     public LeaderboardResponseDto getPersonaLeaderboard(Long userId) {
@@ -123,5 +128,81 @@ public class LeaderboardService {
         response.setRankings(Collections.emptyList());
 
         return response;
+    }
+
+    // 로그인 사용자와 친구들의 리더보드를 조회
+    public LeaderboardResponseDto getFriendLeaderboard(Long userId){
+
+        List<FriendResponseDto> friends = friendService.getFriend(userId);
+
+        List<Long> userIds = new ArrayList<>();
+
+        // 로그인 사용자도 친구 리더보드에 포함
+        userIds.add(userId);
+
+        for(FriendResponseDto friend : friends) {
+            userIds.add(friend.getUserId());
+        }
+
+        List<LeaderboardCacheDto> caches = leaderboardRedisService.getUserCaches(userIds);
+
+        caches.sort(
+                Comparator.comparing(
+                        LeaderboardCacheDto::getReturnRate,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                )
+        );
+
+        List<LeaderboardItemResponseDto> rankings = createFriendsRankingItems(caches);
+
+        Long myRank = findMyRank(rankings, userId);
+
+        LeaderboardResponseDto response = new LeaderboardResponseDto();
+
+        response.setMyRank(myRank);
+        response.setPersonaId(null);
+        response.setPersonaName(null);
+        response.setRankings(rankings);
+
+        return response;
+    }
+
+    // 친구 리더보드 응랍 목록을 생성
+    private List<LeaderboardItemResponseDto> createFriendsRankingItems(
+            List<LeaderboardCacheDto> caches
+    ) {
+        List<LeaderboardItemResponseDto> rankings = new ArrayList<>();
+
+        for(int i = 0; i < caches.size(); i++) {
+            LeaderboardCacheDto cacheDto = caches.get(i);
+
+            LeaderboardItemResponseDto item = new LeaderboardItemResponseDto();
+
+            item.setRank((long) i + 1);
+            item.setUserId(cacheDto.getUserId());
+            item.setNickname(cacheDto.getNickname());
+            item.setPersonaId(cacheDto.getPersonaId());
+            item.setPersonaName(cacheDto.getPersonaName());
+            item.setTotalAsset(cacheDto.getTotalAsset());
+            item.setReturnRate(cacheDto.getReturnRate());
+
+            rankings.add(item);
+        }
+
+        return rankings;
+    }
+
+    // 친구 리더보드에서 로그인 사용자의 순위를 조회
+    private Long findMyRank(
+            List<LeaderboardItemResponseDto> rankings,
+            Long userId
+    ){
+        for(LeaderboardItemResponseDto item : rankings){
+            if(userId.equals(item.getUserId())) {
+                return item.getRank();
+            }
+        }
+
+        return null;
     }
 }

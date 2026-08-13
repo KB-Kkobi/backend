@@ -35,4 +35,19 @@ public class LeaderboardController {
 
         return ResponseEntity.ok(response);
     }
+
+    // 로그인 사용자와 친구들의 리더보드를 조회
+    @Operation(
+            summary = "친구별 리더보드 조회",
+            description = "로그인 사용자와 친구들을 수익률 순으로 조회합니다."
+    )
+    @GetMapping("/friends")
+    public ResponseEntity<LeaderboardResponseDto> getFriendLeaderboard(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
+    ){
+        LeaderboardResponseDto response = leaderboardService.getFriendLeaderboard(authenticatedUser.getUserId());
+
+        return ResponseEntity.ok(response);
+    }
 }
