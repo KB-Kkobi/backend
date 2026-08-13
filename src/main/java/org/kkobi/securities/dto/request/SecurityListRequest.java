@@ -18,4 +18,7 @@ public class SecurityListRequest {
 
     // 페이지당 종목 수
     private Integer size = 20;
+
+    // 정렬 기준. 소문자 문자열로 받음 (match | change | volume | name). 기본값은 Service에서 처리
+    private String sort;
 }

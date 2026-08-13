@@ -6,19 +6,25 @@ import org.kkobi.securities.dto.response.SecurityDetailResponse;
 import org.kkobi.securities.dto.response.SecurityListItemResponse;
 import org.kkobi.securities.dto.response.TickerKisCodeRow;
 import org.kkobi.securities.enums.SecurityType;
+import org.kkobi.securities.enums.StockSortType;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 
 @Mapper
 public interface SecurityMapper {
 
-    // 종목 리스트 조회 (type 필터, keyword 검색, 페이지네이션)
+    // 종목 리스트 조회 (type 필터, keyword 검색, 정렬, 페이지네이션)
     List<SecurityListItemResponse> getSecurityList(
             @Param("type") SecurityType type,
             @Param("keyword") String keyword,
             @Param("offset") int offset,
-            @Param("size") int size);
+            @Param("size") int size,
+            @Param("sort") StockSortType sort,
+            @Param("rtScore") BigDecimal rtScore,
+            @Param("lhScore") BigDecimal lhScore,
+            @Param("rpScore") BigDecimal rpScore);
 
     // 종목 리스트 조건에 맞는 전체 개수 조회
     long countSecurityList(

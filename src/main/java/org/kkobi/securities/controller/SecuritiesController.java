@@ -8,14 +8,10 @@ import org.kkobi.securities.dto.response.SecurityDetailResponse;
 import org.kkobi.securities.dto.response.SecurityListResponse;
 import org.kkobi.securities.service.SecurityQuoteService;
 import org.kkobi.securities.service.SecurityService;
+import org.kkobi.security.principal.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/securities")
@@ -28,9 +24,11 @@ public class SecuritiesController {
     // 종목 목록 조회
     @GetMapping
     public ResponseEntity<SecurityListResponse> getSecurityList(
-            @ModelAttribute SecurityListRequest request) {
+            @ModelAttribute SecurityListRequest request,
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
 
-        return ResponseEntity.ok(securityService.getSecurityList(request));
+        return ResponseEntity.ok(
+                securityService.getSecurityList(request, authenticatedUser.getUserId()));
     }
 
     // ticker로 종목 상세 조회
