@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -104,5 +105,82 @@ public class LeaderboardRedisService {
                 );
 
         redisTemplate.expire(key, CACHE_TTL);
+    }
+
+    // 사용자 리더보드 정보를 Redis에서 조회
+    public LeaderboardCacheDto getUserCache(Long userId) {
+        if(userId == null){
+            return null;
+        }
+
+        String key = USER_CACHE_PREFIX + userId;
+        String value = redisTemplate.opsForValue().get(key);
+
+        if(value == null){
+            return null;
+        }
+
+        try{
+            return objectMapper.readValue(
+                    value,
+                    LeaderboardCacheDto.class
+            );
+        }catch (Exception e){
+            log.warn(
+                    "리더보드 사용자 캐시 조회 실패 userId={} error={}",
+                    userId,
+                    e.getMessage()
+            );
+
+            return null;
+        }
+    }
+
+    // 성향별 사용자 ID를 수익률 높은 순으로 조회
+    public List<Long> getPersonaRankingUserIds(Long personaId){
+        if(personaId == null){
+            return Collections.emptyList();
+        }
+
+        String key = PERSONA_RANKING_PREFIX + personaId;
+
+        Set<String> userIds = redisTemplate.opsForZSet()
+                .reverseRange(key, 0, -1);
+
+        if(userIds == null || userIds.isEmpty()){
+            return Collections.emptyList();
+        }
+
+        List<Long> result = new ArrayList<>();
+
+        for(String userId : userIds){
+            result.add(Long.valueOf(userId));
+        }
+
+        return result;
+    }
+
+    // 성향별 리더보드에서 사용자의 현재 순위를 조회
+    public Long getPersonaRank(
+            Long personaId,
+            Long userId
+    ) {
+        if(personaId == null || userId == null){
+            return null;
+        }
+
+        String key = PERSONA_RANKING_PREFIX + personaId;
+
+        Long rank = redisTemplate.opsForZSet()
+                .reverseRank(
+                        key,
+                        userId.toString()
+                );
+
+        if(rank == null){
+            return null;
+        }
+
+        return rank + 1;
     }
 }
