@@ -42,7 +42,8 @@ import javax.sql.DataSource;
         "org.kkobi.trade.service",
         "org.kkobi.trade.policy",
         "org.kkobi.trade.engine",
-        "org.kkobi.trade.scheduler"
+        "org.kkobi.trade.scheduler",
+        "org.kkobi.leaderboard.service",
 })
 @MapperScan(basePackages = {
         "org.kkobi.assessment.mapper",
@@ -51,7 +52,8 @@ import javax.sql.DataSource;
         "org.kkobi.account.mapper",
         "org.kkobi.securities.mapper",
         "org.kkobi.persona.mapper",
-        "org.kkobi.trade.mapper"
+        "org.kkobi.trade.mapper",
+        "org.kkobi.leaderboard.mapper"
 })
 @Import(RedisConfig.class)
 public class RootConfig {

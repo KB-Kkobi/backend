@@ -1393,4 +1393,22 @@ public class ProductHoldingService {
             BigDecimal foregoneInterest
     ) {
     }
+
+    // 보유 예적금의 세후 현재가치를 계산
+    public BigDecimal calculateAfterTaxCurrentValue(
+            ProductHoldingInfoDto holdingProduct
+    ) {
+        LocalDate today = LocalDate.now(KOREA_ZONE_ID);
+
+        BigDecimal currentPrincipal =
+                calculateCurrentPrincipal(holdingProduct);
+
+        BigDecimal accruedInterest =
+                calculateAccruedInterest(holdingProduct, today);
+
+        BigDecimal afterTaxInterest =
+                calculateAfterTaxInterest(accruedInterest);
+
+        return currentPrincipal.add(afterTaxInterest);
+    }
 }
