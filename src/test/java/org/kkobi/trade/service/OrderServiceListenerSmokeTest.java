@@ -87,8 +87,8 @@ class OrderServiceListenerSmokeTest {
                 "SELECT user_id FROM users WHERE email = ?", Long.class, email);
 
         jdbc.update(
-                "INSERT INTO accounts (user_id, seed_money, monthly_invest_amount, cash_balance, locked_cash) " +
-                "VALUES (?, ?, 0, ?, 0)",
+                "INSERT INTO accounts (user_id, seed_money, cash_balance, locked_cash) " +
+                        "VALUES (?, ?, ?, 0)",
                 userId, INITIAL_CASH, INITIAL_CASH);
         accountId = jdbc.queryForObject(
                 "SELECT account_id FROM accounts WHERE user_id = ?", Long.class, userId);

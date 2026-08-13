@@ -299,7 +299,10 @@ class SecurityOrderAssessmentListenerTest {
         @Override public int saveProductTerminationTransaction(Long holdingProductId, BigDecimal amount, BigDecimal interestAmount, BigDecimal interestTaxAmount, LocalDateTime terminatedAt) { return 0; }
         @Override public int saveAccountDepositTransaction(Long accountId, BigDecimal amount) { return 0; }
         @Override public BigDecimal getAnnualInterestIncome(Long userId, LocalDateTime yearStart, LocalDateTime nextYearStart) { return null; }
+        @Override public Long getLastInsertedProductTransactionId() {return null;}
     }
+
+
 
     private static class StubVirtualInvestmentBehaviorMapper implements VirtualInvestmentBehaviorMapper {
         private final List<VirtualInvestmentBehaviorDto> previousBehaviors;
@@ -315,6 +318,8 @@ class SecurityOrderAssessmentListenerTest {
                 Long accountId, Timestamp tradedAt) {
             return previousBehaviors;
         }
+        @Override
+        public VirtualInvestmentBehaviorRequest getProductBehaviorRequest(Long userId, Long productTransactionId) {return null;}
     }
 
     // ── InMemory AssessmentMapper ────────────────────────────────────────────

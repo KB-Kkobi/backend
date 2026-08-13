@@ -9,7 +9,6 @@ public class AccountAssetStatusResponseDto {
 
     private Long accountId;
     private BigDecimal seedMoney;
-    private BigDecimal monthlyInvestAmount;
     private BigDecimal cashBalance;
     private BigDecimal stockAsset;
     private BigDecimal savingsAsset;

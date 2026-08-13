@@ -53,8 +53,8 @@ class HoldingMapperSqlIntegrationTest {
         Long userId = jdbc.queryForObject(
                 "SELECT user_id FROM users WHERE email = ?", Long.class, email);
         jdbc.update(
-                "INSERT INTO accounts (user_id, seed_money, monthly_invest_amount, cash_balance, locked_cash) " +
-                "VALUES (?, 1000000, 0, 1000000, 0)",
+                "INSERT INTO accounts (user_id, seed_money, cash_balance, locked_cash) " +
+                        "VALUES (?, 1000000, 1000000, 0)",
                 userId);
         return jdbc.queryForObject(
                 "SELECT account_id FROM accounts WHERE user_id = ?", Long.class, userId);
