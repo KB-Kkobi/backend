@@ -22,4 +22,10 @@ public class SecurityListResponse {
 
     // 전체 페이지 수
     private int totalPages;
+
+    // 성향 진단 없이 match 정렬 요청 시 volume으로 대체된 경우 true
+    private boolean sortFallback;
+
+    // 실제 적용된 정렬 키 (소문자: "match" | "change" | "volume" | "name")
+    private String appliedSort;
 }

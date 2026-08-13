@@ -1,15 +1,19 @@
 package org.kkobi.securities.service;
 
 import lombok.RequiredArgsConstructor;
+import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.service.AssessmentResultService;
 import org.kkobi.exception.SecurityNotFoundException;
 import org.kkobi.securities.dto.request.SecurityListRequest;
 import org.kkobi.securities.dto.response.SecurityDetailResponse;
 import org.kkobi.securities.dto.response.SecurityListItemResponse;
 import org.kkobi.securities.dto.response.SecurityListResponse;
+import org.kkobi.securities.enums.StockSortType;
 import org.kkobi.securities.mapper.SecurityMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -22,19 +26,37 @@ public class SecurityService {
     private static final int MAX_SIZE = 100;
 
     private final SecurityMapper securityMapper;
+    private final AssessmentResultService assessmentResultService;
 
     // 종목 목록 조회
     @Transactional(readOnly = true)
-    public SecurityListResponse getSecurityList(SecurityListRequest request) {
+    public SecurityListResponse getSecurityList(SecurityListRequest request, Long userId) {
 
         int page = normalizePage(request.getPage());
         int size = normalizeSize(request.getSize());
         int offset = (page - 1) * size;
-
         String keyword = request.getKeyword();
 
-        List<SecurityListItemResponse> content =
-                securityMapper.getSecurityList(request.getType(), keyword, offset, size);
+        // 사용자 성향 점수 조회 (없으면 null)
+        boolean hasScore = assessmentResultService.existsAssessmentResult(userId);
+        AssessmentScore score = hasScore ? assessmentResultService.getLatestAssessmentScore(userId) : null;
+
+        // 정렬 파싱
+        StockSortType sort = StockSortType.fromString(request.getSort());
+
+        // 성향 결과 없이 match 정렬 요청 → volume으로 대체
+        boolean sortFallback = false;
+        if (sort == StockSortType.MATCH && !hasScore) {
+            sort = StockSortType.VOLUME;
+            sortFallback = true;
+        }
+
+        BigDecimal rtScore = score != null ? score.getRtScore() : null;
+        BigDecimal lhScore = score != null ? score.getLhScore() : null;
+        BigDecimal rpScore = score != null ? score.getRpScore() : null;
+
+        List<SecurityListItemResponse> content = securityMapper.getSecurityList(
+                request.getType(), keyword, offset, size, sort, rtScore, lhScore, rpScore);
 
         long totalElements = securityMapper.countSecurityList(request.getType(), keyword);
         int totalPages = calculateTotalPages(totalElements, size);
@@ -45,6 +67,8 @@ public class SecurityService {
         response.setSize(size);
         response.setTotalElements(totalElements);
         response.setTotalPages(totalPages);
+        response.setSortFallback(sortFallback);
+        response.setAppliedSort(sort.name().toLowerCase());
 
         return response;
     }
