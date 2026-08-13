@@ -8,6 +8,7 @@ import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.service.FriendService;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -47,12 +48,9 @@ public class LeaderboardService {
                         rankingCaches
                 );
 
-        Long myRank =
-                leaderboardRedisService
-                        .getPersonaRank(
-                                personaId,
-                                userId
-                        );
+        assignRanks(rankings);
+
+        Long myRank = findMyRank(rankings, userId);
 
         LeaderboardResponseDto response = new LeaderboardResponseDto();
 
@@ -90,7 +88,6 @@ public class LeaderboardService {
 
             LeaderboardItemResponseDto item = new LeaderboardItemResponseDto();
 
-            item.setRank((long) i + 1);
             item.setUserId(cacheDto.getUserId());
             item.setNickname(cacheDto.getNickname());
             item.setPersonaId(cacheDto.getPersonaId());
@@ -155,6 +152,8 @@ public class LeaderboardService {
 
         List<LeaderboardItemResponseDto> rankings = createFriendsRankingItems(caches);
 
+        assignRanks(rankings);
+
         Long myRank = findMyRank(rankings, userId);
 
         LeaderboardResponseDto response = new LeaderboardResponseDto();
@@ -178,7 +177,6 @@ public class LeaderboardService {
 
             LeaderboardItemResponseDto item = new LeaderboardItemResponseDto();
 
-            item.setRank((long) i + 1);
             item.setUserId(cacheDto.getUserId());
             item.setNickname(cacheDto.getNickname());
             item.setPersonaId(cacheDto.getPersonaId());
@@ -204,5 +202,22 @@ public class LeaderboardService {
         }
 
         return null;
+    }
+
+    // 수익률을 기준으로 리더보드 순위를 부여
+    private void assignRanks(List<LeaderboardItemResponseDto> rankings){
+        BigDecimal previousReturnRate = null;
+        long currentRank = 0;
+
+        for(int i = 0; i < rankings.size(); i++){
+            LeaderboardItemResponseDto item = rankings.get(i);
+
+            if(previousReturnRate == null || item.getReturnRate().compareTo(previousReturnRate) != 0){
+                currentRank = i + 1L;
+            }
+
+            item.setRank(currentRank);
+            previousReturnRate = item.getReturnRate();
+        }
     }
 }
