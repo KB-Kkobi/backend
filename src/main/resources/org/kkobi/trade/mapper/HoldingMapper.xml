@@ -49,6 +49,12 @@
         WHERE holding_security_id = #{holdingSecurityId}
     </update>
 
+    <select id="sumStockPrincipalByAccountId" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(average_price * quantity), 0)
+        FROM holding_securities
+        WHERE account_id = #{accountId}
+    </select>
+
     <select id="findAllByAccountId" resultType="org.kkobi.trade.dto.HoldingDto">
         SELECT holding_security_id, account_id, security_id, quantity,
                locked_quantity, average_price

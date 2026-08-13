@@ -250,6 +250,14 @@
           AND pt.created_at &lt; #{nextYearStart}
     </select>
 
+    <!-- 계좌의 활성 예적금 가입금액 합계 조회 -->
+    <select id="sumActiveDepositByAccountId" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(join_amount), 0)
+        FROM holding_products
+        WHERE account_id = #{accountId}
+          AND status = 'ACTIVE'
+    </select>
+
     <!-- 로그인 사용자의 예적금 해지 이력 조회 -->
     <select id="getProductHoldingHistory"
             resultType="org.kkobi.product.holding.dto.response.ProductHoldingTransactionHistoryResponseDto">

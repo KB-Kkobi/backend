@@ -33,4 +33,6 @@ public interface HoldingMapper {
     int decreaseLocked(
             @Param("holdingSecurityId") Long holdingSecurityId,
             @Param("amount") Integer amount);
+
+    Long sumStockPrincipalByAccountId(@Param("accountId") Long accountId);
 }
