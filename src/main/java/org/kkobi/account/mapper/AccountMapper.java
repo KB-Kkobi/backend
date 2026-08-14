@@ -2,7 +2,8 @@ package org.kkobi.account.mapper;
 
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.account.dto.AccountAssetInfoDto;
-import org.kkobi.account.dto.AccountCreateRequestDto;
+
+import java.math.BigDecimal;
 
 public interface AccountMapper {
 
@@ -10,10 +11,10 @@ public interface AccountMapper {
     boolean existsAccountByUserId(
             @Param("userId") Long userId);
 
-    // 초기 투자금과 월 투자금을 반영하여 계좌 생성
+    // 초기 투자금을 반영하여 계좌 생성
     int saveAccount(
             @Param("userId") Long userId,
-            @Param("request")AccountCreateRequestDto request
+            @Param("seedMoney")BigDecimal seedMoney
             );
 
     AccountAssetInfoDto getAccountAssetInfoByUserId(

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.dto.AccountAssetStatusResponseDto;
-import org.kkobi.account.dto.AccountCreateRequestDto;
 import org.kkobi.account.mapper.AccountMapper;
 import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.holding.service.ProductHoldingService;
@@ -22,7 +21,6 @@ class AccountServiceTest {
         AccountAssetInfoDto account = new AccountAssetInfoDto();
         account.setAccountId(1L);
         account.setSeedMoney(new BigDecimal("10000000"));
-        account.setMonthlyInvestAmount(new BigDecimal("300000"));
         account.setCashBalance(new BigDecimal("6000000"));
         account.setStockAsset(new BigDecimal("2000000"));
 
@@ -80,7 +78,7 @@ class AccountServiceTest {
         }
 
         @Override
-        public int saveAccount(Long userId, AccountCreateRequestDto request) {
+        public int saveAccount(Long userId, BigDecimal seedMoney) {
             return 1;
         }
 

@@ -167,7 +167,6 @@ class ProductHoldingServiceTest {
         AccountAssetInfoDto account = new AccountAssetInfoDto();
         account.setAccountId(1L);
         account.setSeedMoney(new BigDecimal("10000000"));
-        account.setMonthlyInvestAmount(new BigDecimal("300000"));
         account.setCashBalance(new BigDecimal("8000000"));
         account.setStockAsset(BigDecimal.ZERO);
         return account;
