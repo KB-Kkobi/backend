@@ -133,6 +133,32 @@ public class SimulatedGamePortfolio {
         );
     }
 
+    public boolean canBuyStock(long executionPrice) {
+        return executionPrice > 0 && currentCash >= executionPrice;
+    }
+
+    public boolean canSellStock() {
+        return currentStockQuantity > 0;
+    }
+
+    public boolean canCancelDeposit() {
+        return existsActiveDeposit();
+    }
+
+    public boolean existsActiveDeposit() {
+        return currentDeposit > 0 && !depositCancelled && !depositMatured;
+    }
+
+    public int getMaximumBuyQuantity(long executionPrice) {
+        if (!canBuyStock(executionPrice)) {
+            return 0;
+        }
+        return (int) Math.min(
+                currentCash / executionPrice,
+                Integer.MAX_VALUE
+        );
+    }
+
     public long getCurrentTotalAssetPrincipal() {
         return addAmount(
                 addAmount(currentCash, currentStockPrincipal),
