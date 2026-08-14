@@ -4,6 +4,7 @@ package org.kkobi.product.dto.response;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 // 상품 금리 옵션 조회 응답 데이터
 @Data
@@ -28,8 +29,11 @@ public class ProductOptionResponseDto {
     private Integer savingTerm;
 
     // 기본 금리
-    private Integer interestRate;
+    private BigDecimal interestRate;
 
     // 최고 우대 금리
     private BigDecimal maximumInterestRate;
+
+    // 해당 상품 옵션에서 선택할 수 있는 우대조건 목록
+    private List<PreferentialRateConditionResponseDto> preferentialRateConditions;
 }
