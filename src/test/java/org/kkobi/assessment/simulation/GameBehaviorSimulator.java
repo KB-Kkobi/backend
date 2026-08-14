@@ -1,0 +1,371 @@
+package org.kkobi.assessment.simulation;
+
+import org.kkobi.assessment.calculator.AssetRatioCalculator;
+import org.kkobi.assessment.calculator.BehaviorContextFactory;
+import org.kkobi.assessment.calculator.BehaviorRuleEngine;
+import org.kkobi.assessment.calculator.GameScoreCalculator;
+import org.kkobi.assessment.calculator.MarketStateCalculator;
+import org.kkobi.assessment.calculator.PersonaClassifier;
+import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
+import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.domain.BehaviorAnalysisResult;
+import org.kkobi.assessment.domain.BehaviorContext;
+import org.kkobi.assessment.domain.BehaviorEvent;
+import org.kkobi.assessment.domain.RuleResult;
+import org.kkobi.assessment.domain.ScoreDelta;
+import org.kkobi.assessment.enums.BehaviorActionType;
+import org.kkobi.assessment.enums.BehaviorAssetType;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
+import org.kkobi.assessment.enums.MarketState;
+import org.kkobi.game.calculator.GamePriceRateCalculator;
+import org.kkobi.game.dto.ScenarioDto;
+import org.kkobi.game.dto.ScenarioTickDto;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+public class GameBehaviorSimulator {
+
+    private static final Long GAME_SECURITY_ID = 1L;
+
+    private final NeutralGameBehaviorGenerator behaviorGenerator =
+            new NeutralGameBehaviorGenerator();
+    private final AssetRatioCalculator assetRatioCalculator =
+            new AssetRatioCalculator();
+    private final BehaviorContextFactory behaviorContextFactory =
+            new BehaviorContextFactory(
+                    assetRatioCalculator,
+                    new MarketStateCalculator()
+            );
+    private final BehaviorRuleEngine behaviorRuleEngine =
+            new BehaviorRuleEngine();
+    private final GameScoreCalculator gameScoreCalculator =
+            new GameScoreCalculator();
+    private final PersonaClassifier personaClassifier =
+            new PersonaClassifier();
+    private final GamePriceRateCalculator gamePriceRateCalculator =
+            new GamePriceRateCalculator(new SecurityPriceRateCalculator());
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed) {
+        validateSimulationInput(simulationUserId, scenario, initialPortfolio);
+
+        long initialCash = initialPortfolio.getCurrentCash();
+        long initialStockPrincipal = initialPortfolio.getCurrentStockPrincipal();
+        long initialDeposit = initialPortfolio.getCurrentDeposit();
+        int initialStockQuantity = initialPortfolio.getCurrentStockQuantity();
+        SimulatedGamePortfolio simulationPortfolio = new SimulatedGamePortfolio(
+                initialCash,
+                initialStockPrincipal,
+                initialDeposit,
+                initialStockQuantity
+        );
+        GameBehaviorGenerationResult generationResult = behaviorGenerator.generateGameBehavior(
+                scenario,
+                simulationPortfolio,
+                randomSeed
+        );
+
+        List<BehaviorEvent> behaviorEvents = new ArrayList<>();
+        List<BehaviorContext> behaviorContexts = new ArrayList<>();
+        List<BehaviorAnalysisResult> analysisResults = new ArrayList<>();
+        analyzeBehaviorEvent(
+                createInitialAllocationEvent(
+                        simulationUserId,
+                        scenario,
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit,
+                        initialStockQuantity
+                ),
+                behaviorEvents,
+                behaviorContexts,
+                analysisResults
+        );
+
+        long actionSequence = 1L;
+        for (SimulatedGameAction action : generationResult.getActions()) {
+            analyzeBehaviorEvent(
+                    createBehaviorEvent(
+                            simulationUserId,
+                            actionSequence++,
+                            scenario,
+                            action
+                    ),
+                    behaviorEvents,
+                    behaviorContexts,
+                    analysisResults
+            );
+        }
+
+        List<ScoreDelta> scoreDeltas = analysisResults.stream()
+                .map(BehaviorAnalysisResult::getTotalScoreDelta)
+                .toList();
+        AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
+        Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
+                analysisResults
+        );
+
+        return createSimulationResult(
+                simulationUserId,
+                initialCash,
+                initialStockPrincipal,
+                initialDeposit,
+                generationResult,
+                behaviorContexts,
+                assessmentScore,
+                ruleApplicationCounts
+        );
+    }
+
+    private void analyzeBehaviorEvent(
+            BehaviorEvent behaviorEvent,
+            List<BehaviorEvent> previousEvents,
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
+                behaviorEvent,
+                previousEvents
+        );
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateGameBehaviorAnalysis(behaviorContext);
+
+        behaviorContexts.add(behaviorContext);
+        analysisResults.add(analysisResult);
+        previousEvents.add(behaviorEvent);
+    }
+
+    private BehaviorEvent createInitialAllocationEvent(
+            long simulationUserId,
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            int initialStockQuantity) {
+        BehaviorEvent behaviorEvent = new BehaviorEvent();
+        behaviorEvent.setUserId(simulationUserId);
+        behaviorEvent.setGameTick(0);
+        behaviorEvent.setActionSequence(0L);
+        behaviorEvent.setActionType(BehaviorActionType.INITIAL_ALLOCATION);
+        behaviorEvent.setAssetType(BehaviorAssetType.ALL);
+        behaviorEvent.setActionAmount(addAmounts(
+                addAmounts(initialCash, initialStockPrincipal),
+                initialDeposit
+        ));
+        behaviorEvent.setCurrentCash(initialCash);
+        behaviorEvent.setCurrentStockPrincipal(initialStockPrincipal);
+        behaviorEvent.setCurrentDeposit(initialDeposit);
+        behaviorEvent.setCurrentSecurityQuantity(initialStockQuantity);
+        behaviorEvent.setCurrentPriceChangeRate(
+                gamePriceRateCalculator.calculateTickPriceChangeRate(scenario, 0)
+        );
+        behaviorEvent.setTradedAt(getScenarioActionAt(scenario, 0));
+        return behaviorEvent;
+    }
+
+    private BehaviorEvent createBehaviorEvent(
+            long simulationUserId,
+            long actionSequence,
+            ScenarioDto scenario,
+            SimulatedGameAction action) {
+        BehaviorEvent behaviorEvent = new BehaviorEvent();
+        behaviorEvent.setUserId(simulationUserId);
+        behaviorEvent.setGameTick(action.getGameTick());
+        behaviorEvent.setActionSequence(actionSequence);
+        behaviorEvent.setActionType(action.getActionType());
+        behaviorEvent.setAssetType(action.getAssetType());
+        if (action.getAssetType() == BehaviorAssetType.SECURITY) {
+            behaviorEvent.setSecurityId(GAME_SECURITY_ID);
+        }
+        behaviorEvent.setQuantity(action.getQuantity());
+        behaviorEvent.setActionAmount(action.getActionAmount());
+        behaviorEvent.setExecutionPrice(action.getExecutionPrice());
+        behaviorEvent.setCurrentCash(action.getCurrentCash());
+        behaviorEvent.setCurrentStockPrincipal(action.getCurrentStockPrincipal());
+        behaviorEvent.setCurrentDeposit(action.getCurrentDeposit());
+        behaviorEvent.setCurrentSecurityQuantity(action.getCurrentStockQuantity());
+        behaviorEvent.setCurrentPriceChangeRate(
+                gamePriceRateCalculator.calculateTickPriceChangeRate(
+                        scenario,
+                        action.getGameTick()
+                )
+        );
+        behaviorEvent.setPositionReturnRate(action.getPositionReturnRate());
+        behaviorEvent.setRealizedReturnRate(action.getRealizedReturnRate());
+        behaviorEvent.setTradedAt(getScenarioActionAt(scenario, action.getGameTick()));
+        return behaviorEvent;
+    }
+
+    private LocalDateTime getScenarioActionAt(
+            ScenarioDto scenario,
+            int gameTick) {
+        return scenario.getTicks()
+                .stream()
+                .filter(scenarioTick -> scenarioTick.getTick() == gameTick)
+                .map(ScenarioTickDto::getDate)
+                .filter(scenarioDate -> scenarioDate != null && !scenarioDate.isBlank())
+                .map(LocalDate::parse)
+                .map(LocalDate::atStartOfDay)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "게임 시나리오 Tick 날짜를 찾을 수 없습니다: " + gameTick
+                ));
+    }
+
+    private Map<BehaviorRuleCode, Integer> calculateRuleApplicationCounts(
+            List<BehaviorAnalysisResult> analysisResults) {
+        EnumMap<BehaviorRuleCode, Integer> ruleApplicationCounts =
+                new EnumMap<>(BehaviorRuleCode.class);
+        analysisResults.stream()
+                .map(BehaviorAnalysisResult::getAppliedRules)
+                .flatMap(List::stream)
+                .map(RuleResult::getRuleCode)
+                .forEach(ruleCode -> ruleApplicationCounts.merge(ruleCode, 1, Integer::sum));
+        return ruleApplicationCounts;
+    }
+
+    private GameBehaviorSimulationResult createSimulationResult(
+            long simulationUserId,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            GameBehaviorGenerationResult generationResult,
+            List<BehaviorContext> behaviorContexts,
+            AssessmentScore assessmentScore,
+            Map<BehaviorRuleCode, Integer> ruleApplicationCounts) {
+        List<SimulatedGameAction> actions = generationResult.getActions();
+        return GameBehaviorSimulationResult.builder()
+                .simulationUserId(simulationUserId)
+                .initialCashRatio(assetRatioCalculator.calculateCashRatio(
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit
+                ))
+                .initialStockRatio(assetRatioCalculator.calculateStockRatio(
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit
+                ))
+                .initialDepositRatio(assetRatioCalculator.calculateDepositRatio(
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit
+                ))
+                .buyCount(countActions(actions, BehaviorActionType.BUY))
+                .sellCount(countActions(actions, BehaviorActionType.SELL))
+                .noActionTickCount(generationResult.getNoActionTickCount())
+                .totalBuyAmount(calculateTotalActionAmount(actions, BehaviorActionType.BUY))
+                .totalSellAmount(calculateTotalActionAmount(actions, BehaviorActionType.SELL))
+                .fullSellCount((int) actions.stream()
+                        .filter(action -> action.getActionType() == BehaviorActionType.SELL)
+                        .filter(action -> action.getCurrentStockQuantity() == 0)
+                        .count())
+                .crashBuyCount(getRuleCount(ruleApplicationCounts, BehaviorRuleCode.CRASH_BUY))
+                .crashFullSellCount(getRuleCount(
+                        ruleApplicationCounts,
+                        BehaviorRuleCode.CRASH_FULL_SELL
+                ))
+                .bullBuyCount(getRuleCount(ruleApplicationCounts, BehaviorRuleCode.BULL_BUY))
+                .bullProfitSellCount(getRuleCount(
+                        ruleApplicationCounts,
+                        BehaviorRuleCode.BULL_PROFIT_SELL
+                ))
+                .lossAveragingBuyCount(getRuleCount(
+                        ruleApplicationCounts,
+                        BehaviorRuleCode.LOSS_AVERAGING_BUY
+                ))
+                .lossCutSellCount(getRuleCount(
+                        ruleApplicationCounts,
+                        BehaviorRuleCode.LOSS_CUT_SELL
+                ))
+                .depositCancelled(actions.stream()
+                        .anyMatch(action -> action.getActionType() == BehaviorActionType.CANCEL_PRODUCT))
+                .depositMatured(actions.stream()
+                        .anyMatch(action -> action.getActionType() == BehaviorActionType.MATURITY))
+                .boughtStockAfterDepositCancel(getRuleCount(
+                        ruleApplicationCounts,
+                        BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY
+                ) > 0)
+                .maximumConsecutiveBuyCount(calculateMaximumConsecutiveActionCount(
+                        behaviorContexts,
+                        BehaviorActionType.BUY
+                ))
+                .maximumConsecutiveSellCount(calculateMaximumConsecutiveActionCount(
+                        behaviorContexts,
+                        BehaviorActionType.SELL
+                ))
+                .ruleApplicationCounts(ruleApplicationCounts)
+                .finalRtScore(assessmentScore.getRtScore())
+                .finalLhScore(assessmentScore.getLhScore())
+                .finalRpScore(assessmentScore.getRpScore())
+                .personaType(personaClassifier.calculatePersona(assessmentScore))
+                .build();
+    }
+
+    private int countActions(
+            List<SimulatedGameAction> actions,
+            BehaviorActionType actionType) {
+        return (int) actions.stream()
+                .filter(action -> action.getActionType() == actionType)
+                .count();
+    }
+
+    private long calculateTotalActionAmount(
+            List<SimulatedGameAction> actions,
+            BehaviorActionType actionType) {
+        return actions.stream()
+                .filter(action -> action.getActionType() == actionType)
+                .mapToLong(SimulatedGameAction::getActionAmount)
+                .sum();
+    }
+
+    private int calculateMaximumConsecutiveActionCount(
+            List<BehaviorContext> behaviorContexts,
+            BehaviorActionType actionType) {
+        return behaviorContexts.stream()
+                .filter(context -> context.getCurrentEvent() != null)
+                .filter(context -> context.getCurrentEvent().getActionType() == actionType)
+                .map(BehaviorContext::getConsecutiveActionCount)
+                .filter(count -> count != null)
+                .mapToInt(Integer::intValue)
+                .max()
+                .orElse(0);
+    }
+
+    private int getRuleCount(
+            Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
+            BehaviorRuleCode ruleCode) {
+        return ruleApplicationCounts.getOrDefault(ruleCode, 0);
+    }
+
+    private long addAmounts(long firstAmount, long secondAmount) {
+        try {
+            return Math.addExact(firstAmount, secondAmount);
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException("초기 자산 금액이 허용 범위를 초과했습니다.", exception);
+        }
+    }
+
+    private void validateSimulationInput(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio) {
+        if (simulationUserId <= 0) {
+            throw new IllegalArgumentException("시뮬레이션 사용자 ID는 0보다 커야 합니다.");
+        }
+        if (scenario == null) {
+            throw new IllegalArgumentException("게임 시나리오는 필수입니다.");
+        }
+        if (initialPortfolio == null) {
+            throw new IllegalArgumentException("초기 자산 상태는 필수입니다.");
+        }
+    }
+}
