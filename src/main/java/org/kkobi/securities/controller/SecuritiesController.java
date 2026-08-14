@@ -6,6 +6,7 @@ import org.kkobi.securities.dto.request.SecurityListRequest;
 import org.kkobi.securities.dto.response.QuoteResponse;
 import org.kkobi.securities.dto.response.SecurityDetailResponse;
 import org.kkobi.securities.dto.response.SecurityListResponse;
+import org.kkobi.securities.dto.response.SecurityRecommendationResponse;
 import org.kkobi.securities.service.SecurityQuoteService;
 import org.kkobi.securities.service.SecurityService;
 import org.kkobi.security.principal.CustomUserDetails;
@@ -29,6 +30,15 @@ public class SecuritiesController {
 
         return ResponseEntity.ok(
                 securityService.getSecurityList(request, authenticatedUser.getUserId()));
+    }
+
+    // 홈 화면 추천 종목 조회 (주식 1 + 주식형 ETF 1 + 채권형 ETF 1, 성향 매칭 순)
+    @GetMapping("/recommendations")
+    public ResponseEntity<SecurityRecommendationResponse> getRecommendedSecurities(
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser) {
+
+        return ResponseEntity.ok(
+                securityService.getRecommendedSecurities(authenticatedUser.getUserId()));
     }
 
     // ticker로 종목 상세 조회

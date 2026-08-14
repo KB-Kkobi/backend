@@ -8,12 +8,15 @@ import org.kkobi.securities.dto.request.SecurityListRequest;
 import org.kkobi.securities.dto.response.SecurityDetailResponse;
 import org.kkobi.securities.dto.response.SecurityListItemResponse;
 import org.kkobi.securities.dto.response.SecurityListResponse;
+import org.kkobi.securities.dto.response.SecurityRecommendationResponse;
+import org.kkobi.securities.enums.SecurityType;
 import org.kkobi.securities.enums.StockSortType;
 import org.kkobi.securities.mapper.SecurityMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -67,6 +70,43 @@ public class SecurityService {
         response.setSize(size);
         response.setTotalElements(totalElements);
         response.setTotalPages(totalPages);
+        response.setSortFallback(sortFallback);
+        response.setAppliedSort(sort.name().toLowerCase());
+
+        return response;
+    }
+
+    // 홈 화면 추천 종목 조회 (주식 1 + 주식형 ETF 1 + 채권형 ETF 1, 성향 매칭 순)
+    @Transactional(readOnly = true)
+    public SecurityRecommendationResponse getRecommendedSecurities(Long userId) {
+
+        // 사용자 성향 점수 조회 (없으면 null)
+        boolean hasScore = assessmentResultService.existsAssessmentResult(userId);
+        AssessmentScore score = hasScore ? assessmentResultService.getLatestAssessmentScore(userId) : null;
+
+        // 성향 결과 없으면 match 대신 volume으로 대체
+        StockSortType sort = hasScore ? StockSortType.MATCH : StockSortType.VOLUME;
+        boolean sortFallback = !hasScore;
+
+        BigDecimal rtScore = score != null ? score.getRtScore() : null;
+        BigDecimal lhScore = score != null ? score.getLhScore() : null;
+        BigDecimal rpScore = score != null ? score.getRpScore() : null;
+
+        List<SecurityListItemResponse> content = new ArrayList<>();
+
+        for (SecurityType type : List.of(
+                SecurityType.STOCK, SecurityType.EQUITY_ETF, SecurityType.BOND_ETF)) {
+
+            List<SecurityListItemResponse> topMatch = securityMapper.getSecurityList(
+                    type, null, 0, 1, sort, rtScore, lhScore, rpScore);
+
+            if (!topMatch.isEmpty()) {
+                content.add(topMatch.get(0));
+            }
+        }
+
+        SecurityRecommendationResponse response = new SecurityRecommendationResponse();
+        response.setContent(content);
         response.setSortFallback(sortFallback);
         response.setAppliedSort(sort.name().toLowerCase());
 
