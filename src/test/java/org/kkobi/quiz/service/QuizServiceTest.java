@@ -57,9 +57,9 @@ class QuizServiceTest {
                 "SELECT user_id FROM users WHERE email = ?", Long.class, email);
 
         jdbcTemplate.update(
-                "INSERT INTO accounts (user_id, seed_money, monthly_invest_amount, cash_balance, locked_cash) "
-                        + "VALUES (?, ?, ?, ?, ?)",
-                userId, cashBalance, 0L, cashBalance, 0L
+                "INSERT INTO accounts (user_id, seed_money, cash_balance, locked_cash) "
+                        + "VALUES (?, ?, ?, ?)",
+                userId, cashBalance, cashBalance, 0L
         );
         return userId;
     }
