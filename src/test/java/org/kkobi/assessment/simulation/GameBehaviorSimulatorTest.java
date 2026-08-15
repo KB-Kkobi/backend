@@ -212,6 +212,26 @@ class GameBehaviorSimulatorTest {
         ));
     }
 
+    @Test
+    @DisplayName("현금 완충 비중은 서로 분리된 연속 유지 구간마다 한 번 계산한다.")
+    void calculateCashBufferMaintenanceEpisodeCount() {
+        ScenarioDto scenario = createScenario(7);
+        List<SimulatedGameAction> actions = List.of(
+                createCashStateAction(3, 6_000_000L, 4_000_000L),
+                createCashStateAction(4, 3_000_000L, 7_000_000L)
+        );
+
+        int count = gameBehaviorSimulator.calculateCashBufferMaintenanceEpisodeCount(
+                scenario,
+                3_000_000L,
+                7_000_000L,
+                0L,
+                actions
+        );
+
+        assertEquals(2, count);
+    }
+
     private SimulatedGamePortfolio createInitialPortfolio() {
         return new SimulatedGamePortfolio(
                 2_000_000L,
@@ -235,6 +255,26 @@ class GameBehaviorSimulatorTest {
         behaviorContext.setCurrentEvent(behaviorEvent);
         behaviorContext.setMarketState(MarketState.NORMAL);
         return behaviorContext;
+    }
+
+    private SimulatedGameAction createCashStateAction(
+            int gameTick,
+            long currentCash,
+            long currentStockPrincipal) {
+        return new SimulatedGameAction(
+                gameTick,
+                BehaviorActionType.BUY,
+                BehaviorAssetType.SECURITY,
+                1L,
+                1,
+                1L,
+                BigDecimal.ZERO,
+                null,
+                currentCash,
+                currentStockPrincipal,
+                0L,
+                1
+        );
     }
 
     private ScenarioDto createScenario(int totalTicks) {

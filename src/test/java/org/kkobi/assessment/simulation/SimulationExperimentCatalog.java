@@ -24,6 +24,14 @@ public enum SimulationExperimentCatalog {
     CRASH_PARTIAL_SELL_FREQUENCY(
             "급락장 일부 매도 LH·RP 중심 규칙 적용 전후의 저·중·고빈도 비교",
             createCrashPartialSellFrequencyCases()
+    ),
+    RECOMMENDED_REPETITION_POLICY_FREQUENCY(
+            "게임 반복 행동 권장 정책 적용 전후의 저·중·고빈도 비교",
+            createRecommendedRepetitionPolicyFrequencyCases()
+    ),
+    REPETITION_POLICY_AND_CANDIDATE_RULES_FREQUENCY(
+            "반복 정책·세 후보 규칙·동시 적용의 저·중·고빈도 비교",
+            createRepetitionPolicyAndCandidateRulesFrequencyCases()
     );
 
     private final String description;
@@ -115,6 +123,43 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "급락장 일부 매도 LH·RP 중심 적용 후",
                 GameBiasMitigationCondition.CRASH_PARTIAL_SELL_WITH_SMALL_TRADE_DEAD_ZONE
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase> createRecommendedRepetitionPolicyFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "게임 반복 행동 권장 정책 적용 전",
+                GameBiasMitigationCondition.CRASH_PARTIAL_SELL_WITH_SMALL_TRADE_DEAD_ZONE
+        );
+        addFrequencyCases(
+                experimentCases,
+                "게임 반복 행동 권장 정책 적용 후",
+                GameBiasMitigationCondition.RECOMMENDED_GAME_REPETITION_POLICY
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createRepetitionPolicyAndCandidateRulesFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "최신 반복 정책만 적용",
+                GameBiasMitigationCondition.RECOMMENDED_GAME_REPETITION_POLICY
+        );
+        addFrequencyCases(
+                experimentCases,
+                "세 후보 규칙만 적용",
+                GameBiasMitigationCondition.THREE_CANDIDATE_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "최신 반복 정책과 세 후보 규칙 동시 적용",
+                GameBiasMitigationCondition
+                        .RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
         );
         return experimentCases;
     }

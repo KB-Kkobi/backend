@@ -63,7 +63,7 @@ public class SimulationComparisonCsvExporter {
                                 simulationCountPerCase,
                                 randomSeed,
                                 experimentCase.frequencyCondition(),
-                                ConsecutiveActionMultiplierCondition.ENABLED,
+                                mitigationCondition.getMultiplierCondition(),
                                 mitigationCondition.getSameTickRuleCondition(),
                                 mitigationCondition.getRuleAccumulationCondition(),
                                 LossAveragingRtWeightCondition.RT_15,

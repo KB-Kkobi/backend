@@ -331,13 +331,21 @@ public class GameBehaviorSimulator {
                 : 0;
         int cashBufferMaintenanceCount =
                 ruleEvaluationCondition.appliesCashBufferMaintenanceRule()
-                        ? calculateCashBufferMaintenanceCount(
-                        scenario,
-                        initialCash,
-                        initialStockPrincipal,
-                        initialDeposit,
-                        generationResult.getActions()
-                )
+                        ? ruleEvaluationCondition.appliesCashBufferMaintenancePerEpisodeRule()
+                                ? calculateCashBufferMaintenanceEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                generationResult.getActions()
+                        )
+                                : calculateCashBufferMaintenanceCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                generationResult.getActions()
+                        )
                         : 0;
         List<ScoreDelta> scoreDeltas = new ArrayList<>(analysisResults.stream()
                 .map(BehaviorAnalysisResult::getTotalScoreDelta)
@@ -902,6 +910,64 @@ public class GameBehaviorSimulator {
             }
         }
         return 0;
+    }
+
+    int calculateCashBufferMaintenanceEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int consecutiveMaintenanceTicks = 0;
+        int maintenanceEpisodeCount = 0;
+        boolean currentEpisodeApplied = false;
+
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = actions.stream()
+                .filter(action -> action.getActionType() != BehaviorActionType.MATURITY)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        SimulatedGameAction::getGameTick,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+        List<ScenarioTickDto> scenarioTicks = scenario.getTicks().stream()
+                .filter(tick -> tick.getTick() >= 0 && tick.getTick() < scenario.getTotalTicks())
+                .sorted(java.util.Comparator.comparingInt(ScenarioTickDto::getTick))
+                .toList();
+
+        for (ScenarioTickDto scenarioTick : scenarioTicks) {
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+            }
+            BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            );
+            boolean maintainsCashBuffer =
+                    cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0
+                            && cashRatio.compareTo(CASH_BUFFER_MAXIMUM_RATIO) < 0;
+            if (!maintainsCashBuffer) {
+                consecutiveMaintenanceTicks = 0;
+                currentEpisodeApplied = false;
+                continue;
+            }
+
+            consecutiveMaintenanceTicks++;
+            if (!currentEpisodeApplied
+                    && consecutiveMaintenanceTicks >= CASH_BUFFER_MAINTENANCE_TICKS) {
+                maintenanceEpisodeCount++;
+                currentEpisodeApplied = true;
+            }
+        }
+        return maintenanceEpisodeCount;
     }
 
     private int countActions(

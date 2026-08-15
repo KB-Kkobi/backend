@@ -137,6 +137,33 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    RECOMMENDED_GAME_REPETITION_POLICY(
+            "게임 반복 제어·급락 일부 매도",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    THREE_CANDIDATE_RULES(
+            "급락 보유·평범장 계획 매수·현금 완충 유지",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES(
+            "게임 반복 제어·급락 보유·평범장 계획 매수·현금 완충 유지",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -767,7 +794,10 @@ public enum GameRuleEvaluationCondition {
                 || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING
                 || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY
                 || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
-                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL;
+                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL
+                || this == RECOMMENDED_GAME_REPETITION_POLICY
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
@@ -777,22 +807,38 @@ public enum GameRuleEvaluationCondition {
 
     public boolean appliesCrashHoldingRule() {
         return this
-                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING;
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
     }
 
     public boolean appliesNormalPlannedBuyRule() {
         return this
-                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY;
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
     }
 
     public boolean appliesCashBufferMaintenanceRule() {
         return this
-                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER;
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+    }
+
+    public boolean appliesCashBufferMaintenancePerEpisodeRule() {
+        return this
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
     }
 
     private boolean appliesCrashPartialSellAxisSeparation() {
         return this
-                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL;
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL
+                || this == RECOMMENDED_GAME_REPETITION_POLICY
+                || this == THREE_CANDIDATE_RULES
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
     }
 
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {

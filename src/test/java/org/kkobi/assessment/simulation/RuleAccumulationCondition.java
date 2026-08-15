@@ -19,6 +19,10 @@ public enum RuleAccumulationCondition {
     BULL_BUY_MEDIAN_HARD_CAP(
             "급등 매수 중앙값 상한",
             "급등장 매수는 사용자당 중앙값인 최대 2회까지만 반영"
+    ),
+    DOMINANT_BUY_RULE_HARD_CAP(
+            "반복 기여가 큰 매수 규칙 상한",
+            "급락 매수 4회, 급등 매수 2회, 물타기 2회까지만 반영"
     );
 
     private final String description;
@@ -35,6 +39,13 @@ public enum RuleAccumulationCondition {
             return ruleCode == BehaviorRuleCode.BULL_BUY
                     ? 2
                     : Integer.MAX_VALUE;
+        }
+        if (this == DOMINANT_BUY_RULE_HARD_CAP) {
+            return switch (ruleCode) {
+                case CRASH_BUY -> 4;
+                case BULL_BUY, LOSS_AVERAGING_BUY -> 2;
+                default -> Integer.MAX_VALUE;
+            };
         }
         return switch (ruleCode) {
             case INITIAL_STOCK_ALLOCATION,

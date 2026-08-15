@@ -116,21 +116,59 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
             GameRuleEvaluationCondition
                     .EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL
+    ),
+    RECOMMENDED_GAME_REPETITION_POLICY(
+            "동일 Tick 1회·지배적 매수 규칙 상한·연속 배율 제거",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.DOMINANT_BUY_RULE_HARD_CAP,
+            GameRuleEvaluationCondition.RECOMMENDED_GAME_REPETITION_POLICY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    THREE_CANDIDATE_RULES(
+            "급락 보유·평범장 계획 매수·현금 완충 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
+            GameRuleEvaluationCondition.THREE_CANDIDATE_RULES
+    ),
+    RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES(
+            "반복 정책과 세 후보 규칙 동시 적용",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.DOMINANT_BUY_RULE_HARD_CAP,
+            GameRuleEvaluationCondition
+                    .RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
     );
 
     private final String description;
     private final SameTickRuleApplicationCondition sameTickRuleCondition;
     private final RuleAccumulationCondition ruleAccumulationCondition;
     private final GameRuleEvaluationCondition ruleEvaluationCondition;
+    private final ConsecutiveActionMultiplierCondition multiplierCondition;
 
     GameBiasMitigationCondition(
             String description,
             SameTickRuleApplicationCondition sameTickRuleCondition,
             RuleAccumulationCondition ruleAccumulationCondition,
             GameRuleEvaluationCondition ruleEvaluationCondition) {
+        this(
+                description,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                ruleEvaluationCondition,
+                ConsecutiveActionMultiplierCondition.ENABLED
+        );
+    }
+
+    GameBiasMitigationCondition(
+            String description,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition) {
         this.description = description;
         this.sameTickRuleCondition = sameTickRuleCondition;
         this.ruleAccumulationCondition = ruleAccumulationCondition;
         this.ruleEvaluationCondition = ruleEvaluationCondition;
+        this.multiplierCondition = multiplierCondition;
     }
 }
