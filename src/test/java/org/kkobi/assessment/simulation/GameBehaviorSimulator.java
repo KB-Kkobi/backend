@@ -67,7 +67,8 @@ public class GameBehaviorSimulator {
                 randomSeed,
                 null,
                 ConsecutiveActionMultiplierCondition.ENABLED,
-                SameTickRuleApplicationCondition.REPEATED
+                SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED
         );
     }
 
@@ -84,7 +85,8 @@ public class GameBehaviorSimulator {
                 randomSeed,
                 frequencyCondition,
                 ConsecutiveActionMultiplierCondition.ENABLED,
-                SameTickRuleApplicationCondition.REPEATED
+                SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED
         );
     }
 
@@ -102,7 +104,8 @@ public class GameBehaviorSimulator {
                 randomSeed,
                 frequencyCondition,
                 multiplierCondition,
-                SameTickRuleApplicationCondition.REPEATED
+                SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED
         );
     }
 
@@ -114,12 +117,36 @@ public class GameBehaviorSimulator {
             GameBehaviorFrequencyCondition frequencyCondition,
             ConsecutiveActionMultiplierCondition multiplierCondition,
             SameTickRuleApplicationCondition sameTickRuleCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                RuleAccumulationCondition.UNLIMITED
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
         if (multiplierCondition == null) {
             throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
         }
         if (sameTickRuleCondition == null) {
             throw new IllegalArgumentException("동일 Tick 규칙 적용 조건은 필수입니다.");
+        }
+        if (ruleAccumulationCondition == null) {
+            throw new IllegalArgumentException("규칙 누적 조건은 필수입니다.");
         }
 
         long initialCash = initialPortfolio.getCurrentCash();
@@ -143,6 +170,8 @@ public class GameBehaviorSimulator {
         List<BehaviorContext> behaviorContexts = new ArrayList<>();
         List<BehaviorAnalysisResult> analysisResults = new ArrayList<>();
         Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick = new HashMap<>();
+        EnumMap<BehaviorRuleCode, Integer> accumulatedRuleCounts =
+                new EnumMap<>(BehaviorRuleCode.class);
         analyzeBehaviorEvent(
                 createInitialAllocationEvent(
                         simulationUserId,
@@ -157,7 +186,9 @@ public class GameBehaviorSimulator {
                 analysisResults,
                 multiplierCondition,
                 sameTickRuleCondition,
-                appliedRuleCodesByTick
+                appliedRuleCodesByTick,
+                ruleAccumulationCondition,
+                accumulatedRuleCounts
         );
 
         long actionSequence = 1L;
@@ -174,7 +205,9 @@ public class GameBehaviorSimulator {
                     analysisResults,
                     multiplierCondition,
                     sameTickRuleCondition,
-                    appliedRuleCodesByTick
+                    appliedRuleCodesByTick,
+                    ruleAccumulationCondition,
+                    accumulatedRuleCounts
             );
         }
 
@@ -208,7 +241,9 @@ public class GameBehaviorSimulator {
             List<BehaviorAnalysisResult> analysisResults,
             ConsecutiveActionMultiplierCondition multiplierCondition,
             SameTickRuleApplicationCondition sameTickRuleCondition,
-            Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick) {
+            Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            Map<BehaviorRuleCode, Integer> accumulatedRuleCounts) {
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 behaviorEvent,
                 previousEvents
@@ -228,10 +263,52 @@ public class GameBehaviorSimulator {
                     appliedRuleCodesByTick
             );
         }
+        analysisResult = applyRuleAccumulationCondition(
+                analysisResult,
+                ruleAccumulationCondition,
+                accumulatedRuleCounts
+        );
 
         behaviorContexts.add(behaviorContext);
         analysisResults.add(analysisResult);
         previousEvents.add(behaviorEvent);
+    }
+
+    private BehaviorAnalysisResult applyRuleAccumulationCondition(
+            BehaviorAnalysisResult analysisResult,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            Map<BehaviorRuleCode, Integer> accumulatedRuleCounts) {
+        if (ruleAccumulationCondition == RuleAccumulationCondition.UNLIMITED
+                || analysisResult.getAppliedRules().isEmpty()) {
+            analysisResult.getAppliedRules().forEach(ruleResult -> accumulatedRuleCounts.merge(
+                    ruleResult.getRuleCode(),
+                    1,
+                    Integer::sum
+            ));
+            return analysisResult;
+        }
+
+        List<RuleResult> adjustedRules = new ArrayList<>();
+        for (RuleResult ruleResult : analysisResult.getAppliedRules()) {
+            int previousApplicationCount = accumulatedRuleCounts.getOrDefault(
+                    ruleResult.getRuleCode(),
+                    0
+            );
+            accumulatedRuleCounts.put(
+                    ruleResult.getRuleCode(),
+                    previousApplicationCount + 1
+            );
+            int applicationLimit = ruleAccumulationCondition.getApplicationLimit(
+                    ruleResult.getRuleCode()
+            );
+            if (previousApplicationCount < applicationLimit) {
+                adjustedRules.add(ruleResult);
+            } else if (ruleAccumulationCondition
+                    == RuleAccumulationCondition.MEDIUM_P95_HALF_ATTENUATION) {
+                adjustedRules.add(ruleResult.multiplyScoreDelta(BigDecimal.valueOf(0.5)));
+            }
+        }
+        return new BehaviorAnalysisResult(adjustedRules);
     }
 
     private BehaviorAnalysisResult removeSameTickDuplicateRules(

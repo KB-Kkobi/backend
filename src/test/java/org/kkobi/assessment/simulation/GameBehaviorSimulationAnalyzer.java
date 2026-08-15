@@ -75,6 +75,7 @@ public class GameBehaviorSimulationAnalyzer {
                 frequencyCondition,
                 multiplierCondition,
                 SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED,
                 simulationResult -> {
                 }
         );
@@ -94,6 +95,28 @@ public class GameBehaviorSimulationAnalyzer {
                 frequencyCondition,
                 multiplierCondition,
                 sameTickRuleCondition,
+                RuleAccumulationCondition.UNLIMITED,
+                simulationResult -> {
+                }
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
                 simulationResult -> {
                 }
         );
@@ -111,6 +134,7 @@ public class GameBehaviorSimulationAnalyzer {
                 null,
                 ConsecutiveActionMultiplierCondition.ENABLED,
                 SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED,
                 simulationResultConsumer
         );
     }
@@ -128,6 +152,7 @@ public class GameBehaviorSimulationAnalyzer {
                 frequencyCondition,
                 ConsecutiveActionMultiplierCondition.ENABLED,
                 SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED,
                 simulationResultConsumer
         );
     }
@@ -146,6 +171,7 @@ public class GameBehaviorSimulationAnalyzer {
                 frequencyCondition,
                 multiplierCondition,
                 SameTickRuleApplicationCondition.REPEATED,
+                RuleAccumulationCondition.UNLIMITED,
                 simulationResultConsumer
         );
     }
@@ -158,6 +184,27 @@ public class GameBehaviorSimulationAnalyzer {
             ConsecutiveActionMultiplierCondition multiplierCondition,
             SameTickRuleApplicationCondition sameTickRuleCondition,
             Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                RuleAccumulationCondition.UNLIMITED,
+                simulationResultConsumer
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
         validateAnalysisInput(scenario, simulationCount);
         Objects.requireNonNull(
                 simulationResultConsumer,
@@ -165,6 +212,7 @@ public class GameBehaviorSimulationAnalyzer {
         );
         Objects.requireNonNull(multiplierCondition, "연속 행동 배율 조건은 필수입니다.");
         Objects.requireNonNull(sameTickRuleCondition, "동일 Tick 규칙 적용 조건은 필수입니다.");
+        Objects.requireNonNull(ruleAccumulationCondition, "규칙 누적 조건은 필수입니다.");
         long initialStockPrice = getInitialStockPrice(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         EnumMap<PersonaType, MutablePersonaSummary> personaSummaryByType =
@@ -188,7 +236,8 @@ public class GameBehaviorSimulationAnalyzer {
                     userRandom.nextLong(),
                     frequencyCondition,
                     multiplierCondition,
-                    sameTickRuleCondition
+                    sameTickRuleCondition,
+                    ruleAccumulationCondition
             );
             simulationResultConsumer.accept(simulationResult);
             personaSummaryByType.get(simulationResult.getPersonaType())
