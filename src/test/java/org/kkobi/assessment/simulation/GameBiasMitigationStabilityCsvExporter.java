@@ -1,6 +1,7 @@
 package org.kkobi.assessment.simulation;
 
 import org.kkobi.assessment.enums.PersonaType;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.game.dto.ScenarioDto;
 
 import java.io.BufferedWriter;
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,6 +27,8 @@ public class GameBiasMitigationStabilityCsvExporter {
             "game-bias-persona-stability.csv";
     public static final String AXIS_CORRELATION_FILE_NAME =
             "game-bias-axis-correlation.csv";
+    public static final String PERSONA_RULE_ANALYSIS_FILE_NAME =
+            "game-bias-persona-rule-analysis.csv";
 
     private static final GameBiasMitigationCondition TARGET_CONDITION =
             GameBiasMitigationCondition.SIZE_SEPARATED_BULL_BUY_ONCE_AND_CAPPED;
@@ -47,15 +51,19 @@ public class GameBiasMitigationStabilityCsvExporter {
             Files.createDirectories(outputDirectory);
             ScoreAxisCorrelationAnalysis overallCorrelation =
                     new ScoreAxisCorrelationAnalysis();
+            PersonaRuleApplicationAnalysis personaRuleAnalysis =
+                    new PersonaRuleApplicationAnalysis();
             List<SeedAnalysis> seedAnalyses = analyzeSeeds(
                     scenario,
                     simulationCount,
                     randomSeeds,
-                    overallCorrelation
+                    overallCorrelation,
+                    personaRuleAnalysis
             );
             writeSeedDetail(outputDirectory, seedAnalyses);
             writePersonaStability(outputDirectory, seedAnalyses);
             writeAxisCorrelation(outputDirectory, seedAnalyses, overallCorrelation);
+            writePersonaRuleAnalysis(outputDirectory, personaRuleAnalysis);
         } catch (IOException exception) {
             throw new IllegalStateException("Seed 안정성 분석 CSV를 저장하지 못했습니다.", exception);
         }
@@ -65,7 +73,8 @@ public class GameBiasMitigationStabilityCsvExporter {
             ScenarioDto scenario,
             int simulationCount,
             List<Long> randomSeeds,
-            ScoreAxisCorrelationAnalysis overallCorrelation) {
+            ScoreAxisCorrelationAnalysis overallCorrelation,
+            PersonaRuleApplicationAnalysis personaRuleAnalysis) {
         List<SeedAnalysis> analyses = new ArrayList<>();
         for (Long randomSeed : randomSeeds) {
             ScoreAxisCorrelationAnalysis seedCorrelation =
@@ -85,6 +94,7 @@ public class GameBiasMitigationStabilityCsvExporter {
                             simulationResult -> {
                                 seedCorrelation.addResult(simulationResult);
                                 overallCorrelation.addResult(simulationResult);
+                                personaRuleAnalysis.addResult(simulationResult);
                             }
                     );
             analyses.add(new SeedAnalysis(randomSeed, analysis, seedCorrelation));
@@ -204,6 +214,79 @@ public class GameBiasMitigationStabilityCsvExporter {
             }
             writeCorrelationRows(writer, "전체 Seed 통합", overallCorrelation);
         }
+    }
+
+    private void writePersonaRuleAnalysis(
+            Path outputDirectory,
+            PersonaRuleApplicationAnalysis personaRuleAnalysis) throws IOException {
+        try (BufferedWriter writer = createWriter(
+                outputDirectory.resolve(PERSONA_RULE_ANALYSIS_FILE_NAME))) {
+            writeCsvRow(writer, List.of(
+                    "성향_코드(persona_code)",
+                    "성향_사용자수(persona_user_count)",
+                    "유형내_적용순위(application_rank)",
+                    "규칙_코드(rule_code)",
+                    "규칙_설명(rule_name)",
+                    "전체_적용수(application_count)",
+                    "적용_사용자수(applied_user_count)",
+                    "적용_사용자_비율(applied_user_rate)",
+                    "사용자당_평균_적용수(average_application_count_per_user)",
+                    "RT_총기여도(rt_total_contribution)",
+                    "LH_총기여도(lh_total_contribution)",
+                    "RP_총기여도(rp_total_contribution)",
+                    "사용자당_RT_평균기여도(rt_average_contribution_per_user)",
+                    "사용자당_LH_평균기여도(lh_average_contribution_per_user)",
+                    "사용자당_RP_평균기여도(rp_average_contribution_per_user)"
+            ));
+            for (PersonaType personaType : PersonaType.values()) {
+                List<PersonaRuleApplicationAnalysis.RuleSummary> summaries =
+                        personaRuleAnalysis.getRuleSummaries(personaType).stream()
+                                .sorted(Comparator
+                                        .comparingLong(
+                                                PersonaRuleApplicationAnalysis.RuleSummary
+                                                        ::applicationCount
+                                        )
+                                        .reversed()
+                                        .thenComparing(summary -> summary.ruleCode().name()))
+                                .toList();
+                for (int index = 0; index < summaries.size(); index++) {
+                    PersonaRuleApplicationAnalysis.RuleSummary summary = summaries.get(index);
+                    writePersonaRuleRow(
+                            writer,
+                            personaType,
+                            personaRuleAnalysis.getPersonaUserCount(personaType),
+                            index + 1,
+                            summary
+                    );
+                }
+            }
+        }
+    }
+
+    private void writePersonaRuleRow(
+            BufferedWriter writer,
+            PersonaType personaType,
+            int personaUserCount,
+            int rank,
+            PersonaRuleApplicationAnalysis.RuleSummary summary) throws IOException {
+        BehaviorRuleCode ruleCode = summary.ruleCode();
+        writeCsvRow(writer, List.of(
+                personaType.name(),
+                String.valueOf(personaUserCount),
+                String.valueOf(rank),
+                ruleCode.name(),
+                GameBehaviorSimulationCsvExporter.getRuleName(ruleCode),
+                String.valueOf(summary.applicationCount()),
+                String.valueOf(summary.appliedUserCount()),
+                summary.appliedUserRate().toPlainString(),
+                summary.averageApplicationCountPerUser().toPlainString(),
+                summary.rtTotalContribution().toPlainString(),
+                summary.lhTotalContribution().toPlainString(),
+                summary.rpTotalContribution().toPlainString(),
+                summary.rtAverageContributionPerUser().toPlainString(),
+                summary.lhAverageContributionPerUser().toPlainString(),
+                summary.rpAverageContributionPerUser().toPlainString()
+        ));
     }
 
     private void writeCorrelationRows(

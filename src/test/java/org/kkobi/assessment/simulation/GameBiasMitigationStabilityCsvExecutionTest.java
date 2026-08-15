@@ -6,6 +6,8 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.kkobi.game.service.ScenarioService;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,6 +18,8 @@ import java.util.List;
 class GameBiasMitigationStabilityCsvExecutionTest {
 
     private static final int DEFAULT_SIMULATION_COUNT = 10_000;
+    private static final DateTimeFormatter OUTPUT_DIRECTORY_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final List<Long> DEFAULT_RANDOM_SEEDS = List.of(
             20260826L,
             20260827L,
@@ -32,7 +36,8 @@ class GameBiasMitigationStabilityCsvExecutionTest {
         Path outputDirectory = Path.of(
                 "build",
                 "assessment-simulation",
-                "game-bias-stability"
+                "game-bias-stability-"
+                        + LocalDateTime.now().format(OUTPUT_DIRECTORY_FORMATTER)
         );
 
         new GameBiasMitigationStabilityCsvExporter().exportStability(
