@@ -1,6 +1,7 @@
 package org.kkobi.assessment.simulation;
 
 import org.kkobi.assessment.enums.PersonaType;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.game.dto.ScenarioDto;
 
 import java.io.BufferedWriter;
@@ -103,7 +104,11 @@ public class GameRuleEvaluationComparisonCsvExporter {
                 "LH_100점_비율(lh_maximum_rate)",
                 "RP_100점_비율(rp_maximum_rate)",
                 "HLH_비율(hlh_rate)",
-                "기존대비_HLH_차이(hlh_rate_difference)"
+                "기존대비_HLH_차이(hlh_rate_difference)",
+                "예금_해지_후_판정_적용수(deposit_decision_application_count)",
+                "예금_해지_후_판정_RT_총기여도(deposit_decision_rt_contribution)",
+                "예금_해지_후_판정_LH_총기여도(deposit_decision_lh_contribution)",
+                "예금_해지_후_판정_RP_총기여도(deposit_decision_rp_contribution)"
         ));
         for (PersonaType personaType : PersonaType.values()) {
             header.add(personaType.name() + "_판정_비율");
@@ -115,6 +120,10 @@ public class GameRuleEvaluationComparisonCsvExporter {
             GameRuleEvaluationCondition condition,
             GameBehaviorSimulationAnalysis analysis,
             GameBehaviorSimulationAnalysis baseline) {
+        GameBehaviorSimulationAnalysis.RuleStatistics depositDecisionStatistics =
+                analysis.getRuleStatistics().get(
+                        BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY
+                );
         List<String> row = new ArrayList<>(List.of(
                 condition.name(),
                 condition.getDescription(),
@@ -128,7 +137,11 @@ public class GameRuleEvaluationComparisonCsvExporter {
                 getPersonaRate(analysis, PersonaType.HLH),
                 analysis.getPersonaSummary(PersonaType.HLH).getDistributionRate()
                         .subtract(baseline.getPersonaSummary(PersonaType.HLH).getDistributionRate())
-                        .toPlainString()
+                        .toPlainString(),
+                String.valueOf(depositDecisionStatistics.getApplicationCount()),
+                depositDecisionStatistics.getRtTotalContribution().toPlainString(),
+                depositDecisionStatistics.getLhTotalContribution().toPlainString(),
+                depositDecisionStatistics.getRpTotalContribution().toPlainString()
         ));
         for (PersonaType personaType : PersonaType.values()) {
             row.add(getPersonaRate(analysis, personaType));

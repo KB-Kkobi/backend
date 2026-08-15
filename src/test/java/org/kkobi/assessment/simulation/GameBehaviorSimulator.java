@@ -269,6 +269,11 @@ public class GameBehaviorSimulator {
             );
         }
 
+        analysisResults = ruleEvaluationCondition.adjustDepositDecisionResults(
+                behaviorContexts,
+                analysisResults
+        );
+
         List<ScoreDelta> scoreDeltas = analysisResults.stream()
                 .map(BehaviorAnalysisResult::getTotalScoreDelta)
                 .toList();

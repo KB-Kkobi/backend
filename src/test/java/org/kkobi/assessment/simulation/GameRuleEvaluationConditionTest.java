@@ -160,6 +160,96 @@ class GameRuleEvaluationConditionTest {
         assertScore(adjustedResult, "5", "-10", "5.00");
     }
 
+    @Test
+    @DisplayName("예금 해지 후 2 Tick 안에 해지액의 50% 이상을 매수하면 매수 규칙만 적용한다.")
+    void applyDepositCancelAndBuyRuleExclusively() {
+        BehaviorContext cancelContext = createDepositActionContext(
+                BehaviorActionType.CANCEL_PRODUCT,
+                10,
+                1_000_000L,
+                3_000_000L
+        );
+        BehaviorContext buyContext = createDepositActionContext(
+                BehaviorActionType.BUY,
+                11,
+                500_000L,
+                2_500_000L
+        );
+        List<BehaviorAnalysisResult> analysisResults = List.of(
+                createAnalysisResult(),
+                createAnalysisResult(createRule(
+                        BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
+                        5,
+                        -10,
+                        5
+                ))
+        );
+
+        List<BehaviorAnalysisResult> adjustedResults = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AXIS_AND_DEPOSIT_DECISION
+                .adjustDepositDecisionResults(
+                        List.of(cancelContext, buyContext),
+                        analysisResults
+                );
+
+        assertEquals(1, countDepositDecisionRules(adjustedResults));
+        assertTotalScore(adjustedResults, "5", "-10", "5");
+    }
+
+    @Test
+    @DisplayName("예금 해지 후 2 Tick 동안 현금 80% 이상을 유지하면 현금 유지 규칙만 적용한다.")
+    void applyDepositCashRetentionRuleExclusively() {
+        BehaviorContext cancelContext = createDepositActionContext(
+                BehaviorActionType.CANCEL_PRODUCT,
+                10,
+                1_000_000L,
+                3_000_000L
+        );
+        BehaviorContext smallBuyContext = createDepositActionContext(
+                BehaviorActionType.BUY,
+                12,
+                400_000L,
+                2_600_000L
+        );
+
+        List<BehaviorAnalysisResult> adjustedResults = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AXIS_AND_DEPOSIT_DECISION
+                .adjustDepositDecisionResults(
+                        List.of(cancelContext, smallBuyContext),
+                        List.of(createAnalysisResult(), createAnalysisResult())
+                );
+
+        assertEquals(1, countDepositDecisionRules(adjustedResults));
+        assertTotalScore(adjustedResults, "-5", "10", "-5");
+    }
+
+    @Test
+    @DisplayName("예금 해지액 매수와 현금 유지 기준을 모두 충족하지 못하면 점수를 적용하지 않는다.")
+    void skipAmbiguousDepositDecisionRule() {
+        BehaviorContext cancelContext = createDepositActionContext(
+                BehaviorActionType.CANCEL_PRODUCT,
+                10,
+                1_000_000L,
+                3_000_000L
+        );
+        BehaviorContext smallBuyContext = createDepositActionContext(
+                BehaviorActionType.BUY,
+                12,
+                400_000L,
+                2_000_000L
+        );
+
+        List<BehaviorAnalysisResult> adjustedResults = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AXIS_AND_DEPOSIT_DECISION
+                .adjustDepositDecisionResults(
+                        List.of(cancelContext, smallBuyContext),
+                        List.of(createAnalysisResult(), createAnalysisResult())
+                );
+
+        assertEquals(0, countDepositDecisionRules(adjustedResults));
+        assertTotalScore(adjustedResults, "0", "0", "0");
+    }
+
     private BehaviorContext createBuyContext(long actionAmount, long totalAssetPrincipal) {
         BehaviorEvent behaviorEvent = new BehaviorEvent();
         behaviorEvent.setActionType(BehaviorActionType.BUY);
@@ -193,6 +283,28 @@ class GameRuleEvaluationConditionTest {
         behaviorContext.setCurrentEvent(behaviorEvent);
         behaviorContext.setMarketState(MarketState.CRASH);
         behaviorContext.setFullSecuritySell(fullSecuritySell);
+        return behaviorContext;
+    }
+
+    private BehaviorContext createDepositActionContext(
+            BehaviorActionType actionType,
+            int gameTick,
+            long actionAmount,
+            long currentCash) {
+        BehaviorEvent behaviorEvent = new BehaviorEvent();
+        behaviorEvent.setActionType(actionType);
+        behaviorEvent.setAssetType(actionType == BehaviorActionType.BUY
+                ? BehaviorAssetType.SECURITY
+                : BehaviorAssetType.PRODUCT);
+        behaviorEvent.setGameTick(gameTick);
+        behaviorEvent.setActionAmount(actionAmount);
+        behaviorEvent.setCurrentCash(currentCash);
+        behaviorEvent.setCurrentStockPrincipal(7_000_000L);
+        behaviorEvent.setCurrentDeposit(0L);
+
+        BehaviorContext behaviorContext = new BehaviorContext();
+        behaviorContext.setCurrentEvent(behaviorEvent);
+        behaviorContext.setMarketState(MarketState.NORMAL);
         return behaviorContext;
     }
 
@@ -242,5 +354,27 @@ class GameRuleEvaluationConditionTest {
                         analysisResult.getTotalScoreDelta().getRpDelta()
                 )
         );
+    }
+
+    private int countDepositDecisionRules(List<BehaviorAnalysisResult> analysisResults) {
+        return (int) analysisResults.stream()
+                .map(BehaviorAnalysisResult::getAppliedRules)
+                .flatMap(List::stream)
+                .filter(ruleResult -> ruleResult.getRuleCode()
+                        == BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY)
+                .count();
+    }
+
+    private void assertTotalScore(
+            List<BehaviorAnalysisResult> analysisResults,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        ScoreDelta totalScoreDelta = analysisResults.stream()
+                .map(BehaviorAnalysisResult::getTotalScoreDelta)
+                .reduce(ScoreDelta.createZeroScoreDelta(), ScoreDelta::addScoreDelta);
+        assertEquals(0, new BigDecimal(expectedRtDelta).compareTo(totalScoreDelta.getRtDelta()));
+        assertEquals(0, new BigDecimal(expectedLhDelta).compareTo(totalScoreDelta.getLhDelta()));
+        assertEquals(0, new BigDecimal(expectedRpDelta).compareTo(totalScoreDelta.getRpDelta()));
     }
 }

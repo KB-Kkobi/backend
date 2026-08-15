@@ -7,6 +7,7 @@ import org.kkobi.assessment.domain.BehaviorEvent;
 import org.kkobi.assessment.domain.RuleResult;
 import org.kkobi.assessment.domain.ScoreDelta;
 import org.kkobi.assessment.enums.BehaviorActionType;
+import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.MarketState;
 
@@ -18,16 +19,25 @@ import java.util.List;
 @Getter
 public enum GameRuleEvaluationCondition {
 
-    BASELINE("기존 규칙", false, false, false),
-    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false, false),
+    BASELINE("기존 규칙", false, false, false, false),
+    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false, false, false),
     EXCLUSIVE_PRIORITY_AND_ACTION_RATIO(
             "규칙 우선순위와 거래 비율 적용",
             true,
             true,
+            false,
             false
     ),
     EXCLUSIVE_RATIO_AND_AXIS_SEPARATION(
             "규칙 우선순위·거래 비율·RT/RP 역할 분리",
+            true,
+            true,
+            true,
+            false
+    ),
+    EXCLUSIVE_RATIO_AXIS_AND_DEPOSIT_DECISION(
+            "규칙 우선순위·거래 비율·축 분리·예금 해지 후 행동 판정",
+            true,
             true,
             true,
             true
@@ -41,6 +51,9 @@ public enum GameRuleEvaluationCondition {
     private static final BigDecimal LARGE_ACTION_MULTIPLIER = BigDecimal.valueOf(1.25);
     private static final BigDecimal LOSS_AVERAGING_RT_MULTIPLIER =
             BigDecimal.valueOf(10).divide(BigDecimal.valueOf(15), 4, RoundingMode.HALF_UP);
+    private static final BigDecimal DEPOSIT_BUY_AMOUNT_RATIO = BigDecimal.valueOf(50);
+    private static final BigDecimal DEPOSIT_CASH_RETENTION_RATIO = BigDecimal.valueOf(80);
+    private static final int DEPOSIT_EVALUATION_TICKS = 2;
     private static final int RATIO_SCALE = 4;
     private static final int SCORE_SCALE = 2;
 
@@ -48,16 +61,19 @@ public enum GameRuleEvaluationCondition {
     private final boolean exclusiveRulePriority;
     private final boolean actionRatioWeight;
     private final boolean axisSeparation;
+    private final boolean depositDecisionEvaluation;
 
     GameRuleEvaluationCondition(
             String description,
             boolean exclusiveRulePriority,
             boolean actionRatioWeight,
-            boolean axisSeparation) {
+            boolean axisSeparation,
+            boolean depositDecisionEvaluation) {
         this.description = description;
         this.exclusiveRulePriority = exclusiveRulePriority;
         this.actionRatioWeight = actionRatioWeight;
         this.axisSeparation = axisSeparation;
+        this.depositDecisionEvaluation = depositDecisionEvaluation;
     }
 
     public BehaviorAnalysisResult adjustAnalysisResult(
@@ -78,6 +94,153 @@ public enum GameRuleEvaluationCondition {
             adjustedRules = applyActionRatioWeight(behaviorContext, adjustedRules);
         }
         return new BehaviorAnalysisResult(adjustedRules);
+    }
+
+    public List<BehaviorAnalysisResult> adjustDepositDecisionResults(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (!depositDecisionEvaluation) {
+            return analysisResults;
+        }
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+
+        int depositCancelIndex = findDepositCancelIndex(behaviorContexts);
+        if (depositCancelIndex < 0) {
+            return analysisResults;
+        }
+
+        List<List<RuleResult>> adjustedRulesByIndex = analysisResults.stream()
+                .map(BehaviorAnalysisResult::getAppliedRules)
+                .map(rules -> (List<RuleResult>) new ArrayList<>(rules))
+                .map(rules -> {
+                    rules.removeIf(ruleResult -> ruleResult.getRuleCode()
+                            == BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY);
+                    return rules;
+                })
+                .toList();
+        BehaviorEvent depositCancelEvent = behaviorContexts.get(depositCancelIndex)
+                .getCurrentEvent();
+        List<Integer> evaluationIndexes = findDepositEvaluationIndexes(
+                behaviorContexts,
+                depositCancelEvent.getGameTick()
+        );
+
+        int stockBuyIndex = findDepositFundStockBuyIndex(
+                behaviorContexts,
+                evaluationIndexes,
+                depositCancelEvent.getActionAmount()
+        );
+        if (stockBuyIndex >= 0) {
+            adjustedRulesByIndex.get(stockBuyIndex).add(createDepositCancelAndBuyRule());
+        } else if (isDepositCashRetained(
+                behaviorContexts,
+                evaluationIndexes,
+                depositCancelEvent.getCurrentCash()
+        )) {
+            adjustedRulesByIndex.get(depositCancelIndex).add(createDepositCashRetentionRule());
+        }
+
+        return adjustedRulesByIndex.stream()
+                .map(BehaviorAnalysisResult::new)
+                .toList();
+    }
+
+    private int findDepositCancelIndex(List<BehaviorContext> behaviorContexts) {
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorEvent behaviorEvent = behaviorContexts.get(index).getCurrentEvent();
+            if (behaviorEvent != null
+                    && behaviorEvent.getActionType() == BehaviorActionType.CANCEL_PRODUCT) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private List<Integer> findDepositEvaluationIndexes(
+            List<BehaviorContext> behaviorContexts,
+            Integer depositCancelTick) {
+        if (depositCancelTick == null) {
+            return List.of();
+        }
+        List<Integer> evaluationIndexes = new ArrayList<>();
+        int lastEvaluationTick = depositCancelTick + DEPOSIT_EVALUATION_TICKS;
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorEvent behaviorEvent = behaviorContexts.get(index).getCurrentEvent();
+            if (behaviorEvent == null || behaviorEvent.getGameTick() == null) {
+                continue;
+            }
+            if (behaviorEvent.getGameTick() >= depositCancelTick
+                    && behaviorEvent.getGameTick() <= lastEvaluationTick) {
+                evaluationIndexes.add(index);
+            }
+        }
+        return evaluationIndexes;
+    }
+
+    private int findDepositFundStockBuyIndex(
+            List<BehaviorContext> behaviorContexts,
+            List<Integer> evaluationIndexes,
+            Long depositCancelAmount) {
+        if (depositCancelAmount == null || depositCancelAmount <= 0) {
+            return -1;
+        }
+        long accumulatedBuyAmount = 0L;
+        for (Integer index : evaluationIndexes) {
+            BehaviorEvent behaviorEvent = behaviorContexts.get(index).getCurrentEvent();
+            if (behaviorEvent.getActionType() != BehaviorActionType.BUY
+                    || behaviorEvent.getAssetType() != BehaviorAssetType.SECURITY
+                    || behaviorEvent.getActionAmount() == null) {
+                continue;
+            }
+            accumulatedBuyAmount = Math.addExact(
+                    accumulatedBuyAmount,
+                    behaviorEvent.getActionAmount()
+            );
+            BigDecimal buyAmountRatio = calculateRatio(
+                    accumulatedBuyAmount,
+                    depositCancelAmount
+            );
+            if (buyAmountRatio.compareTo(DEPOSIT_BUY_AMOUNT_RATIO) >= 0) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private boolean isDepositCashRetained(
+            List<BehaviorContext> behaviorContexts,
+            List<Integer> evaluationIndexes,
+            Long cashAfterDepositCancel) {
+        if (cashAfterDepositCancel == null || cashAfterDepositCancel <= 0) {
+            return false;
+        }
+        long minimumCash = cashAfterDepositCancel;
+        for (Integer index : evaluationIndexes) {
+            Long currentCash = behaviorContexts.get(index).getCurrentEvent().getCurrentCash();
+            if (currentCash != null) {
+                minimumCash = Math.min(minimumCash, currentCash);
+            }
+        }
+        return calculateRatio(minimumCash, cashAfterDepositCancel)
+                .compareTo(DEPOSIT_CASH_RETENTION_RATIO) >= 0;
+    }
+
+    private RuleResult createDepositCancelAndBuyRule() {
+        return new RuleResult(
+                BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
+                ScoreDelta.createScoreDelta(5, -10, 5),
+                "예금 해지 후 2 Tick 안에 해지 금액의 50% 이상을 주식 매수에 사용했습니다."
+        );
+    }
+
+    private RuleResult createDepositCashRetentionRule() {
+        return new RuleResult(
+                BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
+                ScoreDelta.createScoreDelta(-5, 10, -5),
+                "예금 해지 후 2 Tick 동안 해지 직후 현금의 80% 이상을 유지했습니다."
+        );
     }
 
     private List<RuleResult> applyExclusiveRulePriority(
