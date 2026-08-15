@@ -27,8 +27,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GameBehaviorSimulator {
 
@@ -63,7 +66,8 @@ public class GameBehaviorSimulator {
                 initialPortfolio,
                 randomSeed,
                 null,
-                ConsecutiveActionMultiplierCondition.ENABLED
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                SameTickRuleApplicationCondition.REPEATED
         );
     }
 
@@ -79,7 +83,8 @@ public class GameBehaviorSimulator {
                 initialPortfolio,
                 randomSeed,
                 frequencyCondition,
-                ConsecutiveActionMultiplierCondition.ENABLED
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                SameTickRuleApplicationCondition.REPEATED
         );
     }
 
@@ -90,9 +95,31 @@ public class GameBehaviorSimulator {
             long randomSeed,
             GameBehaviorFrequencyCondition frequencyCondition,
             ConsecutiveActionMultiplierCondition multiplierCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                SameTickRuleApplicationCondition.REPEATED
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
         if (multiplierCondition == null) {
             throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
+        }
+        if (sameTickRuleCondition == null) {
+            throw new IllegalArgumentException("동일 Tick 규칙 적용 조건은 필수입니다.");
         }
 
         long initialCash = initialPortfolio.getCurrentCash();
@@ -115,6 +142,7 @@ public class GameBehaviorSimulator {
         List<BehaviorEvent> behaviorEvents = new ArrayList<>();
         List<BehaviorContext> behaviorContexts = new ArrayList<>();
         List<BehaviorAnalysisResult> analysisResults = new ArrayList<>();
+        Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick = new HashMap<>();
         analyzeBehaviorEvent(
                 createInitialAllocationEvent(
                         simulationUserId,
@@ -127,7 +155,9 @@ public class GameBehaviorSimulator {
                 behaviorEvents,
                 behaviorContexts,
                 analysisResults,
-                multiplierCondition
+                multiplierCondition,
+                sameTickRuleCondition,
+                appliedRuleCodesByTick
         );
 
         long actionSequence = 1L;
@@ -142,7 +172,9 @@ public class GameBehaviorSimulator {
                     behaviorEvents,
                     behaviorContexts,
                     analysisResults,
-                    multiplierCondition
+                    multiplierCondition,
+                    sameTickRuleCondition,
+                    appliedRuleCodesByTick
             );
         }
 
@@ -174,7 +206,9 @@ public class GameBehaviorSimulator {
             List<BehaviorEvent> previousEvents,
             List<BehaviorContext> behaviorContexts,
             List<BehaviorAnalysisResult> analysisResults,
-            ConsecutiveActionMultiplierCondition multiplierCondition) {
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick) {
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 behaviorEvent,
                 previousEvents
@@ -187,10 +221,38 @@ public class GameBehaviorSimulator {
                     analysisResult
             );
         }
+        if (sameTickRuleCondition == SameTickRuleApplicationCondition.ONCE_PER_TICK) {
+            analysisResult = removeSameTickDuplicateRules(
+                    behaviorContext,
+                    analysisResult,
+                    appliedRuleCodesByTick
+            );
+        }
 
         behaviorContexts.add(behaviorContext);
         analysisResults.add(analysisResult);
         previousEvents.add(behaviorEvent);
+    }
+
+    private BehaviorAnalysisResult removeSameTickDuplicateRules(
+            BehaviorContext behaviorContext,
+            BehaviorAnalysisResult analysisResult,
+            Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick) {
+        Integer gameTick = behaviorContext.getCurrentEvent() == null
+                ? null
+                : behaviorContext.getCurrentEvent().getGameTick();
+        if (gameTick == null || analysisResult.getAppliedRules().isEmpty()) {
+            return analysisResult;
+        }
+
+        Set<BehaviorRuleCode> appliedRuleCodes = appliedRuleCodesByTick.computeIfAbsent(
+                gameTick,
+                ignored -> new HashSet<>()
+        );
+        List<RuleResult> uniqueRules = analysisResult.getAppliedRules().stream()
+                .filter(ruleResult -> appliedRuleCodes.add(ruleResult.getRuleCode()))
+                .toList();
+        return new BehaviorAnalysisResult(uniqueRules);
     }
 
     private BehaviorAnalysisResult removeConsecutiveActionMultiplier(
