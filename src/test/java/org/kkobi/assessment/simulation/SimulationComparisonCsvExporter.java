@@ -14,26 +14,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class SmallTradeDeadZoneFrequencyComparisonCsvExporter {
+public class SimulationComparisonCsvExporter {
 
-    public static final String FILE_NAME =
-            "small-trade-dead-zone-frequency-comparison.csv";
+    public static final String FILE_NAME = "simulation-comparison.csv";
 
-    private static final List<GameBiasMitigationCondition> COMPARISON_CONDITIONS = List.of(
-            GameBiasMitigationCondition.SIZE_SEPARATED_BULL_BUY_ONCE_AND_CAPPED,
-            GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
-    );
     private static final char UTF_8_BYTE_ORDER_MARK = '\uFEFF';
 
     private final GameBehaviorSimulationAnalyzer simulationAnalyzer =
             new GameBehaviorSimulationAnalyzer();
 
-    public Map<ComparisonKey, GameBehaviorSimulationAnalysis> exportComparison(
+    public Map<String, GameBehaviorSimulationAnalysis> exportComparison(
             ScenarioDto scenario,
-            int simulationCountPerCondition,
+            List<SimulationExperimentCase> experimentCases,
+            int simulationCountPerCase,
             long randomSeed,
             Path outputDirectory) {
-        if (simulationCountPerCondition <= 0) {
+        if (experimentCases == null || experimentCases.isEmpty()) {
+            throw new IllegalArgumentException("실험 조건은 한 개 이상 필요합니다.");
+        }
+        if (simulationCountPerCase <= 0) {
             throw new IllegalArgumentException("조건별 사용자 수는 0보다 커야 합니다.");
         }
         if (outputDirectory == null) {
@@ -42,76 +41,73 @@ public class SmallTradeDeadZoneFrequencyComparisonCsvExporter {
 
         try {
             Files.createDirectories(outputDirectory);
-            Map<ComparisonKey, GameBehaviorSimulationAnalysis> analyses = new LinkedHashMap<>();
-            Map<ComparisonKey, ScoreAxisCorrelationAnalysis> correlations = new LinkedHashMap<>();
+            Map<String, GameBehaviorSimulationAnalysis> analyses = new LinkedHashMap<>();
+            Map<String, ScoreAxisCorrelationAnalysis> correlations = new LinkedHashMap<>();
 
-            for (GameBiasMitigationCondition mitigationCondition : COMPARISON_CONDITIONS) {
-                for (GameBehaviorFrequencyCondition frequencyCondition
-                        : GameBehaviorFrequencyCondition.values()) {
-                    ComparisonKey comparisonKey = new ComparisonKey(
-                            mitigationCondition,
-                            frequencyCondition
-                    );
-                    ScoreAxisCorrelationAnalysis correlationAnalysis =
-                            new ScoreAxisCorrelationAnalysis();
-                    GameBehaviorSimulationAnalysis analysis =
-                            simulationAnalyzer.analyzeGameSimulations(
-                                    scenario,
-                                    simulationCountPerCondition,
-                                    randomSeed,
-                                    frequencyCondition,
-                                    ConsecutiveActionMultiplierCondition.ENABLED,
-                                    mitigationCondition.getSameTickRuleCondition(),
-                                    mitigationCondition.getRuleAccumulationCondition(),
-                                    LossAveragingRtWeightCondition.RT_15,
-                                    mitigationCondition.getRuleEvaluationCondition(),
-                                    TradeQuantityGenerationCondition.SYMMETRIC_THREE_LEVEL,
-                                    correlationAnalysis::addResult
-                            );
-                    analyses.put(comparisonKey, analysis);
-                    correlations.put(comparisonKey, correlationAnalysis);
+            for (SimulationExperimentCase experimentCase : experimentCases) {
+                ScoreAxisCorrelationAnalysis correlationAnalysis =
+                        new ScoreAxisCorrelationAnalysis();
+                GameBiasMitigationCondition mitigationCondition =
+                        experimentCase.mitigationCondition();
+                GameBehaviorSimulationAnalysis analysis =
+                        simulationAnalyzer.analyzeGameSimulations(
+                                scenario,
+                                simulationCountPerCase,
+                                randomSeed,
+                                experimentCase.frequencyCondition(),
+                                ConsecutiveActionMultiplierCondition.ENABLED,
+                                mitigationCondition.getSameTickRuleCondition(),
+                                mitigationCondition.getRuleAccumulationCondition(),
+                                LossAveragingRtWeightCondition.RT_15,
+                                mitigationCondition.getRuleEvaluationCondition(),
+                                TradeQuantityGenerationCondition.SYMMETRIC_THREE_LEVEL,
+                                correlationAnalysis::addResult
+                        );
+                if (analyses.putIfAbsent(experimentCase.name(), analysis) != null) {
+                    throw new IllegalArgumentException("실험 이름이 중복되었습니다: " + experimentCase.name());
                 }
+                correlations.put(experimentCase.name(), correlationAnalysis);
             }
 
-            writeComparison(outputDirectory.resolve(FILE_NAME), analyses, correlations);
+            writeComparison(
+                    outputDirectory.resolve(FILE_NAME),
+                    experimentCases,
+                    analyses,
+                    correlations
+            );
             return Map.copyOf(analyses);
         } catch (IOException exception) {
-            throw new IllegalStateException("소규모 거래 제외 비교 CSV를 저장하지 못했습니다.", exception);
+            throw new IllegalStateException("시뮬레이션 비교 CSV를 저장하지 못했습니다.", exception);
         }
     }
 
     private void writeComparison(
             Path outputPath,
-            Map<ComparisonKey, GameBehaviorSimulationAnalysis> analyses,
-            Map<ComparisonKey, ScoreAxisCorrelationAnalysis> correlations) throws IOException {
+            List<SimulationExperimentCase> experimentCases,
+            Map<String, GameBehaviorSimulationAnalysis> analyses,
+            Map<String, ScoreAxisCorrelationAnalysis> correlations) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(
                 outputPath,
                 StandardCharsets.UTF_8
         )) {
             writer.write(UTF_8_BYTE_ORDER_MARK);
             writeCsvRow(writer, createHeader());
-            for (GameBiasMitigationCondition mitigationCondition : COMPARISON_CONDITIONS) {
-                for (GameBehaviorFrequencyCondition frequencyCondition
-                        : GameBehaviorFrequencyCondition.values()) {
-                    ComparisonKey comparisonKey = new ComparisonKey(
-                            mitigationCondition,
-                            frequencyCondition
-                    );
-                    writeCsvRow(writer, createRow(
-                            comparisonKey,
-                            analyses.get(comparisonKey),
-                            correlations.get(comparisonKey)
-                    ));
-                }
+            for (SimulationExperimentCase experimentCase : experimentCases) {
+                writeCsvRow(writer, createRow(
+                        experimentCase,
+                        analyses.get(experimentCase.name()),
+                        correlations.get(experimentCase.name())
+                ));
             }
         }
     }
 
     private List<String> createHeader() {
         List<String> header = new ArrayList<>(List.of(
+                "실험_이름(experiment_name)",
+                "실험_설명(experiment_description)",
                 "보정_조건(mitigation_condition)",
                 "보정_설명(mitigation_description)",
-                "소규모_거래_점수_제외(small_trade_dead_zone)",
                 "빈도_조건(frequency_condition)",
                 "빈도_설명(frequency_name)",
                 "검증_구분(validation_type)",
@@ -134,19 +130,19 @@ public class SmallTradeDeadZoneFrequencyComparisonCsvExporter {
     }
 
     private List<String> createRow(
-            ComparisonKey comparisonKey,
+            SimulationExperimentCase experimentCase,
             GameBehaviorSimulationAnalysis analysis,
             ScoreAxisCorrelationAnalysis correlationAnalysis) {
         GameBehaviorSimulationAnalysis.BehaviorStatistics behaviorStatistics =
                 analysis.getBehaviorStatistics();
         List<String> row = new ArrayList<>(List.of(
-                comparisonKey.mitigationCondition().name(),
-                comparisonKey.mitigationCondition().getDescription(),
-                String.valueOf(comparisonKey.mitigationCondition()
-                        == GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED),
-                comparisonKey.frequencyCondition().name(),
-                comparisonKey.frequencyCondition().getDescription(),
-                comparisonKey.frequencyCondition().getValidationType(),
+                experimentCase.name(),
+                experimentCase.description(),
+                experimentCase.mitigationCondition().name(),
+                experimentCase.mitigationCondition().getDescription(),
+                experimentCase.frequencyCondition().name(),
+                experimentCase.frequencyCondition().getDescription(),
+                experimentCase.frequencyCondition().getValidationType(),
                 String.valueOf(analysis.getTotalSimulationCount()),
                 behaviorStatistics.getAverageBuyCount().toPlainString(),
                 behaviorStatistics.getAverageSellCount().toPlainString(),
@@ -182,10 +178,5 @@ public class SmallTradeDeadZoneFrequencyComparisonCsvExporter {
             return value;
         }
         return "\"" + value.replace("\"", "\"\"") + "\"";
-    }
-
-    public record ComparisonKey(
-            GameBiasMitigationCondition mitigationCondition,
-            GameBehaviorFrequencyCondition frequencyCondition) {
     }
 }
