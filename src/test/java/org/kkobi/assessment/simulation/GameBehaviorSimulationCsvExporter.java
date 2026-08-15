@@ -377,7 +377,7 @@ public class GameBehaviorSimulationCsvExporter {
         }
     }
 
-    private String getRuleName(BehaviorRuleCode ruleCode) {
+    static String getRuleName(BehaviorRuleCode ruleCode) {
         return switch (ruleCode) {
             case INITIAL_STOCK_ALLOCATION -> "초기 주식 비중 70% 이상";
             case INITIAL_DEPOSIT_ALLOCATION -> "초기 예금 비중 50% 이상";
