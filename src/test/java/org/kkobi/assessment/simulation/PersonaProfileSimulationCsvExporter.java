@@ -24,6 +24,16 @@ public class PersonaProfileSimulationCsvExporter {
                     outputDirectory.resolve("persona-confusion-matrix.csv"),
                     new PersonaProfileSimulationAnalysis(results)
             );
+            PersonaStandardizationAnalysis standardization =
+                    new PersonaStandardizationAnalysis(results);
+            writeStandardizationSummary(
+                    outputDirectory.resolve("persona-standardization-summary.csv"),
+                    standardization
+            );
+            writeStandardizedResults(
+                    outputDirectory.resolve("persona-standardized-results.csv"),
+                    standardization
+            );
         } catch (IOException exception) {
             throw new IllegalStateException("유형별 시뮬레이션 CSV를 저장하지 못했습니다.", exception);
         }
@@ -106,6 +116,68 @@ public class PersonaProfileSimulationCsvExporter {
                 }
                 row.add(analysis.getAccuracy(target).toPlainString());
                 writeRow(writer, row);
+            }
+        }
+    }
+
+    private void writeStandardizationSummary(
+            Path outputPath,
+            PersonaStandardizationAnalysis analysis) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8)) {
+            writer.write(BOM);
+            writeRow(writer, List.of(
+                    "기준_안내(criteria_note)", "목표_성향(target_persona)",
+                    "RT_평균(rt_average)", "RT_표준편차(rt_standard_deviation)",
+                    "LH_평균(lh_average)", "LH_표준편차(lh_standard_deviation)",
+                    "RP_평균(rp_average)", "RP_표준편차(rp_standard_deviation)"
+            ));
+            for (PersonaType personaType : PersonaType.values()) {
+                PersonaStandardizationAnalysis.PersonaScoreStatistics statistics =
+                        analysis.getStatistics(personaType);
+                writeRow(writer, List.of(
+                        "시뮬레이션 데이터 기준",
+                        personaType.name(),
+                        statistics.rtAverage().toPlainString(),
+                        statistics.rtStandardDeviation().toPlainString(),
+                        statistics.lhAverage().toPlainString(),
+                        statistics.lhStandardDeviation().toPlainString(),
+                        statistics.rpAverage().toPlainString(),
+                        statistics.rpStandardDeviation().toPlainString()
+                ));
+            }
+        }
+    }
+
+    private void writeStandardizedResults(
+            Path outputPath,
+            PersonaStandardizationAnalysis analysis) throws IOException {
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8)) {
+            writer.write(BOM);
+            writeRow(writer, List.of(
+                    "기준_안내(criteria_note)", "가상_사용자_ID(simulation_user_id)",
+                    "목표_성향(target_persona)", "판정_성향(predicted_persona)",
+                    "RT_Z점수(rt_z_score)", "LH_Z점수(lh_z_score)",
+                    "RP_Z점수(rp_z_score)", "RT_백분위(rt_percentile)",
+                    "LH_백분위(lh_percentile)", "RP_백분위(rp_percentile)",
+                    "유형_평균점_거리(distance_from_persona_mean)",
+                    "유형_유사도_백분위(similarity_percentile)"
+            ));
+            for (PersonaStandardizationAnalysis.StandardizedSimulationResult result
+                    : analysis.getStandardizedResults()) {
+                writeRow(writer, List.of(
+                        "시뮬레이션 데이터 기준",
+                        String.valueOf(result.source().simulationResult().getSimulationUserId()),
+                        result.source().targetPersona().name(),
+                        result.source().predictedPersona().name(),
+                        result.rtZScore().toPlainString(),
+                        result.lhZScore().toPlainString(),
+                        result.rpZScore().toPlainString(),
+                        result.rtPercentile().toPlainString(),
+                        result.lhPercentile().toPlainString(),
+                        result.rpPercentile().toPlainString(),
+                        result.distanceFromPersonaMean().toPlainString(),
+                        result.similarityPercentile().toPlainString()
+                ));
             }
         }
     }

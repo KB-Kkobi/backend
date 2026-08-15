@@ -18,6 +18,20 @@ class PersonaBehaviorProfilesTest {
             assertEquals(personaType, profile.targetPersona());
             assertTrue(profile.minimumStockRatio() <= profile.maximumStockRatio());
             assertTrue(profile.minimumDepositRatio() <= profile.maximumDepositRatio());
+            assertTrue(profile.depositCashRetentionProbability() >= 0);
+            assertTrue(profile.cashBufferMaintenanceProbability() >= 0);
         }
+    }
+
+    @Test
+    @DisplayName("유동성 선호 유형은 예금 해지 후 현금 유지와 현금 완충 유지 확률이 더 높다.")
+    void distinguishCashMaintenanceBehaviorByPersona() {
+        PersonaBehaviorProfile highLiquidity = PersonaBehaviorProfiles.get(PersonaType.LHL);
+        PersonaBehaviorProfile lowLiquidity = PersonaBehaviorProfiles.get(PersonaType.HLH);
+
+        assertTrue(highLiquidity.depositCashRetentionProbability()
+                > lowLiquidity.depositCashRetentionProbability());
+        assertTrue(highLiquidity.cashBufferMaintenanceProbability()
+                > lowLiquidity.cashBufferMaintenanceProbability());
     }
 }

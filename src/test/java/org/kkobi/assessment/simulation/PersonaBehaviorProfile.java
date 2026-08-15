@@ -17,7 +17,17 @@ public record PersonaBehaviorProfile(
         int bullSellProbability,
         int normalBuyProbability,
         int normalSellProbability,
-        int depositCancelProbability) {
+        int depositCancelProbability,
+        int depositCancelThenBuyProbability,
+        int depositCashRetentionProbability,
+        int cashBufferMaintenanceProbability,
+        int crashHoldingProbability,
+        int lossAveragingProbability,
+        int lossCutProbability,
+        int profitTakingProbability,
+        int smallTradeProbability,
+        int mediumTradeProbability,
+        int largeTradeProbability) {
 
     public PersonaBehaviorProfile {
         Objects.requireNonNull(targetPersona, "목표 성향은 필수입니다.");
@@ -31,6 +41,19 @@ public record PersonaBehaviorProfile(
         validateProbability(normalBuyProbability, "평범장 매수 확률");
         validateProbability(normalSellProbability, "평범장 매도 확률");
         validateProbability(depositCancelProbability, "예금 해지 확률");
+        validateProbability(depositCancelThenBuyProbability, "예금 해지 후 매수 확률");
+        validateProbability(depositCashRetentionProbability, "예금 해지 후 현금 유지 확률");
+        validateProbability(cashBufferMaintenanceProbability, "현금 완충 비중 유지 확률");
+        validateProbability(crashHoldingProbability, "급락장 보유 유지 확률");
+        validateProbability(lossAveragingProbability, "물타기 확률");
+        validateProbability(lossCutProbability, "손절 확률");
+        validateProbability(profitTakingProbability, "익절 확률");
+        validateProbability(smallTradeProbability, "소규모 거래 확률");
+        validateProbability(mediumTradeProbability, "중간 거래 확률");
+        validateProbability(largeTradeProbability, "대규모 거래 확률");
+        if (smallTradeProbability + mediumTradeProbability + largeTradeProbability != 100) {
+            throw new IllegalArgumentException("거래 규모 확률의 합은 100이어야 합니다.");
+        }
         if (minimumStockRatio + minimumDepositRatio > 100) {
             throw new IllegalArgumentException("최소 자산 배분 비율의 합은 100을 초과할 수 없습니다.");
         }

@@ -5,11 +5,17 @@ import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
 
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.SplittableRandom;
 
 public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
+
+    private static final int DEPOSIT_CASH_RETENTION_TICKS = 2;
+    private static final int CASH_BUFFER_MAINTENANCE_TICKS = 3;
+    private static final BigDecimal CASH_BUFFER_MINIMUM_RATIO = BigDecimal.valueOf(25);
+    private static final BigDecimal CASH_BUFFER_MAXIMUM_RATIO = BigDecimal.valueOf(50);
 
     private final PersonaBehaviorProfile profile;
 
@@ -39,6 +45,15 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
 
         List<SimulatedGameAction> actions = new ArrayList<>();
         Integer depositCancelTick = createDepositCancelTick(decisionTicks, portfolio, random);
+        boolean retainCashAfterDepositCancel = depositCancelTick != null
+                && canApply(random, profile.depositCashRetentionProbability());
+        boolean maintainCashBuffer = canApply(
+                random,
+                profile.cashBufferMaintenanceProbability()
+        );
+        Integer depositCashRetentionEndTick = null;
+        int cashBufferMaintenanceTicksRemaining = 0;
+        boolean cashBufferMaintenanceCompleted = false;
         int noActionTickCount = 0;
 
         for (ScenarioTickDto tick : decisionTicks) {
@@ -46,6 +61,31 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
             if (depositCancelTick != null && depositCancelTick == tick.getTick()) {
                 actions.add(portfolio.cancelDeposit(tick.getTick()));
                 acted = true;
+                if (retainCashAfterDepositCancel) {
+                    depositCashRetentionEndTick = tick.getTick()
+                            + DEPOSIT_CASH_RETENTION_TICKS;
+                } else if (portfolio.canBuyStock(tick.getPrice())
+                        && canApply(random, profile.depositCancelThenBuyProbability())) {
+                    actions.add(createBuy(tick, portfolio, random));
+                }
+                continue;
+            }
+            if (depositCashRetentionEndTick != null
+                    && tick.getTick() <= depositCashRetentionEndTick) {
+                noActionTickCount++;
+                continue;
+            }
+            if (maintainCashBuffer && !cashBufferMaintenanceCompleted) {
+                if (cashBufferMaintenanceTicksRemaining == 0
+                        && isCashBufferRatio(portfolio)) {
+                    cashBufferMaintenanceTicksRemaining = CASH_BUFFER_MAINTENANCE_TICKS;
+                }
+                if (cashBufferMaintenanceTicksRemaining > 0) {
+                    cashBufferMaintenanceTicksRemaining--;
+                    cashBufferMaintenanceCompleted = cashBufferMaintenanceTicksRemaining == 0;
+                    noActionTickCount++;
+                    continue;
+                }
             }
             if (canApply(random, profile.actionProbability())) {
                 SimulatedGameAction trade = createTrade(tick, portfolio, random);
@@ -81,8 +121,14 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
             SimulatedGamePortfolio portfolio,
             SplittableRandom random) {
         MarketState marketState = calculateMarketState(tick.getChangeRate());
-        int buyProbability = getBuyProbability(marketState);
-        int sellProbability = getSellProbability(marketState);
+        if (marketState == MarketState.CRASH
+                && portfolio.canSellStock()
+                && canApply(random, profile.crashHoldingProbability())) {
+            return null;
+        }
+        BigDecimal returnRate = calculateReturnRate(tick.getPrice(), portfolio);
+        int buyProbability = getBuyProbability(marketState, returnRate);
+        int sellProbability = getSellProbability(marketState, returnRate);
         boolean canBuy = portfolio.canBuyStock(tick.getPrice());
         boolean canSell = portfolio.canSellStock();
         if (!canBuy && !canSell) {
@@ -95,12 +141,7 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
             return null;
         }
         if (random.nextInt(buyWeight + sellWeight) < buyWeight) {
-            int maximumQuantity = portfolio.getMaximumBuyQuantity(tick.getPrice());
-            return portfolio.buyStock(
-                    tick.getTick(),
-                    createQuantity(maximumQuantity, random),
-                    tick.getPrice()
-            );
+            return createBuy(tick, portfolio, random);
         }
         return portfolio.sellStock(
                 tick.getTick(),
@@ -109,10 +150,58 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         );
     }
 
+    private SimulatedGameAction createBuy(
+            ScenarioTickDto tick,
+            SimulatedGamePortfolio portfolio,
+            SplittableRandom random) {
+        return portfolio.buyStock(
+                tick.getTick(),
+                createQuantity(portfolio.getMaximumBuyQuantity(tick.getPrice()), random),
+                tick.getPrice()
+        );
+    }
+
     private int createQuantity(int maximumQuantity, SplittableRandom random) {
-        int[] percentages = {25, 50, 100};
-        int percentage = percentages[random.nextInt(percentages.length)];
+        int selected = random.nextInt(100);
+        int percentage;
+        if (selected < profile.smallTradeProbability()) {
+            percentage = 10;
+        } else if (selected < profile.smallTradeProbability()
+                + profile.mediumTradeProbability()) {
+            percentage = 50;
+        } else {
+            percentage = 100;
+        }
         return Math.max(1, (int) ((long) maximumQuantity * percentage / 100));
+    }
+
+    private BigDecimal calculateReturnRate(
+            long currentPrice,
+            SimulatedGamePortfolio portfolio) {
+        BigDecimal averagePrice = portfolio.getAveragePurchasePrice();
+        if (averagePrice == null || averagePrice.signum() == 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(currentPrice)
+                .subtract(averagePrice)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(averagePrice, 2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private boolean isCashBufferRatio(SimulatedGamePortfolio portfolio) {
+        long totalAssetPrincipal = portfolio.getCurrentTotalAssetPrincipal();
+        if (totalAssetPrincipal <= 0) {
+            return false;
+        }
+        BigDecimal cashRatio = BigDecimal.valueOf(portfolio.getCurrentCash())
+                .multiply(BigDecimal.valueOf(100))
+                .divide(
+                        BigDecimal.valueOf(totalAssetPrincipal),
+                        4,
+                        java.math.RoundingMode.HALF_UP
+                );
+        return cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0
+                && cashRatio.compareTo(CASH_BUFFER_MAXIMUM_RATIO) < 0;
     }
 
     private MarketState calculateMarketState(double changeRate) {
@@ -125,7 +214,10 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         return MarketState.NORMAL;
     }
 
-    private int getBuyProbability(MarketState marketState) {
+    private int getBuyProbability(MarketState marketState, BigDecimal returnRate) {
+        if (returnRate != null && returnRate.compareTo(BigDecimal.valueOf(-10)) <= 0) {
+            return profile.lossAveragingProbability();
+        }
         return switch (marketState) {
             case CRASH -> profile.crashBuyProbability();
             case BULL -> profile.bullBuyProbability();
@@ -133,7 +225,13 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         };
     }
 
-    private int getSellProbability(MarketState marketState) {
+    private int getSellProbability(MarketState marketState, BigDecimal returnRate) {
+        if (returnRate != null && returnRate.compareTo(BigDecimal.valueOf(-10)) <= 0) {
+            return profile.lossCutProbability();
+        }
+        if (returnRate != null && returnRate.signum() > 0) {
+            return profile.profitTakingProbability();
+        }
         return switch (marketState) {
             case CRASH -> profile.crashSellProbability();
             case BULL -> profile.bullSellProbability();

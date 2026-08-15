@@ -30,5 +30,9 @@ class PersonaProfileSimulationCsvExporterTest {
 
         assertTrue(Files.exists(temporaryDirectory.resolve("persona-profile-results.csv")));
         assertTrue(Files.exists(temporaryDirectory.resolve("persona-confusion-matrix.csv")));
+        assertTrue(Files.exists(
+                temporaryDirectory.resolve("persona-standardization-summary.csv")));
+        assertTrue(Files.exists(
+                temporaryDirectory.resolve("persona-standardized-results.csv")));
     }
 }

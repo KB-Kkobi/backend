@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.kkobi.game.service.ScenarioService;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,8 @@ class PersonaProfileSimulationCsvExecutionTest {
 
     private static final int DEFAULT_USER_COUNT_PER_PERSONA = 100;
     private static final long[] DEFAULT_SEEDS = {20260816L, 20260817L, 20260818L};
+    private static final DateTimeFormatter DIRECTORY_TIMESTAMP_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     @Test
     @DisplayName("유형별 판정 결과와 Seed 안정성 결과를 CSV로 출력한다.")
@@ -30,6 +34,7 @@ class PersonaProfileSimulationCsvExecutionTest {
                 "build",
                 "assessment-simulation",
                 "persona-profiles-" + ruleEvaluationCondition.name().toLowerCase()
+                        + "-" + LocalDateTime.now().format(DIRECTORY_TIMESTAMP_FORMATTER)
         );
 
         for (long seed : getSeeds()) {

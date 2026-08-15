@@ -30,22 +30,30 @@ public final class PersonaBehaviorProfiles {
     private static Map<PersonaType, PersonaBehaviorProfile> createProfiles() {
         EnumMap<PersonaType, PersonaBehaviorProfile> profiles =
                 new EnumMap<>(PersonaType.class);
-        profiles.put(PersonaType.HHH, profile(PersonaType.HHH, 60, 85, 0, 20,
-                70, 80, 15, 75, 25, 60, 25, 70));
-        profiles.put(PersonaType.HHL, profile(PersonaType.HHL, 45, 70, 10, 35,
-                55, 60, 30, 35, 65, 35, 55, 45));
-        profiles.put(PersonaType.HLH, profile(PersonaType.HLH, 55, 80, 0, 20,
-                65, 75, 20, 80, 20, 65, 20, 75));
-        profiles.put(PersonaType.HLL, profile(PersonaType.HLL, 35, 60, 15, 40,
-                45, 60, 30, 30, 70, 30, 60, 40));
-        profiles.put(PersonaType.LHH, profile(PersonaType.LHH, 20, 45, 30, 60,
-                40, 20, 75, 40, 60, 30, 65, 15));
-        profiles.put(PersonaType.LHL, profile(PersonaType.LHL, 10, 35, 40, 70,
-                30, 15, 80, 15, 80, 15, 75, 10));
-        profiles.put(PersonaType.LLH, profile(PersonaType.LLH, 30, 55, 20, 45,
-                45, 25, 70, 70, 30, 55, 35, 35));
-        profiles.put(PersonaType.LLL, profile(PersonaType.LLL, 5, 25, 55, 85,
-                20, 5, 90, 5, 90, 10, 85, 5));
+        profiles.put(PersonaType.HHH, profile(PersonaType.HHH, 75, 90, 0, 5,
+                100, 80, 60, 100, 100, 50, 50, 65,
+                80, 100, 100, 95, 70, 45, 100, 0, 100, 0));
+        profiles.put(PersonaType.HHL, profile(PersonaType.HHL, 55, 75, 0, 10,
+                75, 40, 95, 5, 95, 5, 95, 15,
+                0, 100, 100, 100, 30, 100, 95, 0, 50, 50));
+        profiles.put(PersonaType.HLH, profile(PersonaType.HLH, 75, 95, 0, 5,
+                85, 95, 5, 95, 5, 90, 5, 95,
+                95, 0, 0, 90, 95, 0, 5, 0, 20, 80));
+        profiles.put(PersonaType.HLL, profile(PersonaType.HLL, 55, 75, 15, 35,
+                45, 80, 5, 5, 10, 10, 15, 10,
+                0, 20, 10, 95, 80, 10, 5, 0, 30, 70));
+        profiles.put(PersonaType.LHH, profile(PersonaType.LHH, 55, 65, 0, 5,
+                90, 0, 80, 100, 100, 80, 100, 0,
+                0, 100, 100, 0, 0, 90, 100, 0, 100, 0));
+        profiles.put(PersonaType.LHL, profile(PersonaType.LHL, 0, 15, 45, 70,
+                35, 0, 95, 0, 95, 5, 95, 5,
+                0, 100, 100, 0, 0, 95, 10, 25, 60, 15));
+        profiles.put(PersonaType.LLH, profile(PersonaType.LLH, 10, 15, 55, 60,
+                90, 0, 0, 100, 0, 100, 0, 100,
+                100, 0, 0, 0, 0, 0, 0, 0, 100, 0));
+        profiles.put(PersonaType.LLL, profile(PersonaType.LLL, 0, 10, 70, 90,
+                10, 0, 10, 0, 10, 0, 10, 0,
+                0, 10, 10, 0, 0, 10, 0, 80, 20, 0));
         return Map.copyOf(profiles);
     }
 
@@ -62,7 +70,17 @@ public final class PersonaBehaviorProfiles {
             int bullSellProbability,
             int normalBuyProbability,
             int normalSellProbability,
-            int depositCancelProbability) {
+            int depositCancelProbability,
+            int depositCancelThenBuyProbability,
+            int depositCashRetentionProbability,
+            int cashBufferMaintenanceProbability,
+            int crashHoldingProbability,
+            int lossAveragingProbability,
+            int lossCutProbability,
+            int profitTakingProbability,
+            int smallTradeProbability,
+            int mediumTradeProbability,
+            int largeTradeProbability) {
         return new PersonaBehaviorProfile(
                 personaType,
                 minimumStockRatio,
@@ -76,7 +94,17 @@ public final class PersonaBehaviorProfiles {
                 bullSellProbability,
                 normalBuyProbability,
                 normalSellProbability,
-                depositCancelProbability
+                depositCancelProbability,
+                depositCancelThenBuyProbability,
+                depositCashRetentionProbability,
+                cashBufferMaintenanceProbability,
+                crashHoldingProbability,
+                lossAveragingProbability,
+                lossCutProbability,
+                profitTakingProbability,
+                smallTradeProbability,
+                mediumTradeProbability,
+                largeTradeProbability
         );
     }
 }
