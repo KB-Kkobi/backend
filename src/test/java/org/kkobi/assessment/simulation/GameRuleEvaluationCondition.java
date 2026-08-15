@@ -65,6 +65,33 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    EXCLUSIVE_MODERATE_RP_CENTERED_BULL_BUY_AND_DEPOSIT_DECISION(
+            "중간 정수안·급등 매수 RP 중심·예금 해지 후 행동 판정",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    EXCLUSIVE_MODERATE_REDUCED_BULL_BUY_RP_AND_DEPOSIT_DECISION(
+            "중간 정수안·급등 매수 RP 완화·예금 해지 후 행동 판정",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION(
+            "중간 정수안·급등 매수 규모별 RT/RP 분리·예금 행동 판정",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -398,6 +425,15 @@ public enum GameRuleEvaluationCondition {
     private ScoreDelta calculateFixedBullBuyScore(
             BigDecimal buyRatio,
             boolean moderateScore) {
+        if (this == EXCLUSIVE_MODERATE_RP_CENTERED_BULL_BUY_AND_DEPOSIT_DECISION) {
+            return calculateRpCenteredBullBuyScore(buyRatio);
+        }
+        if (this == EXCLUSIVE_MODERATE_REDUCED_BULL_BUY_RP_AND_DEPOSIT_DECISION) {
+            return calculateReducedRpBullBuyScore(buyRatio);
+        }
+        if (this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION) {
+            return calculateSizeSeparatedBullBuyScore(buyRatio);
+        }
         if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
             return ScoreDelta.createScoreDelta(5, 0, 5);
         }
@@ -405,6 +441,36 @@ public enum GameRuleEvaluationCondition {
             return ScoreDelta.createScoreDelta(10, -10, moderateScore ? 10 : 15);
         }
         return ScoreDelta.createScoreDelta(5, -5, 10);
+    }
+
+    private ScoreDelta calculateRpCenteredBullBuyScore(BigDecimal buyRatio) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(0, 0, 5);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(5, -10, 10);
+        }
+        return ScoreDelta.createScoreDelta(0, -5, 10);
+    }
+
+    private ScoreDelta calculateReducedRpBullBuyScore(BigDecimal buyRatio) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(5, 0, 5);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(10, -10, 5);
+        }
+        return ScoreDelta.createScoreDelta(5, -5, 5);
+    }
+
+    private ScoreDelta calculateSizeSeparatedBullBuyScore(BigDecimal buyRatio) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(0, 0, 5);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(10, -10, 5);
+        }
+        return ScoreDelta.createScoreDelta(0, -5, 10);
     }
 
     private ScoreDelta calculateFixedLossAveragingBuyScore(BigDecimal buyRatio) {

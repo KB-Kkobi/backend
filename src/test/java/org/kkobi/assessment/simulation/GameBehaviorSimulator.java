@@ -359,11 +359,6 @@ public class GameBehaviorSimulator {
                     appliedRuleCodesByTick
             );
         }
-        analysisResult = applyRuleAccumulationCondition(
-                analysisResult,
-                ruleAccumulationCondition,
-                accumulatedRuleCounts
-        );
         analysisResult = applyLossAveragingRtWeight(
                 analysisResult,
                 lossAveragingRtWeightCondition
@@ -371,6 +366,11 @@ public class GameBehaviorSimulator {
         analysisResult = ruleEvaluationCondition.adjustAnalysisResult(
                 behaviorContext,
                 analysisResult
+        );
+        analysisResult = applyRuleAccumulationCondition(
+                analysisResult,
+                ruleAccumulationCondition,
+                accumulatedRuleCounts
         );
 
         behaviorContexts.add(behaviorContext);
@@ -416,8 +416,7 @@ public class GameBehaviorSimulator {
             );
             if (previousApplicationCount < applicationLimit) {
                 adjustedRules.add(ruleResult);
-            } else if (ruleAccumulationCondition
-                    == RuleAccumulationCondition.MEDIUM_P95_HALF_ATTENUATION) {
+            } else if (ruleAccumulationCondition.isHalfAttenuation()) {
                 adjustedRules.add(ruleResult.multiplyScoreDelta(BigDecimal.valueOf(0.5)));
             }
         }

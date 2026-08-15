@@ -340,6 +340,58 @@ class GameRuleEvaluationConditionTest {
     }
 
     @Test
+    @DisplayName("급등장 매수 RP 중심안은 RT와 RP 역할을 분리한다.")
+    void applyRpCenteredBullBuyScoresByActionRatio() {
+        assertBuyScore(
+                GameRuleEvaluationCondition
+                        .EXCLUSIVE_MODERATE_RP_CENTERED_BULL_BUY_AND_DEPOSIT_DECISION,
+                createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY,
+                "0", "0", "5"
+        );
+        assertBuyScore(
+                GameRuleEvaluationCondition
+                        .EXCLUSIVE_MODERATE_RP_CENTERED_BULL_BUY_AND_DEPOSIT_DECISION,
+                createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY,
+                "0", "-5", "10"
+        );
+        assertBuyScore(
+                GameRuleEvaluationCondition
+                        .EXCLUSIVE_MODERATE_RP_CENTERED_BULL_BUY_AND_DEPOSIT_DECISION,
+                createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY,
+                "5", "-10", "10"
+        );
+    }
+
+    @Test
+    @DisplayName("급등장 매수 RP 완화안은 RT를 유지하고 RP를 5점으로 제한한다.")
+    void applyReducedRpBullBuyScoresByActionRatio() {
+        GameRuleEvaluationCondition condition = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_REDUCED_BULL_BUY_RP_AND_DEPOSIT_DECISION;
+        assertBuyScore(condition, createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "0", "5");
+        assertBuyScore(condition, createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "-5", "5");
+        assertBuyScore(condition, createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "10", "-10", "5");
+    }
+
+    @Test
+    @DisplayName("급등장 매수 규모별 분리안은 중간 매수는 RP, 대규모 매수는 RT를 반영한다.")
+    void applySizeSeparatedBullBuyScoresByActionRatio() {
+        GameRuleEvaluationCondition condition = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION;
+        assertBuyScore(condition, createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "0", "0", "5");
+        assertBuyScore(condition, createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "0", "-5", "10");
+        assertBuyScore(condition, createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "10", "-10", "5");
+    }
+
+    @Test
     @DisplayName("중간 정수안의 손절 매도는 LH를 최대 10점으로 제한한다.")
     void applyModerateLossCutScoresBySellRatio() {
         assertModerateSellScore(19, 81, false,
@@ -393,6 +445,21 @@ class GameRuleEvaluationConditionTest {
                         behaviorContext,
                         createAnalysisResult(createRule(ruleCode, 1, 1, 1))
                 );
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertBuyScore(
+            GameRuleEvaluationCondition condition,
+            BehaviorContext behaviorContext,
+            BehaviorRuleCode ruleCode,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorAnalysisResult adjustedResult = condition.adjustAnalysisResult(
+                behaviorContext,
+                createAnalysisResult(createRule(ruleCode, 1, 1, 1))
+        );
 
         assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
     }
