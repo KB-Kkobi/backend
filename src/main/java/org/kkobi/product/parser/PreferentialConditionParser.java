@@ -65,7 +65,7 @@ public class PreferentialConditionParser {
                 "첫예금거래",
                 "첫예금 거래"
         )){
-            conditionTypes.add(PreferentialConditionType.MARKETING_CONSENT);
+            conditionTypes.add(PreferentialConditionType.FIRST_TRANSACTION);
         }
 
         // 주택청약 보유 조건 확인

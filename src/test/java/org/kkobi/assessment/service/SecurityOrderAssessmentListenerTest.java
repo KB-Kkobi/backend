@@ -19,6 +19,7 @@ import org.kkobi.assessment.dto.VirtualInvestmentBehaviorRequest;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
 import org.kkobi.assessment.validator.VirtualInvestmentBehaviorValidator;
+import org.kkobi.product.holding.dto.PreferentialRateConditionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
@@ -283,7 +284,8 @@ class SecurityOrderAssessmentListenerTest {
     private static class StubProductHoldingMapper implements ProductHoldingMapper {
         private final long deposit;
 
-        StubProductHoldingMapper(long deposit) { this.deposit = deposit; }
+
+        StubProductHoldingMapper(long deposit) { this.deposit = deposit;}
 
         @Override public Long sumActiveDepositByAccountId(Long accountId) { return deposit; }
         @Override public ProductSubscriptionInfoDto getProductSubscriptionInfo(Long userId, Long productOptionId) { return null; }
@@ -300,8 +302,14 @@ class SecurityOrderAssessmentListenerTest {
         @Override public int saveAccountDepositTransaction(Long accountId, BigDecimal amount) { return 0; }
         @Override public BigDecimal getAnnualInterestIncome(Long userId, LocalDateTime yearStart, LocalDateTime nextYearStart) { return null; }
         @Override public Long getLastInsertedProductTransactionId() {return null;}
+        @Override
+        public List<PreferentialRateConditionInfoDto> getSelectedPreferentialRateConditions(
+                Long productOptionId,
+                List<Long> conditionIds
+        ) {
+            return List.of();
+        }
     }
-
 
 
     private static class StubVirtualInvestmentBehaviorMapper implements VirtualInvestmentBehaviorMapper {

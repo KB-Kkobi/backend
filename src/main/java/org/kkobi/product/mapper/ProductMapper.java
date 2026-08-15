@@ -3,6 +3,7 @@ package org.kkobi.product.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.product.deposit.dto.DepositProductDto;
 import org.kkobi.product.deposit.dto.DepositProductOptionDto;
+import org.kkobi.product.dto.response.PreferentialRateConditionResponseDto;
 import org.kkobi.product.dto.response.ProductDetailResponseDto;
 import org.kkobi.product.dto.response.ProductListItemResponseDto;
 import org.kkobi.product.dto.response.ProductOptionResponseDto;
@@ -56,6 +57,11 @@ public interface ProductMapper {
             @Param("productId") Long productId
     );
 
+    // 상품 옵션에 등록된 우대조건과 추가금리를 조회
+    List<PreferentialRateConditionResponseDto> getPreferentialRateConditions(
+            @Param("productOptionId") Long productOptionId
+    );
+
     // 조건에 맞는 상품 목록 조회
     List<ProductListItemResponseDto> getProductList(
             @Param("productType") String productType,
@@ -88,5 +94,20 @@ public interface ProductMapper {
     int saveProductPreferentialCondition(
             @Param("productId") Long productId,
             @Param("conditionType") PreferentialConditionType conditionType
+    );
+
+    // 상품 옵션에 저장된 기존 우대금리 조건을 삭제
+    int deleteProductPreferentialRateConditions(
+            @Param("productId") Long productId
+    );
+
+    // 상품 옵션별 우대금리 조건을 저장
+    int saveProductPreferentialRateCondition(
+            @Param("productOptionId") Long productOptionId,
+            @Param("conditionType") PreferentialConditionType conditionType,
+            @Param("conditionName") String conditionName,
+            @Param("additionalRate") java.math.BigDecimal additionalRate,
+            @Param("selectable") boolean selectable,
+            @Param("displayOrder") int displayOrder
     );
 }
