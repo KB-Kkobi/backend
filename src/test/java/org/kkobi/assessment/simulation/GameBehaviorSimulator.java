@@ -43,6 +43,11 @@ public class GameBehaviorSimulator {
     private static final BigDecimal NORMAL_BUY_MAXIMUM_RATIO = BigDecimal.valueOf(30);
     private static final ScoreDelta NORMAL_PLANNED_BUY_SCORE =
             ScoreDelta.createScoreDelta(0, -5, 5);
+    private static final BigDecimal CASH_BUFFER_MINIMUM_RATIO = BigDecimal.valueOf(25);
+    private static final BigDecimal CASH_BUFFER_MAXIMUM_RATIO = BigDecimal.valueOf(50);
+    private static final int CASH_BUFFER_MAINTENANCE_TICKS = 3;
+    private static final ScoreDelta CASH_BUFFER_MAINTENANCE_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 0);
 
     private final NeutralGameBehaviorGenerator behaviorGenerator =
             new NeutralGameBehaviorGenerator();
@@ -324,6 +329,16 @@ public class GameBehaviorSimulator {
         int normalPlannedBuyCount = ruleEvaluationCondition.appliesNormalPlannedBuyRule()
                 ? calculateNormalPlannedBuyCount(behaviorContexts, analysisResults)
                 : 0;
+        int cashBufferMaintenanceCount =
+                ruleEvaluationCondition.appliesCashBufferMaintenanceRule()
+                        ? calculateCashBufferMaintenanceCount(
+                        scenario,
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit,
+                        generationResult.getActions()
+                )
+                        : 0;
         List<ScoreDelta> scoreDeltas = new ArrayList<>(analysisResults.stream()
                 .map(BehaviorAnalysisResult::getTotalScoreDelta)
                 .toList());
@@ -332,6 +347,9 @@ public class GameBehaviorSimulator {
         }
         for (int count = 0; count < normalPlannedBuyCount; count++) {
             scoreDeltas.add(NORMAL_PLANNED_BUY_SCORE);
+        }
+        for (int count = 0; count < cashBufferMaintenanceCount; count++) {
+            scoreDeltas.add(CASH_BUFFER_MAINTENANCE_SCORE);
         }
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
@@ -349,6 +367,7 @@ public class GameBehaviorSimulator {
                 behaviorContexts,
                 crashHoldingEpisodeCount,
                 normalPlannedBuyCount,
+                cashBufferMaintenanceCount,
                 assessmentScore,
                 ruleApplicationCounts,
                 ruleScoreContributions
@@ -626,6 +645,7 @@ public class GameBehaviorSimulator {
             List<BehaviorContext> behaviorContexts,
             int crashHoldingEpisodeCount,
             int normalPlannedBuyCount,
+            int cashBufferMaintenanceCount,
             AssessmentScore assessmentScore,
             Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
             Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions) {
@@ -676,6 +696,7 @@ public class GameBehaviorSimulator {
                 ))
                 .crashHoldingEpisodeCount(crashHoldingEpisodeCount)
                 .normalPlannedBuyCount(normalPlannedBuyCount)
+                .cashBufferMaintenanceCount(cashBufferMaintenanceCount)
                 .depositCancelled(actions.stream()
                         .anyMatch(action -> action.getActionType() == BehaviorActionType.CANCEL_PRODUCT))
                 .depositMatured(actions.stream()
@@ -831,6 +852,56 @@ public class GameBehaviorSimulator {
         return BigDecimal.valueOf(behaviorEvent.getActionAmount())
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(totalPrincipal), 4, RoundingMode.HALF_UP);
+    }
+
+    int calculateCashBufferMaintenanceCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int consecutiveMaintenanceTicks = 0;
+
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = actions.stream()
+                .filter(action -> action.getActionType() != BehaviorActionType.MATURITY)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        SimulatedGameAction::getGameTick,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+        List<ScenarioTickDto> scenarioTicks = scenario.getTicks().stream()
+                .filter(tick -> tick.getTick() >= 0 && tick.getTick() < scenario.getTotalTicks())
+                .sorted(java.util.Comparator.comparingInt(ScenarioTickDto::getTick))
+                .toList();
+
+        for (ScenarioTickDto scenarioTick : scenarioTicks) {
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+            }
+            BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            );
+            if (cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0
+                    && cashRatio.compareTo(CASH_BUFFER_MAXIMUM_RATIO) < 0) {
+                consecutiveMaintenanceTicks++;
+                if (consecutiveMaintenanceTicks >= CASH_BUFFER_MAINTENANCE_TICKS) {
+                    return 1;
+                }
+            } else {
+                consecutiveMaintenanceTicks = 0;
+            }
+        }
+        return 0;
     }
 
     private int countActions(

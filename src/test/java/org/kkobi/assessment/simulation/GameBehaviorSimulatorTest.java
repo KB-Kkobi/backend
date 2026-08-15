@@ -14,6 +14,7 @@ import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.MarketState;
 import org.kkobi.game.dto.ScenarioDto;
+import org.kkobi.game.dto.ScenarioTickDto;
 import org.kkobi.game.service.ScenarioService;
 
 import java.math.BigDecimal;
@@ -175,6 +176,42 @@ class GameBehaviorSimulatorTest {
         assertEquals(1, count);
     }
 
+    @Test
+    @DisplayName("현금 비중 25% 이상 50% 미만을 3 Tick 연속 유지하면 한 번 반영한다.")
+    void calculateCashBufferMaintenanceCount() {
+        ScenarioDto threeTickScenario = createScenario(3);
+        ScenarioDto twoTickScenario = createScenario(2);
+
+        assertEquals(1, gameBehaviorSimulator.calculateCashBufferMaintenanceCount(
+                threeTickScenario,
+                2_500_000L,
+                7_500_000L,
+                0L,
+                List.of()
+        ));
+        assertEquals(1, gameBehaviorSimulator.calculateCashBufferMaintenanceCount(
+                threeTickScenario,
+                4_999_000L,
+                5_001_000L,
+                0L,
+                List.of()
+        ));
+        assertEquals(0, gameBehaviorSimulator.calculateCashBufferMaintenanceCount(
+                threeTickScenario,
+                5_000_000L,
+                5_000_000L,
+                0L,
+                List.of()
+        ));
+        assertEquals(0, gameBehaviorSimulator.calculateCashBufferMaintenanceCount(
+                twoTickScenario,
+                3_000_000L,
+                7_000_000L,
+                0L,
+                List.of()
+        ));
+    }
+
     private SimulatedGamePortfolio createInitialPortfolio() {
         return new SimulatedGamePortfolio(
                 2_000_000L,
@@ -198,6 +235,20 @@ class GameBehaviorSimulatorTest {
         behaviorContext.setCurrentEvent(behaviorEvent);
         behaviorContext.setMarketState(MarketState.NORMAL);
         return behaviorContext;
+    }
+
+    private ScenarioDto createScenario(int totalTicks) {
+        ScenarioDto scenario = new ScenarioDto();
+        scenario.setTotalTicks(totalTicks);
+        java.util.ArrayList<ScenarioTickDto> ticks = new java.util.ArrayList<>();
+        for (int tick = 0; tick < totalTicks; tick++) {
+            ScenarioTickDto scenarioTick = new ScenarioTickDto();
+            scenarioTick.setTick(tick);
+            scenarioTick.setPrice(20_000L);
+            ticks.add(scenarioTick);
+        }
+        scenario.setTicks(ticks);
+        return scenario;
     }
 
     private void assertScoreRange(BigDecimal score) {

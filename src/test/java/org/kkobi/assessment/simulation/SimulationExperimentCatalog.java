@@ -16,6 +16,10 @@ public enum SimulationExperimentCatalog {
     NORMAL_PLANNED_BUY_FREQUENCY(
             "평범장 계획 매수 규칙 적용 전후의 저·중·고빈도 비교",
             createNormalPlannedBuyFrequencyCases()
+    ),
+    CASH_BUFFER_MAINTENANCE_FREQUENCY(
+            "현금 완충 비중 유지 규칙 적용 전후의 저·중·고빈도 비교",
+            createCashBufferMaintenanceFrequencyCases()
     );
 
     private final String description;
@@ -77,6 +81,21 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "평범장 계획 매수 규칙 적용 후",
                 GameBiasMitigationCondition.NORMAL_PLANNED_BUY_WITH_SMALL_TRADE_DEAD_ZONE
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase> createCashBufferMaintenanceFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "현금 완충 비중 유지 규칙 적용 전",
+                GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
+        );
+        addFrequencyCases(
+                experimentCases,
+                "현금 완충 비중 유지 규칙 적용 후",
+                GameBiasMitigationCondition.CASH_BUFFER_WITH_SMALL_TRADE_DEAD_ZONE
         );
         return experimentCases;
     }

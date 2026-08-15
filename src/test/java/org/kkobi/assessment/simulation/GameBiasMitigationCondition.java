@@ -102,6 +102,13 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
             GameRuleEvaluationCondition
                     .EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY
+    ),
+    CASH_BUFFER_WITH_SMALL_TRADE_DEAD_ZONE(
+            "소규모 거래 제외·현금 비중 25~49% 3 Tick 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
+            GameRuleEvaluationCondition
+                    .EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
     );
 
     private final String description;
