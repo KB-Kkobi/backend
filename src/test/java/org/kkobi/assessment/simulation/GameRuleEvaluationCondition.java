@@ -92,6 +92,15 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE(
+            "중간 정수안·급등 매수 규모별 RT/RP 분리·소규모 거래 점수 제외",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -157,6 +166,25 @@ public enum GameRuleEvaluationCondition {
             adjustedRules = applyActionRatioWeight(behaviorContext, adjustedRules);
         }
         return new BehaviorAnalysisResult(adjustedRules);
+    }
+
+    public BehaviorAnalysisResult excludeSmallTradeScores(
+            BehaviorContext behaviorContext,
+            BehaviorAnalysisResult analysisResult) {
+        if (!excludesSmallTradeScores() || behaviorContext.getCurrentEvent() == null) {
+            return analysisResult;
+        }
+
+        BehaviorEvent behaviorEvent = behaviorContext.getCurrentEvent();
+        if (behaviorEvent.getActionType() == BehaviorActionType.BUY
+                && calculateBuyRatio(behaviorEvent).compareTo(BUY_SMALL_RATIO) < 0) {
+            return new BehaviorAnalysisResult(List.of());
+        }
+        if (behaviorEvent.getActionType() == BehaviorActionType.SELL
+                && calculateSellRatio(behaviorEvent).compareTo(SELL_MINIMUM_RATIO) < 0) {
+            return new BehaviorAnalysisResult(List.of());
+        }
+        return analysisResult;
     }
 
     public List<BehaviorAnalysisResult> adjustDepositDecisionResults(
@@ -254,7 +282,8 @@ public enum GameRuleEvaluationCondition {
             BehaviorEvent behaviorEvent = behaviorContexts.get(index).getCurrentEvent();
             if (behaviorEvent.getActionType() != BehaviorActionType.BUY
                     || behaviorEvent.getAssetType() != BehaviorAssetType.SECURITY
-                    || behaviorEvent.getActionAmount() == null) {
+                    || behaviorEvent.getActionAmount() == null
+                    || isExcludedSmallBuy(behaviorEvent)) {
                 continue;
             }
             accumulatedBuyAmount = Math.addExact(
@@ -431,7 +460,7 @@ public enum GameRuleEvaluationCondition {
         if (this == EXCLUSIVE_MODERATE_REDUCED_BULL_BUY_RP_AND_DEPOSIT_DECISION) {
             return calculateReducedRpBullBuyScore(buyRatio);
         }
-        if (this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION) {
+        if (isSizeSeparatedBullBuyCondition()) {
             return calculateSizeSeparatedBullBuyScore(buyRatio);
         }
         if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
@@ -693,6 +722,20 @@ public enum GameRuleEvaluationCondition {
             BehaviorRuleCode ruleCode) {
         return appliedRules.stream()
                 .anyMatch(ruleResult -> ruleResult.getRuleCode() == ruleCode);
+    }
+
+    private boolean excludesSmallTradeScores() {
+        return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE;
+    }
+
+    private boolean isSizeSeparatedBullBuyCondition() {
+        return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION
+                || excludesSmallTradeScores();
+    }
+
+    private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {
+        return excludesSmallTradeScores()
+                && calculateBuyRatio(behaviorEvent).compareTo(BUY_SMALL_RATIO) < 0;
     }
 
     private long addAmounts(Long firstAmount, Long secondAmount) {

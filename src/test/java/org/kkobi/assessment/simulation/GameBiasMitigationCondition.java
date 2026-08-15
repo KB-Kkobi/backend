@@ -81,6 +81,13 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
             GameRuleEvaluationCondition
                     .EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION
+    ),
+    SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED(
+            "소규모 매수 10% 미만·매도 20% 미만 제외·동일 Tick 1회·급등 매수 최대 2회",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
+            GameRuleEvaluationCondition
+                    .EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE
     );
 
     private final String description;

@@ -392,6 +392,35 @@ class GameRuleEvaluationConditionTest {
     }
 
     @Test
+    @DisplayName("소규모 거래 제외 조건은 10% 미만 매수와 20% 미만 매도의 점수를 제거한다.")
+    void excludeSmallTradeScores() {
+        GameRuleEvaluationCondition condition = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE;
+
+        BehaviorAnalysisResult smallBuyResult = condition.excludeSmallTradeScores(
+                createBuyContext(900_000L, 10_000_000L),
+                createAnalysisResult(createRule(BehaviorRuleCode.CRASH_BUY, 5, 0, 0))
+        );
+        BehaviorAnalysisResult boundaryBuyResult = condition.excludeSmallTradeScores(
+                createBuyContext(1_000_000L, 10_000_000L),
+                createAnalysisResult(createRule(BehaviorRuleCode.CRASH_BUY, 10, -5, 0))
+        );
+        BehaviorAnalysisResult smallSellResult = condition.excludeSmallTradeScores(
+                createSellContext(19, 81, false),
+                createAnalysisResult(createRule(BehaviorRuleCode.LOSS_CUT_SELL, -5, 5, 0))
+        );
+        BehaviorAnalysisResult boundarySellResult = condition.excludeSmallTradeScores(
+                createSellContext(20, 80, false),
+                createAnalysisResult(createRule(BehaviorRuleCode.LOSS_CUT_SELL, -5, 5, -5))
+        );
+
+        assertTrue(smallBuyResult.getAppliedRules().isEmpty());
+        assertFalse(boundaryBuyResult.getAppliedRules().isEmpty());
+        assertTrue(smallSellResult.getAppliedRules().isEmpty());
+        assertFalse(boundarySellResult.getAppliedRules().isEmpty());
+    }
+
+    @Test
     @DisplayName("중간 정수안의 손절 매도는 LH를 최대 10점으로 제한한다.")
     void applyModerateLossCutScoresBySellRatio() {
         assertModerateSellScore(19, 81, false,

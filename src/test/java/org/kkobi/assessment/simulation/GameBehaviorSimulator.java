@@ -346,6 +346,10 @@ public class GameBehaviorSimulator {
         );
         BehaviorAnalysisResult analysisResult = behaviorRuleEngine
                 .calculateGameBehaviorAnalysis(behaviorContext);
+        analysisResult = ruleEvaluationCondition.excludeSmallTradeScores(
+                behaviorContext,
+                analysisResult
+        );
         if (multiplierCondition == ConsecutiveActionMultiplierCondition.DISABLED) {
             analysisResult = removeConsecutiveActionMultiplier(
                     behaviorContext,
