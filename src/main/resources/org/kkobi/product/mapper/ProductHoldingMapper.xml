@@ -293,4 +293,25 @@
             pt.product_transaction_id DESC
     </select>
 
+    <!-- 선택한 우대조건이 해당 상품 옵션에 속하는지 조회 -->
+    <select id="getSelectedPreferentialRateConditions"
+            resultType="org.kkobi.product.holding.dto.PreferentialRateConditionInfoDto">
+        SELECT
+        product_preferential_rate_condition_id
+        AS preferential_rate_condition_id,
+        product_option_id,
+        additional_rate,
+        selectable
+        FROM product_preferential_rate_conditions
+        WHERE product_option_id = #{productOptionId}
+        AND product_preferential_rate_condition_id IN
+        <foreach collection="conditionIds"
+                 item="conditionId"
+                 open="("
+                 separator=","
+                 close=")">
+            #{conditionId}
+        </foreach>
+    </select>
+
 </mapper>
