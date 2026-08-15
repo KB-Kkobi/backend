@@ -138,6 +138,29 @@ public class GameBehaviorSimulator {
             ConsecutiveActionMultiplierCondition multiplierCondition,
             SameTickRuleApplicationCondition sameTickRuleCondition,
             RuleAccumulationCondition ruleAccumulationCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                LossAveragingRtWeightCondition.RT_15
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
         if (multiplierCondition == null) {
             throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
@@ -147,6 +170,9 @@ public class GameBehaviorSimulator {
         }
         if (ruleAccumulationCondition == null) {
             throw new IllegalArgumentException("규칙 누적 조건은 필수입니다.");
+        }
+        if (lossAveragingRtWeightCondition == null) {
+            throw new IllegalArgumentException("물타기 RT 가중치 조건은 필수입니다.");
         }
 
         long initialCash = initialPortfolio.getCurrentCash();
@@ -188,7 +214,8 @@ public class GameBehaviorSimulator {
                 sameTickRuleCondition,
                 appliedRuleCodesByTick,
                 ruleAccumulationCondition,
-                accumulatedRuleCounts
+                accumulatedRuleCounts,
+                lossAveragingRtWeightCondition
         );
 
         long actionSequence = 1L;
@@ -207,7 +234,8 @@ public class GameBehaviorSimulator {
                     sameTickRuleCondition,
                     appliedRuleCodesByTick,
                     ruleAccumulationCondition,
-                    accumulatedRuleCounts
+                    accumulatedRuleCounts,
+                    lossAveragingRtWeightCondition
             );
         }
 
@@ -243,7 +271,8 @@ public class GameBehaviorSimulator {
             SameTickRuleApplicationCondition sameTickRuleCondition,
             Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick,
             RuleAccumulationCondition ruleAccumulationCondition,
-            Map<BehaviorRuleCode, Integer> accumulatedRuleCounts) {
+            Map<BehaviorRuleCode, Integer> accumulatedRuleCounts,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition) {
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 behaviorEvent,
                 previousEvents
@@ -268,10 +297,23 @@ public class GameBehaviorSimulator {
                 ruleAccumulationCondition,
                 accumulatedRuleCounts
         );
+        analysisResult = applyLossAveragingRtWeight(
+                analysisResult,
+                lossAveragingRtWeightCondition
+        );
 
         behaviorContexts.add(behaviorContext);
         analysisResults.add(analysisResult);
         previousEvents.add(behaviorEvent);
+    }
+
+    private BehaviorAnalysisResult applyLossAveragingRtWeight(
+            BehaviorAnalysisResult analysisResult,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition) {
+        List<RuleResult> adjustedRules = analysisResult.getAppliedRules().stream()
+                .map(lossAveragingRtWeightCondition::adjustRuleResult)
+                .toList();
+        return new BehaviorAnalysisResult(adjustedRules);
     }
 
     private BehaviorAnalysisResult applyRuleAccumulationCondition(
