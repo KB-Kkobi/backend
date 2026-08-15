@@ -74,8 +74,7 @@ public class GameBehaviorSimulator {
             BehaviorRuleCode.DEPOSIT_MATURITY
     );
 
-    private final NeutralGameBehaviorGenerator behaviorGenerator =
-            new NeutralGameBehaviorGenerator();
+    private final GameBehaviorGenerator behaviorGenerator;
     private final AssetRatioCalculator assetRatioCalculator =
             new AssetRatioCalculator();
     private final MarketStateCalculator marketStateCalculator =
@@ -93,6 +92,17 @@ public class GameBehaviorSimulator {
             new PersonaClassifier();
     private final GamePriceRateCalculator gamePriceRateCalculator =
             new GamePriceRateCalculator(new SecurityPriceRateCalculator());
+
+    public GameBehaviorSimulator() {
+        this(new NeutralGameBehaviorGenerator());
+    }
+
+    GameBehaviorSimulator(GameBehaviorGenerator behaviorGenerator) {
+        if (behaviorGenerator == null) {
+            throw new IllegalArgumentException("행동 생성기는 필수입니다.");
+        }
+        this.behaviorGenerator = behaviorGenerator;
+    }
 
     public GameBehaviorSimulationResult simulateGame(
             long simulationUserId,

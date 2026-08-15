@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SplittableRandom;
 
-public class NeutralGameBehaviorGenerator {
+public class NeutralGameBehaviorGenerator implements GameBehaviorGenerator {
 
     private static final int MAXIMUM_ACTION_COUNT_PER_TICK = 2;
     private static final int DEPOSIT_HOLD_PERCENTAGE = 50;
@@ -37,6 +37,7 @@ public class NeutralGameBehaviorGenerator {
         );
     }
 
+    @Override
     public GameBehaviorGenerationResult generateGameBehavior(
             ScenarioDto scenario,
             SimulatedGamePortfolio portfolio,
