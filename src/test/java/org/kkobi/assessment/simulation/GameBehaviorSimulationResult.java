@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.PersonaType;
+import org.kkobi.assessment.domain.ScoreDelta;
 
 import java.math.BigDecimal;
 import java.util.EnumMap;
@@ -40,7 +41,10 @@ public class GameBehaviorSimulationResult {
     private final boolean boughtStockAfterDepositCancel;
     private final int maximumConsecutiveBuyCount;
     private final int maximumConsecutiveSellCount;
+    private final int consecutiveActionLevelTwoCount;
+    private final int consecutiveActionLevelThreeOrMoreCount;
     private final Map<BehaviorRuleCode, Integer> ruleApplicationCounts;
+    private final Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions;
     private final BigDecimal finalRtScore;
     private final BigDecimal finalLhScore;
     private final BigDecimal finalRpScore;
@@ -69,7 +73,10 @@ public class GameBehaviorSimulationResult {
             boolean boughtStockAfterDepositCancel,
             int maximumConsecutiveBuyCount,
             int maximumConsecutiveSellCount,
+            int consecutiveActionLevelTwoCount,
+            int consecutiveActionLevelThreeOrMoreCount,
             Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
+            Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions,
             BigDecimal finalRtScore,
             BigDecimal finalLhScore,
             BigDecimal finalRpScore,
@@ -103,7 +110,16 @@ public class GameBehaviorSimulationResult {
                 maximumConsecutiveSellCount,
                 "최대 연속 매도 횟수"
         );
+        this.consecutiveActionLevelTwoCount = validateCount(
+                consecutiveActionLevelTwoCount,
+                "연속 행동 2회 발생 횟수"
+        );
+        this.consecutiveActionLevelThreeOrMoreCount = validateCount(
+                consecutiveActionLevelThreeOrMoreCount,
+                "연속 행동 3회 이상 발생 횟수"
+        );
         this.ruleApplicationCounts = copyRuleApplicationCounts(ruleApplicationCounts);
+        this.ruleScoreContributions = copyRuleScoreContributions(ruleScoreContributions);
         this.finalRtScore = validateScore(finalRtScore, "최종 RT 점수");
         this.finalLhScore = validateScore(finalLhScore, "최종 LH 점수");
         this.finalRpScore = validateScore(finalRpScore, "최종 RP 점수");
@@ -198,6 +214,24 @@ public class GameBehaviorSimulationResult {
             copiedCounts.put(ruleCode, validateCount(count, "행동 규칙 적용 횟수"));
         });
         return Map.copyOf(copiedCounts);
+    }
+
+    private Map<BehaviorRuleCode, ScoreDelta> copyRuleScoreContributions(
+            Map<BehaviorRuleCode, ScoreDelta> scoreContributions) {
+        if (scoreContributions == null || scoreContributions.isEmpty()) {
+            return Map.of();
+        }
+
+        EnumMap<BehaviorRuleCode, ScoreDelta> copiedContributions =
+                new EnumMap<>(BehaviorRuleCode.class);
+        scoreContributions.forEach((ruleCode, scoreDelta) -> {
+            Objects.requireNonNull(ruleCode, "행동 규칙 코드는 필수입니다.");
+            copiedContributions.put(
+                    ruleCode,
+                    Objects.requireNonNull(scoreDelta, "행동 규칙 점수 기여도는 필수입니다.")
+            );
+        });
+        return Map.copyOf(copiedContributions);
     }
 
     private BigDecimal validateScore(BigDecimal score, String scoreName) {

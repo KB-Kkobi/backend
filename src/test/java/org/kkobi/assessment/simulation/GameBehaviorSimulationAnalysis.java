@@ -1,6 +1,7 @@
 package org.kkobi.assessment.simulation;
 
 import lombok.Getter;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.PersonaType;
 
 import java.math.BigDecimal;
@@ -16,13 +17,23 @@ public class GameBehaviorSimulationAnalysis {
     private final ScoreSummary overallRtScoreSummary;
     private final ScoreSummary overallLhScoreSummary;
     private final ScoreSummary overallRpScoreSummary;
+    private final BehaviorStatistics behaviorStatistics;
+    private final Map<BehaviorRuleCode, RuleStatistics> ruleStatistics;
+    private final ScoreDiagnostic rtScoreDiagnostic;
+    private final ScoreDiagnostic lhScoreDiagnostic;
+    private final ScoreDiagnostic rpScoreDiagnostic;
 
     public GameBehaviorSimulationAnalysis(
             int totalSimulationCount,
             Map<PersonaType, PersonaSummary> personaSummaries,
             ScoreSummary overallRtScoreSummary,
             ScoreSummary overallLhScoreSummary,
-            ScoreSummary overallRpScoreSummary) {
+            ScoreSummary overallRpScoreSummary,
+            BehaviorStatistics behaviorStatistics,
+            Map<BehaviorRuleCode, RuleStatistics> ruleStatistics,
+            ScoreDiagnostic rtScoreDiagnostic,
+            ScoreDiagnostic lhScoreDiagnostic,
+            ScoreDiagnostic rpScoreDiagnostic) {
         if (totalSimulationCount <= 0) {
             throw new IllegalArgumentException("전체 시뮬레이션 수는 0보다 커야 합니다.");
         }
@@ -45,6 +56,23 @@ public class GameBehaviorSimulationAnalysis {
                 overallRpScoreSummary,
                 "전체 RP 점수 통계는 필수입니다."
         );
+        this.behaviorStatistics = Objects.requireNonNull(
+                behaviorStatistics,
+                "전체 행동 통계는 필수입니다."
+        );
+        this.ruleStatistics = copyRuleStatistics(ruleStatistics);
+        this.rtScoreDiagnostic = Objects.requireNonNull(
+                rtScoreDiagnostic,
+                "RT 점수 진단 결과는 필수입니다."
+        );
+        this.lhScoreDiagnostic = Objects.requireNonNull(
+                lhScoreDiagnostic,
+                "LH 점수 진단 결과는 필수입니다."
+        );
+        this.rpScoreDiagnostic = Objects.requireNonNull(
+                rpScoreDiagnostic,
+                "RP 점수 진단 결과는 필수입니다."
+        );
     }
 
     public PersonaSummary getPersonaSummary(PersonaType personaType) {
@@ -65,6 +93,23 @@ public class GameBehaviorSimulationAnalysis {
             copiedSummaries.put(personaType, personaSummary);
         }
         return Map.copyOf(copiedSummaries);
+    }
+
+    private Map<BehaviorRuleCode, RuleStatistics> copyRuleStatistics(
+            Map<BehaviorRuleCode, RuleStatistics> statistics) {
+        Objects.requireNonNull(statistics, "행동 규칙 통계는 필수입니다.");
+        EnumMap<BehaviorRuleCode, RuleStatistics> copiedStatistics =
+                new EnumMap<>(BehaviorRuleCode.class);
+        for (BehaviorRuleCode ruleCode : BehaviorRuleCode.values()) {
+            RuleStatistics ruleStatistic = statistics.get(ruleCode);
+            if (ruleStatistic == null) {
+                throw new IllegalArgumentException(
+                        "행동 규칙 통계가 누락되었습니다: " + ruleCode
+                );
+            }
+            copiedStatistics.put(ruleCode, ruleStatistic);
+        }
+        return Map.copyOf(copiedStatistics);
     }
 
     @Getter
@@ -110,6 +155,76 @@ public class GameBehaviorSimulationAnalysis {
             this.standardDeviation = standardDeviation;
             this.minimum = minimum;
             this.maximum = maximum;
+        }
+    }
+
+    @Getter
+    public static class BehaviorStatistics {
+
+        private final BigDecimal averageBuyCount;
+        private final BigDecimal averageSellCount;
+        private final BigDecimal averageNoActionTickCount;
+        private final BigDecimal averageActionCountPerTick;
+        private final long consecutiveActionLevelTwoCount;
+        private final long consecutiveActionLevelThreeOrMoreCount;
+
+        BehaviorStatistics(
+                BigDecimal averageBuyCount,
+                BigDecimal averageSellCount,
+                BigDecimal averageNoActionTickCount,
+                BigDecimal averageActionCountPerTick,
+                long consecutiveActionLevelTwoCount,
+                long consecutiveActionLevelThreeOrMoreCount) {
+            this.averageBuyCount = averageBuyCount;
+            this.averageSellCount = averageSellCount;
+            this.averageNoActionTickCount = averageNoActionTickCount;
+            this.averageActionCountPerTick = averageActionCountPerTick;
+            this.consecutiveActionLevelTwoCount = consecutiveActionLevelTwoCount;
+            this.consecutiveActionLevelThreeOrMoreCount =
+                    consecutiveActionLevelThreeOrMoreCount;
+        }
+    }
+
+    @Getter
+    public static class RuleStatistics {
+
+        private final BehaviorRuleCode ruleCode;
+        private final long applicationCount;
+        private final BigDecimal rtTotalContribution;
+        private final BigDecimal lhTotalContribution;
+        private final BigDecimal rpTotalContribution;
+
+        RuleStatistics(
+                BehaviorRuleCode ruleCode,
+                long applicationCount,
+                BigDecimal rtTotalContribution,
+                BigDecimal lhTotalContribution,
+                BigDecimal rpTotalContribution) {
+            this.ruleCode = ruleCode;
+            this.applicationCount = applicationCount;
+            this.rtTotalContribution = rtTotalContribution;
+            this.lhTotalContribution = lhTotalContribution;
+            this.rpTotalContribution = rpTotalContribution;
+        }
+    }
+
+    @Getter
+    public static class ScoreDiagnostic {
+
+        private final int maximumScoreCount;
+        private final BigDecimal maximumScoreRate;
+        private final int boundaryScoreCount;
+        private final BigDecimal boundaryScoreRate;
+
+        ScoreDiagnostic(
+                int maximumScoreCount,
+                BigDecimal maximumScoreRate,
+                int boundaryScoreCount,
+                BigDecimal boundaryScoreRate) {
+            this.maximumScoreCount = maximumScoreCount;
+            this.maximumScoreRate = maximumScoreRate;
+            this.boundaryScoreCount = boundaryScoreCount;
+            this.boundaryScoreRate = boundaryScoreRate;
         }
     }
 }

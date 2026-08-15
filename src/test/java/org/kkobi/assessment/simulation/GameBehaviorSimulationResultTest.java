@@ -2,6 +2,7 @@ package org.kkobi.assessment.simulation;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.kkobi.assessment.domain.ScoreDelta;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.PersonaType;
 
@@ -27,6 +28,10 @@ class GameBehaviorSimulationResultTest {
         assertTrue(result.isNearBoundary(BigDecimal.valueOf(5)));
         assertFalse(result.isNearBoundary(BigDecimal.ONE));
         assertEquals(1, result.getRuleApplicationCounts().get(BehaviorRuleCode.CRASH_BUY));
+        assertEquals(
+                BigDecimal.TEN,
+                result.getRuleScoreContributions().get(BehaviorRuleCode.CRASH_BUY).getRtDelta()
+        );
         assertEquals(PersonaType.HLH, result.getPersonaType());
     }
 
@@ -86,11 +91,19 @@ class GameBehaviorSimulationResultTest {
                 .boughtStockAfterDepositCancel(true)
                 .maximumConsecutiveBuyCount(2)
                 .maximumConsecutiveSellCount(1)
+                .consecutiveActionLevelTwoCount(1)
+                .consecutiveActionLevelThreeOrMoreCount(0)
                 .ruleApplicationCounts(Map.of(
                         BehaviorRuleCode.CRASH_BUY,
                         1,
                         BehaviorRuleCode.LOSS_CUT_SELL,
                         1
+                ))
+                .ruleScoreContributions(Map.of(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 5),
+                        BehaviorRuleCode.LOSS_CUT_SELL,
+                        ScoreDelta.createScoreDelta(-15, 10, -5)
                 ))
                 .finalRtScore(new BigDecimal("52.00"))
                 .finalLhScore(new BigDecimal("44.00"))

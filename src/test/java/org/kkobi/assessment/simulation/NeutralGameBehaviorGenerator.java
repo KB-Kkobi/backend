@@ -19,6 +19,14 @@ public class NeutralGameBehaviorGenerator {
             ScenarioDto scenario,
             SimulatedGamePortfolio portfolio,
             long randomSeed) {
+        return generateGameBehavior(scenario, portfolio, randomSeed, null);
+    }
+
+    public GameBehaviorGenerationResult generateGameBehavior(
+            ScenarioDto scenario,
+            SimulatedGamePortfolio portfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition) {
         List<ScenarioTickDto> decisionTicks = getDecisionTicks(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         List<SimulatedGameAction> actions = new ArrayList<>();
@@ -29,7 +37,8 @@ public class NeutralGameBehaviorGenerator {
                     scenarioTick,
                     portfolio,
                     random,
-                    actions
+                    actions,
+                    frequencyCondition
             );
             if (actionCount == 0) {
                 noActionTickCount++;
@@ -48,6 +57,43 @@ public class NeutralGameBehaviorGenerator {
     }
 
     private int generateTickActions(
+            ScenarioTickDto scenarioTick,
+            SimulatedGamePortfolio portfolio,
+            SplittableRandom random,
+            List<SimulatedGameAction> actions,
+            GameBehaviorFrequencyCondition frequencyCondition) {
+        if (frequencyCondition == null) {
+            return generateBaselineTickActions(scenarioTick, portfolio, random, actions);
+        }
+        if (!canApplyPercentage(random, frequencyCondition.getActionStartPercentage())) {
+            return 0;
+        }
+
+        int actionCount = 0;
+        while (actionCount < frequencyCondition.getMaximumActionCountPerTick()) {
+            CandidateAction selectedAction = selectTradeAction(
+                    scenarioTick.getPrice(),
+                    portfolio,
+                    random
+            );
+            if (selectedAction == null) {
+                break;
+            }
+
+            actions.add(createAction(selectedAction, scenarioTick, portfolio, random));
+            actionCount++;
+            if (actionCount >= frequencyCondition.getMaximumActionCountPerTick()
+                    || !canApplyPercentage(
+                    random,
+                    frequencyCondition.getAdditionalActionPercentage()
+            )) {
+                break;
+            }
+        }
+        return actionCount;
+    }
+
+    private int generateBaselineTickActions(
             ScenarioTickDto scenarioTick,
             SimulatedGamePortfolio portfolio,
             SplittableRandom random,
@@ -73,6 +119,34 @@ public class NeutralGameBehaviorGenerator {
             actionCount++;
         }
         return actionCount;
+    }
+
+    private CandidateAction selectTradeAction(
+            long executionPrice,
+            SimulatedGamePortfolio portfolio,
+            SplittableRandom random) {
+        EnumSet<CandidateAction> candidateActions = EnumSet.noneOf(CandidateAction.class);
+        if (portfolio.canBuyStock(executionPrice)) {
+            candidateActions.add(CandidateAction.BUY);
+        }
+        if (portfolio.canSellStock()) {
+            candidateActions.add(CandidateAction.SELL);
+        }
+        if (portfolio.canCancelDeposit()) {
+            candidateActions.add(CandidateAction.CANCEL_DEPOSIT);
+        }
+        if (candidateActions.isEmpty()) {
+            return null;
+        }
+
+        List<CandidateAction> selectableActions = List.copyOf(candidateActions);
+        return selectableActions.get(random.nextInt(selectableActions.size()));
+    }
+
+    private boolean canApplyPercentage(
+            SplittableRandom random,
+            int percentage) {
+        return random.nextInt(100) < percentage;
     }
 
     private CandidateAction selectCandidateAction(

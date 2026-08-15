@@ -22,6 +22,7 @@ import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -56,7 +57,43 @@ public class GameBehaviorSimulator {
             ScenarioDto scenario,
             SimulatedGamePortfolio initialPortfolio,
             long randomSeed) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                null,
+                ConsecutiveActionMultiplierCondition.ENABLED
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                ConsecutiveActionMultiplierCondition.ENABLED
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
+        if (multiplierCondition == null) {
+            throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
+        }
 
         long initialCash = initialPortfolio.getCurrentCash();
         long initialStockPrincipal = initialPortfolio.getCurrentStockPrincipal();
@@ -71,7 +108,8 @@ public class GameBehaviorSimulator {
         GameBehaviorGenerationResult generationResult = behaviorGenerator.generateGameBehavior(
                 scenario,
                 simulationPortfolio,
-                randomSeed
+                randomSeed,
+                frequencyCondition
         );
 
         List<BehaviorEvent> behaviorEvents = new ArrayList<>();
@@ -88,7 +126,8 @@ public class GameBehaviorSimulator {
                 ),
                 behaviorEvents,
                 behaviorContexts,
-                analysisResults
+                analysisResults,
+                multiplierCondition
         );
 
         long actionSequence = 1L;
@@ -102,7 +141,8 @@ public class GameBehaviorSimulator {
                     ),
                     behaviorEvents,
                     behaviorContexts,
-                    analysisResults
+                    analysisResults,
+                    multiplierCondition
             );
         }
 
@@ -113,6 +153,8 @@ public class GameBehaviorSimulator {
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
                 analysisResults
         );
+        Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions =
+                calculateRuleScoreContributions(analysisResults);
 
         return createSimulationResult(
                 simulationUserId,
@@ -122,7 +164,8 @@ public class GameBehaviorSimulator {
                 generationResult,
                 behaviorContexts,
                 assessmentScore,
-                ruleApplicationCounts
+                ruleApplicationCounts,
+                ruleScoreContributions
         );
     }
 
@@ -130,17 +173,62 @@ public class GameBehaviorSimulator {
             BehaviorEvent behaviorEvent,
             List<BehaviorEvent> previousEvents,
             List<BehaviorContext> behaviorContexts,
-            List<BehaviorAnalysisResult> analysisResults) {
+            List<BehaviorAnalysisResult> analysisResults,
+            ConsecutiveActionMultiplierCondition multiplierCondition) {
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 behaviorEvent,
                 previousEvents
         );
         BehaviorAnalysisResult analysisResult = behaviorRuleEngine
                 .calculateGameBehaviorAnalysis(behaviorContext);
+        if (multiplierCondition == ConsecutiveActionMultiplierCondition.DISABLED) {
+            analysisResult = removeConsecutiveActionMultiplier(
+                    behaviorContext,
+                    analysisResult
+            );
+        }
 
         behaviorContexts.add(behaviorContext);
         analysisResults.add(analysisResult);
         previousEvents.add(behaviorEvent);
+    }
+
+    private BehaviorAnalysisResult removeConsecutiveActionMultiplier(
+            BehaviorContext behaviorContext,
+            BehaviorAnalysisResult analysisResult) {
+        if (behaviorContext.getCurrentEvent() == null
+                || behaviorContext.getConsecutiveActionCount() == null
+                || behaviorContext.getConsecutiveActionCount() <= 1
+                || behaviorContext.getCurrentEvent().getActionType()
+                == BehaviorActionType.INITIAL_ALLOCATION) {
+            return analysisResult;
+        }
+
+        BigDecimal multiplier = behaviorContext.getConsecutiveActionCount() == 2
+                ? BigDecimal.valueOf(1.2)
+                : BigDecimal.valueOf(1.5);
+        List<RuleResult> normalizedRules = analysisResult.getAppliedRules().stream()
+                .map(ruleResult -> new RuleResult(
+                        ruleResult.getRuleCode(),
+                        divideScoreDelta(ruleResult.getScoreDelta(), multiplier),
+                        ruleResult.getReason()
+                ))
+                .toList();
+        return new BehaviorAnalysisResult(normalizedRules);
+    }
+
+    private ScoreDelta divideScoreDelta(
+            ScoreDelta scoreDelta,
+            BigDecimal divisor) {
+        return new ScoreDelta(
+                divideScore(scoreDelta.getRtDelta(), divisor),
+                divideScore(scoreDelta.getLhDelta(), divisor),
+                divideScore(scoreDelta.getRpDelta(), divisor)
+        );
+    }
+
+    private BigDecimal divideScore(BigDecimal score, BigDecimal divisor) {
+        return score.divide(divisor, 2, RoundingMode.HALF_UP);
     }
 
     private BehaviorEvent createInitialAllocationEvent(
@@ -232,6 +320,21 @@ public class GameBehaviorSimulator {
         return ruleApplicationCounts;
     }
 
+    private Map<BehaviorRuleCode, ScoreDelta> calculateRuleScoreContributions(
+            List<BehaviorAnalysisResult> analysisResults) {
+        EnumMap<BehaviorRuleCode, ScoreDelta> ruleScoreContributions =
+                new EnumMap<>(BehaviorRuleCode.class);
+        analysisResults.stream()
+                .map(BehaviorAnalysisResult::getAppliedRules)
+                .flatMap(List::stream)
+                .forEach(ruleResult -> ruleScoreContributions.merge(
+                        ruleResult.getRuleCode(),
+                        ruleResult.getScoreDelta(),
+                        ScoreDelta::addScoreDelta
+                ));
+        return ruleScoreContributions;
+    }
+
     private GameBehaviorSimulationResult createSimulationResult(
             long simulationUserId,
             long initialCash,
@@ -240,7 +343,8 @@ public class GameBehaviorSimulator {
             GameBehaviorGenerationResult generationResult,
             List<BehaviorContext> behaviorContexts,
             AssessmentScore assessmentScore,
-            Map<BehaviorRuleCode, Integer> ruleApplicationCounts) {
+            Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
+            Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions) {
         List<SimulatedGameAction> actions = generationResult.getActions();
         return GameBehaviorSimulationResult.builder()
                 .simulationUserId(simulationUserId)
@@ -302,7 +406,18 @@ public class GameBehaviorSimulator {
                         behaviorContexts,
                         BehaviorActionType.SELL
                 ))
+                .consecutiveActionLevelTwoCount(countConsecutiveActions(
+                        behaviorContexts,
+                        2,
+                        false
+                ))
+                .consecutiveActionLevelThreeOrMoreCount(countConsecutiveActions(
+                        behaviorContexts,
+                        3,
+                        true
+                ))
                 .ruleApplicationCounts(ruleApplicationCounts)
+                .ruleScoreContributions(ruleScoreContributions)
                 .finalRtScore(assessmentScore.getRtScore())
                 .finalLhScore(assessmentScore.getLhScore())
                 .finalRpScore(assessmentScore.getRpScore())
@@ -338,6 +453,22 @@ public class GameBehaviorSimulator {
                 .mapToInt(Integer::intValue)
                 .max()
                 .orElse(0);
+    }
+
+    private int countConsecutiveActions(
+            List<BehaviorContext> behaviorContexts,
+            int consecutiveActionCount,
+            boolean includeGreaterCount) {
+        return (int) behaviorContexts.stream()
+                .filter(context -> context.getCurrentEvent() != null)
+                .filter(context -> context.getCurrentEvent().getActionType() == BehaviorActionType.BUY
+                        || context.getCurrentEvent().getActionType() == BehaviorActionType.SELL)
+                .map(BehaviorContext::getConsecutiveActionCount)
+                .filter(count -> count != null)
+                .filter(count -> includeGreaterCount
+                        ? count >= consecutiveActionCount
+                        : count == consecutiveActionCount)
+                .count();
     }
 
     private int getRuleCount(

@@ -93,6 +93,28 @@ class NeutralGameBehaviorGeneratorTest {
     }
 
     @Test
+    @DisplayName("행동 빈도 조건이 높아질수록 평균 행동 수가 증가한다.")
+    void increaseActionsByFrequencyCondition() {
+        ScenarioDto scenario = scenarioService.getScenario("SC001");
+
+        double lowAverage = calculateAverageActionCount(
+                scenario,
+                GameBehaviorFrequencyCondition.LOW
+        );
+        double mediumAverage = calculateAverageActionCount(
+                scenario,
+                GameBehaviorFrequencyCondition.MEDIUM
+        );
+        double highAverage = calculateAverageActionCount(
+                scenario,
+                GameBehaviorFrequencyCondition.HIGH
+        );
+
+        assertTrue(lowAverage < mediumAverage);
+        assertTrue(mediumAverage < highAverage);
+    }
+
+    @Test
     @DisplayName("게임 종료 Tick이 없으면 행동을 생성할 수 없다.")
     void rejectScenarioWithoutCompletionTick() {
         ScenarioDto scenario = scenarioService.getScenario("SC001");
@@ -129,5 +151,24 @@ class NeutralGameBehaviorGeneratorTest {
                         String.valueOf(action.getQuantity())
                 ))
                 .toList();
+    }
+
+    private double calculateAverageActionCount(
+            ScenarioDto scenario,
+            GameBehaviorFrequencyCondition frequencyCondition) {
+        int totalActionCount = 0;
+        int simulationCount = 200;
+        for (int index = 0; index < simulationCount; index++) {
+            GameBehaviorGenerationResult result = behaviorGenerator.generateGameBehavior(
+                    scenario,
+                    createPortfolio(),
+                    RANDOM_SEED + index,
+                    frequencyCondition
+            );
+            totalActionCount += result.getActions().stream()
+                    .filter(action -> action.getActionType() != BehaviorActionType.MATURITY)
+                    .count();
+        }
+        return (double) totalActionCount / simulationCount;
     }
 }

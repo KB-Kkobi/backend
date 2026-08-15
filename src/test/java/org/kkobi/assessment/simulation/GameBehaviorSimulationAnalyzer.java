@@ -1,6 +1,8 @@
 package org.kkobi.assessment.simulation;
 
 import org.kkobi.assessment.enums.PersonaType;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
+import org.kkobi.assessment.domain.ScoreDelta;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
 
@@ -19,6 +21,10 @@ public class GameBehaviorSimulationAnalyzer {
     private static final int TOTAL_RATIO = 100;
     private static final int STATISTICS_SCALE = 4;
     private static final int DISTRIBUTION_SCALE = 2;
+    private static final int TOTAL_GAME_TICKS = 52;
+    private static final BigDecimal MAXIMUM_SCORE = BigDecimal.valueOf(100);
+    private static final BigDecimal BOUNDARY_SCORE = BigDecimal.valueOf(50);
+    private static final BigDecimal BOUNDARY_RANGE = BigDecimal.valueOf(5);
     private static final MathContext STATISTICS_CONTEXT =
             new MathContext(20, RoundingMode.HALF_UP);
 
@@ -33,6 +39,41 @@ public class GameBehaviorSimulationAnalyzer {
                 scenario,
                 simulationCount,
                 randomSeed,
+                null,
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                simulationResult -> {
+                }
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                simulationResult -> {
+                }
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
                 simulationResult -> {
                 }
         );
@@ -43,11 +84,45 @@ public class GameBehaviorSimulationAnalyzer {
             int simulationCount,
             long randomSeed,
             Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                null,
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                simulationResultConsumer
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                ConsecutiveActionMultiplierCondition.ENABLED,
+                simulationResultConsumer
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
         validateAnalysisInput(scenario, simulationCount);
         Objects.requireNonNull(
                 simulationResultConsumer,
                 "시뮬레이션 결과 처리 함수는 필수입니다."
         );
+        Objects.requireNonNull(multiplierCondition, "연속 행동 배율 조건은 필수입니다.");
         long initialStockPrice = getInitialStockPrice(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         EnumMap<PersonaType, MutablePersonaSummary> personaSummaryByType =
@@ -55,6 +130,12 @@ public class GameBehaviorSimulationAnalyzer {
         MutableScoreSummary overallRtScoreSummary = new MutableScoreSummary();
         MutableScoreSummary overallLhScoreSummary = new MutableScoreSummary();
         MutableScoreSummary overallRpScoreSummary = new MutableScoreSummary();
+        MutableBehaviorStatistics behaviorStatistics = new MutableBehaviorStatistics();
+        EnumMap<BehaviorRuleCode, MutableRuleStatistics> ruleStatistics =
+                createRuleStatistics();
+        MutableScoreDiagnostic rtScoreDiagnostic = new MutableScoreDiagnostic();
+        MutableScoreDiagnostic lhScoreDiagnostic = new MutableScoreDiagnostic();
+        MutableScoreDiagnostic rpScoreDiagnostic = new MutableScoreDiagnostic();
 
         for (int index = 0; index < simulationCount; index++) {
             SplittableRandom userRandom = random.split();
@@ -62,7 +143,9 @@ public class GameBehaviorSimulationAnalyzer {
                     index + 1L,
                     scenario,
                     createInitialPortfolio(initialStockPrice, userRandom),
-                    userRandom.nextLong()
+                    userRandom.nextLong(),
+                    frequencyCondition,
+                    multiplierCondition
             );
             simulationResultConsumer.accept(simulationResult);
             personaSummaryByType.get(simulationResult.getPersonaType())
@@ -70,6 +153,12 @@ public class GameBehaviorSimulationAnalyzer {
             overallRtScoreSummary.addScore(simulationResult.getFinalRtScore());
             overallLhScoreSummary.addScore(simulationResult.getFinalLhScore());
             overallRpScoreSummary.addScore(simulationResult.getFinalRpScore());
+            behaviorStatistics.addSimulationResult(simulationResult);
+            ruleStatistics.values().forEach(ruleStatistic ->
+                    ruleStatistic.addSimulationResult(simulationResult));
+            rtScoreDiagnostic.addScore(simulationResult.getFinalRtScore());
+            lhScoreDiagnostic.addScore(simulationResult.getFinalLhScore());
+            rpScoreDiagnostic.addScore(simulationResult.getFinalRpScore());
         }
 
         return new GameBehaviorSimulationAnalysis(
@@ -77,7 +166,12 @@ public class GameBehaviorSimulationAnalyzer {
                 createPersonaSummaries(personaSummaryByType, simulationCount),
                 overallRtScoreSummary.createScoreSummary(),
                 overallLhScoreSummary.createScoreSummary(),
-                overallRpScoreSummary.createScoreSummary()
+                overallRpScoreSummary.createScoreSummary(),
+                behaviorStatistics.createBehaviorStatistics(simulationCount),
+                createRuleStatisticResults(ruleStatistics),
+                rtScoreDiagnostic.createScoreDiagnostic(simulationCount),
+                lhScoreDiagnostic.createScoreDiagnostic(simulationCount),
+                rpScoreDiagnostic.createScoreDiagnostic(simulationCount)
         );
     }
 
@@ -137,6 +231,27 @@ public class GameBehaviorSimulationAnalyzer {
             summaries.put(personaType, new MutablePersonaSummary(personaType));
         }
         return summaries;
+    }
+
+    private EnumMap<BehaviorRuleCode, MutableRuleStatistics> createRuleStatistics() {
+        EnumMap<BehaviorRuleCode, MutableRuleStatistics> statistics =
+                new EnumMap<>(BehaviorRuleCode.class);
+        for (BehaviorRuleCode ruleCode : BehaviorRuleCode.values()) {
+            statistics.put(ruleCode, new MutableRuleStatistics(ruleCode));
+        }
+        return statistics;
+    }
+
+    private Map<BehaviorRuleCode, GameBehaviorSimulationAnalysis.RuleStatistics>
+            createRuleStatisticResults(
+                    Map<BehaviorRuleCode, MutableRuleStatistics> mutableStatistics) {
+        EnumMap<BehaviorRuleCode, GameBehaviorSimulationAnalysis.RuleStatistics> statistics =
+                new EnumMap<>(BehaviorRuleCode.class);
+        mutableStatistics.forEach((ruleCode, mutableStatistic) -> statistics.put(
+                ruleCode,
+                mutableStatistic.createRuleStatistics()
+        ));
+        return statistics;
     }
 
     private Map<PersonaType, GameBehaviorSimulationAnalysis.PersonaSummary> createPersonaSummaries(
@@ -257,6 +372,119 @@ public class GameBehaviorSimulationAnalyzer {
                     minimumScore.setScale(STATISTICS_SCALE, RoundingMode.HALF_UP),
                     maximumScore.setScale(STATISTICS_SCALE, RoundingMode.HALF_UP)
             );
+        }
+    }
+
+    private static class MutableBehaviorStatistics {
+
+        private long totalBuyCount;
+        private long totalSellCount;
+        private long totalNoActionTickCount;
+        private long totalUserActionCount;
+        private long consecutiveActionLevelTwoCount;
+        private long consecutiveActionLevelThreeOrMoreCount;
+
+        private void addSimulationResult(GameBehaviorSimulationResult simulationResult) {
+            totalBuyCount += simulationResult.getBuyCount();
+            totalSellCount += simulationResult.getSellCount();
+            totalNoActionTickCount += simulationResult.getNoActionTickCount();
+            totalUserActionCount += simulationResult.getBuyCount()
+                    + simulationResult.getSellCount()
+                    + (simulationResult.isDepositCancelled() ? 1 : 0);
+            consecutiveActionLevelTwoCount +=
+                    simulationResult.getConsecutiveActionLevelTwoCount();
+            consecutiveActionLevelThreeOrMoreCount +=
+                    simulationResult.getConsecutiveActionLevelThreeOrMoreCount();
+        }
+
+        private GameBehaviorSimulationAnalysis.BehaviorStatistics createBehaviorStatistics(
+                int simulationCount) {
+            return new GameBehaviorSimulationAnalysis.BehaviorStatistics(
+                    calculateAverage(totalBuyCount, simulationCount),
+                    calculateAverage(totalSellCount, simulationCount),
+                    calculateAverage(totalNoActionTickCount, simulationCount),
+                    calculateAverage(
+                            totalUserActionCount,
+                            (long) simulationCount * TOTAL_GAME_TICKS
+                    ),
+                    consecutiveActionLevelTwoCount,
+                    consecutiveActionLevelThreeOrMoreCount
+            );
+        }
+
+        private BigDecimal calculateAverage(long totalValue, long count) {
+            return BigDecimal.valueOf(totalValue)
+                    .divide(
+                            BigDecimal.valueOf(count),
+                            STATISTICS_SCALE,
+                            RoundingMode.HALF_UP
+                    );
+        }
+    }
+
+    private static class MutableRuleStatistics {
+
+        private final BehaviorRuleCode ruleCode;
+        private long applicationCount;
+        private ScoreDelta totalScoreContribution = ScoreDelta.createZeroScoreDelta();
+
+        private MutableRuleStatistics(BehaviorRuleCode ruleCode) {
+            this.ruleCode = ruleCode;
+        }
+
+        private void addSimulationResult(GameBehaviorSimulationResult simulationResult) {
+            applicationCount += simulationResult.getRuleApplicationCounts()
+                    .getOrDefault(ruleCode, 0);
+            ScoreDelta scoreContribution = simulationResult.getRuleScoreContributions()
+                    .get(ruleCode);
+            if (scoreContribution != null) {
+                totalScoreContribution = totalScoreContribution.addScoreDelta(scoreContribution);
+            }
+        }
+
+        private GameBehaviorSimulationAnalysis.RuleStatistics createRuleStatistics() {
+            return new GameBehaviorSimulationAnalysis.RuleStatistics(
+                    ruleCode,
+                    applicationCount,
+                    totalScoreContribution.getRtDelta(),
+                    totalScoreContribution.getLhDelta(),
+                    totalScoreContribution.getRpDelta()
+            );
+        }
+    }
+
+    private static class MutableScoreDiagnostic {
+
+        private int maximumScoreCount;
+        private int boundaryScoreCount;
+
+        private void addScore(BigDecimal score) {
+            if (score.compareTo(MAXIMUM_SCORE) == 0) {
+                maximumScoreCount++;
+            }
+            if (score.subtract(BOUNDARY_SCORE).abs().compareTo(BOUNDARY_RANGE) <= 0) {
+                boundaryScoreCount++;
+            }
+        }
+
+        private GameBehaviorSimulationAnalysis.ScoreDiagnostic createScoreDiagnostic(
+                int simulationCount) {
+            return new GameBehaviorSimulationAnalysis.ScoreDiagnostic(
+                    maximumScoreCount,
+                    calculateRate(maximumScoreCount, simulationCount),
+                    boundaryScoreCount,
+                    calculateRate(boundaryScoreCount, simulationCount)
+            );
+        }
+
+        private BigDecimal calculateRate(int count, int totalCount) {
+            return BigDecimal.valueOf(count)
+                    .multiply(BigDecimal.valueOf(TOTAL_RATIO))
+                    .divide(
+                            BigDecimal.valueOf(totalCount),
+                            DISTRIBUTION_SCALE,
+                            RoundingMode.HALF_UP
+                    );
         }
     }
 }

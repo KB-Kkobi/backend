@@ -2,6 +2,7 @@ package org.kkobi.assessment.simulation;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.enums.PersonaType;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.service.ScenarioService;
@@ -43,6 +44,11 @@ class GameBehaviorSimulationAnalyzerTest {
         assertScoreSummary(analysis.getOverallRtScoreSummary());
         assertScoreSummary(analysis.getOverallLhScoreSummary());
         assertScoreSummary(analysis.getOverallRpScoreSummary());
+        assertBehaviorStatistics(analysis.getBehaviorStatistics());
+        assertEquals(BehaviorRuleCode.values().length, analysis.getRuleStatistics().size());
+        assertScoreDiagnostic(analysis.getRtScoreDiagnostic());
+        assertScoreDiagnostic(analysis.getLhScoreDiagnostic());
+        assertScoreDiagnostic(analysis.getRpScoreDiagnostic());
     }
 
     @Test
@@ -122,5 +128,29 @@ class GameBehaviorSimulationAnalyzerTest {
         assertTrue(scoreSummary.getAverage().compareTo(BigDecimal.valueOf(100)) <= 0);
         assertTrue(scoreSummary.getStandardDeviation().compareTo(BigDecimal.ZERO) >= 0);
         assertTrue(scoreSummary.getMinimum().compareTo(scoreSummary.getMaximum()) <= 0);
+    }
+
+    private void assertBehaviorStatistics(
+            GameBehaviorSimulationAnalysis.BehaviorStatistics behaviorStatistics) {
+        assertTrue(behaviorStatistics.getAverageBuyCount().compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(behaviorStatistics.getAverageSellCount().compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(behaviorStatistics.getAverageNoActionTickCount()
+                .compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(behaviorStatistics.getAverageActionCountPerTick()
+                .compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(behaviorStatistics.getConsecutiveActionLevelTwoCount() >= 0);
+        assertTrue(behaviorStatistics.getConsecutiveActionLevelThreeOrMoreCount() >= 0);
+    }
+
+    private void assertScoreDiagnostic(
+            GameBehaviorSimulationAnalysis.ScoreDiagnostic scoreDiagnostic) {
+        assertTrue(scoreDiagnostic.getMaximumScoreCount() >= 0);
+        assertTrue(scoreDiagnostic.getMaximumScoreRate().compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(scoreDiagnostic.getMaximumScoreRate()
+                .compareTo(BigDecimal.valueOf(100)) <= 0);
+        assertTrue(scoreDiagnostic.getBoundaryScoreCount() >= 0);
+        assertTrue(scoreDiagnostic.getBoundaryScoreRate().compareTo(BigDecimal.ZERO) >= 0);
+        assertTrue(scoreDiagnostic.getBoundaryScoreRate()
+                .compareTo(BigDecimal.valueOf(100)) <= 0);
     }
 }
