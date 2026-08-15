@@ -19,12 +19,14 @@ import java.util.List;
 @Getter
 public enum GameRuleEvaluationCondition {
 
-    BASELINE("기존 규칙", false, false, false, false),
-    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false, false, false),
+    BASELINE("기존 규칙", false, false, false, false, false, false),
+    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false, false, false, false, false),
     EXCLUSIVE_PRIORITY_AND_ACTION_RATIO(
             "규칙 우선순위와 거래 비율 적용",
             true,
             true,
+            false,
+            false,
             false,
             false
     ),
@@ -33,11 +35,33 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true,
+            false,
+            false,
             false
     ),
     EXCLUSIVE_RATIO_AXIS_AND_DEPOSIT_DECISION(
             "규칙 우선순위·거래 비율·축 분리·예금 해지 후 행동 판정",
             true,
+            true,
+            true,
+            false,
+            false,
+            true
+    ),
+    EXCLUSIVE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION(
+            "규칙 우선순위·정수 거래 비율 점수·예금 해지 후 행동 판정",
+            true,
+            false,
+            false,
+            true,
+            false,
+            true
+    ),
+    EXCLUSIVE_MODERATE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION(
+            "규칙 우선순위·중간 정수 거래 비율 점수·예금 해지 후 행동 판정",
+            true,
+            false,
+            false,
             true,
             true,
             true
@@ -61,6 +85,8 @@ public enum GameRuleEvaluationCondition {
     private final boolean exclusiveRulePriority;
     private final boolean actionRatioWeight;
     private final boolean axisSeparation;
+    private final boolean fixedActionRatioScore;
+    private final boolean moderateFixedActionRatioScore;
     private final boolean depositDecisionEvaluation;
 
     GameRuleEvaluationCondition(
@@ -68,11 +94,15 @@ public enum GameRuleEvaluationCondition {
             boolean exclusiveRulePriority,
             boolean actionRatioWeight,
             boolean axisSeparation,
+            boolean fixedActionRatioScore,
+            boolean moderateFixedActionRatioScore,
             boolean depositDecisionEvaluation) {
         this.description = description;
         this.exclusiveRulePriority = exclusiveRulePriority;
         this.actionRatioWeight = actionRatioWeight;
         this.axisSeparation = axisSeparation;
+        this.fixedActionRatioScore = fixedActionRatioScore;
+        this.moderateFixedActionRatioScore = moderateFixedActionRatioScore;
         this.depositDecisionEvaluation = depositDecisionEvaluation;
     }
 
@@ -90,7 +120,13 @@ public enum GameRuleEvaluationCondition {
         if (axisSeparation) {
             adjustedRules = applyAxisSeparation(adjustedRules);
         }
-        if (actionRatioWeight) {
+        if (fixedActionRatioScore) {
+            adjustedRules = applyFixedActionRatioScore(
+                    behaviorContext,
+                    adjustedRules,
+                    moderateFixedActionRatioScore
+            );
+        } else if (actionRatioWeight) {
             adjustedRules = applyActionRatioWeight(behaviorContext, adjustedRules);
         }
         return new BehaviorAnalysisResult(adjustedRules);
@@ -308,6 +344,161 @@ public enum GameRuleEvaluationCondition {
             return adjustSellRules(behaviorContext, appliedRules);
         }
         return appliedRules;
+    }
+
+    private List<RuleResult> applyFixedActionRatioScore(
+            BehaviorContext behaviorContext,
+            List<RuleResult> appliedRules,
+            boolean moderateScore) {
+        BehaviorActionType actionType = behaviorContext.getCurrentEvent().getActionType();
+        if (actionType == BehaviorActionType.BUY) {
+            return adjustFixedBuyRules(behaviorContext, appliedRules, moderateScore);
+        }
+        if (actionType == BehaviorActionType.SELL) {
+            return adjustFixedSellRules(behaviorContext, appliedRules, moderateScore);
+        }
+        return appliedRules;
+    }
+
+    private List<RuleResult> adjustFixedBuyRules(
+            BehaviorContext behaviorContext,
+            List<RuleResult> appliedRules,
+            boolean moderateScore) {
+        BigDecimal buyRatio = calculateBuyRatio(behaviorContext.getCurrentEvent());
+        return appliedRules.stream()
+                .map(ruleResult -> adjustFixedBuyRule(ruleResult, buyRatio, moderateScore))
+                .toList();
+    }
+
+    private RuleResult adjustFixedBuyRule(
+            RuleResult ruleResult,
+            BigDecimal buyRatio,
+            boolean moderateScore) {
+        ScoreDelta scoreDelta = switch (ruleResult.getRuleCode()) {
+            case CRASH_BUY -> calculateFixedCrashBuyScore(buyRatio, moderateScore);
+            case BULL_BUY -> calculateFixedBullBuyScore(buyRatio, moderateScore);
+            case LOSS_AVERAGING_BUY -> calculateFixedLossAveragingBuyScore(buyRatio);
+            default -> ruleResult.getScoreDelta();
+        };
+        return replaceScoreDelta(ruleResult, scoreDelta);
+    }
+
+    private ScoreDelta calculateFixedCrashBuyScore(
+            BigDecimal buyRatio,
+            boolean moderateScore) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(5, 0, 0);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(15, -10, moderateScore ? 0 : 5);
+        }
+        return ScoreDelta.createScoreDelta(10, -5, moderateScore ? 0 : 5);
+    }
+
+    private ScoreDelta calculateFixedBullBuyScore(
+            BigDecimal buyRatio,
+            boolean moderateScore) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(5, 0, 5);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(10, -10, moderateScore ? 10 : 15);
+        }
+        return ScoreDelta.createScoreDelta(5, -5, 10);
+    }
+
+    private ScoreDelta calculateFixedLossAveragingBuyScore(BigDecimal buyRatio) {
+        if (buyRatio.compareTo(BUY_SMALL_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(5, 0, 0);
+        }
+        if (buyRatio.compareTo(BUY_LARGE_RATIO) >= 0) {
+            return ScoreDelta.createScoreDelta(15, -10, 0);
+        }
+        return ScoreDelta.createScoreDelta(10, -5, 0);
+    }
+
+    private List<RuleResult> adjustFixedSellRules(
+            BehaviorContext behaviorContext,
+            List<RuleResult> appliedRules,
+            boolean moderateScore) {
+        BigDecimal sellRatio = calculateSellRatio(behaviorContext.getCurrentEvent());
+        List<RuleResult> adjustedRules = appliedRules.stream()
+                .map(ruleResult -> adjustFixedSellRule(ruleResult, sellRatio, moderateScore))
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+
+        if (canAddCrashPartialSellRule(behaviorContext, adjustedRules, sellRatio)) {
+            adjustedRules.add(createFixedCrashPartialSellRule(sellRatio));
+        }
+        return adjustedRules;
+    }
+
+    private RuleResult adjustFixedSellRule(
+            RuleResult ruleResult,
+            BigDecimal sellRatio,
+            boolean moderateScore) {
+        ScoreDelta scoreDelta = switch (ruleResult.getRuleCode()) {
+            case CRASH_FULL_SELL -> ScoreDelta.createScoreDelta(-15, 10, -5);
+            case LOSS_CUT_SELL -> calculateFixedLossCutSellScore(sellRatio, moderateScore);
+            case BULL_PROFIT_SELL -> calculateFixedBullProfitSellScore(sellRatio, moderateScore);
+            default -> ruleResult.getScoreDelta();
+        };
+        return replaceScoreDelta(ruleResult, scoreDelta);
+    }
+
+    private ScoreDelta calculateFixedLossCutSellScore(
+            BigDecimal sellRatio,
+            boolean moderateScore) {
+        if (sellRatio.compareTo(SELL_MINIMUM_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(-5, 5, 0);
+        }
+        if (sellRatio.compareTo(SELL_MAJORITY_RATIO) < 0) {
+            return moderateScore
+                    ? ScoreDelta.createScoreDelta(-5, 5, -5)
+                    : ScoreDelta.createScoreDelta(-10, 10, -5);
+        }
+        if (sellRatio.compareTo(BigDecimal.valueOf(100)) < 0) {
+            return moderateScore
+                    ? ScoreDelta.createScoreDelta(-10, 10, -5)
+                    : ScoreDelta.createScoreDelta(-15, 15, -10);
+        }
+        return moderateScore
+                ? ScoreDelta.createScoreDelta(-15, 10, -10)
+                : ScoreDelta.createScoreDelta(-15, 15, -10);
+    }
+
+    private ScoreDelta calculateFixedBullProfitSellScore(
+            BigDecimal sellRatio,
+            boolean moderateScore) {
+        if (sellRatio.compareTo(SELL_MINIMUM_RATIO) < 0) {
+            return ScoreDelta.createScoreDelta(0, 5, 0);
+        }
+        if (sellRatio.compareTo(SELL_MAJORITY_RATIO) < 0) {
+            return moderateScore
+                    ? ScoreDelta.createScoreDelta(0, 5, 5)
+                    : ScoreDelta.createScoreDelta(0, 10, 5);
+        }
+        return moderateScore
+                ? ScoreDelta.createScoreDelta(0, 10, 0)
+                : ScoreDelta.createScoreDelta(0, 15, 10);
+    }
+
+    private RuleResult createFixedCrashPartialSellRule(BigDecimal sellRatio) {
+        ScoreDelta scoreDelta = sellRatio.compareTo(SELL_MAJORITY_RATIO) >= 0
+                ? ScoreDelta.createScoreDelta(-10, 5, -5)
+                : ScoreDelta.createScoreDelta(-5, 5, 0);
+        return new RuleResult(
+                BehaviorRuleCode.CRASH_FULL_SELL,
+                scoreDelta,
+                "급락 상황에서 보유 증권을 일부 매도했습니다."
+        );
+    }
+
+    private RuleResult replaceScoreDelta(RuleResult ruleResult, ScoreDelta scoreDelta) {
+        return new RuleResult(
+                ruleResult.getRuleCode(),
+                scoreDelta,
+                ruleResult.getReason()
+        );
     }
 
     private List<RuleResult> adjustBuyRules(

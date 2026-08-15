@@ -186,6 +186,33 @@ public class GameBehaviorSimulator {
             RuleAccumulationCondition ruleAccumulationCondition,
             LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
             GameRuleEvaluationCondition ruleEvaluationCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                lossAveragingRtWeightCondition,
+                ruleEvaluationCondition,
+                TradeQuantityGenerationCondition.CURRENT_RANDOM_BUY_PERCENTAGE
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
         if (multiplierCondition == null) {
             throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
@@ -202,6 +229,9 @@ public class GameBehaviorSimulator {
         if (ruleEvaluationCondition == null) {
             throw new IllegalArgumentException("게임 규칙 평가 조건은 필수입니다.");
         }
+        if (tradeQuantityCondition == null) {
+            throw new IllegalArgumentException("거래 수량 생성 조건은 필수입니다.");
+        }
 
         long initialCash = initialPortfolio.getCurrentCash();
         long initialStockPrincipal = initialPortfolio.getCurrentStockPrincipal();
@@ -217,7 +247,8 @@ public class GameBehaviorSimulator {
                 scenario,
                 simulationPortfolio,
                 randomSeed,
-                frequencyCondition
+                frequencyCondition,
+                tradeQuantityCondition
         );
 
         List<BehaviorEvent> behaviorEvents = new ArrayList<>();

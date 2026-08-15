@@ -184,6 +184,37 @@ class NeutralGameBehaviorGeneratorTest {
     }
 
     @Test
+    @DisplayName("대칭 수량 조건은 매수도 25%·50%·100% 구간에서 생성한다.")
+    void generateCategorizedBuyQuantity() {
+        ScenarioDto scenario = scenarioService.getScenario("SC001");
+
+        for (long randomSeed = 1L; randomSeed <= 100L; randomSeed++) {
+            GameBehaviorGenerationResult result = behaviorGenerator.generateGameBehavior(
+                    scenario,
+                    createPortfolio(),
+                    randomSeed,
+                    GameBehaviorFrequencyCondition.HIGH,
+                    TradeQuantityGenerationCondition.SYMMETRIC_THREE_LEVEL
+            );
+            for (SimulatedGameAction action : result.getActions()) {
+                if (action.getActionType() != BehaviorActionType.BUY) {
+                    continue;
+                }
+
+                long cashBeforeBuy = action.getCurrentCash() + action.getActionAmount();
+                int maximumBuyQuantity = (int) (cashBeforeBuy / action.getExecutionPrice());
+                int partialQuantity = Math.max(1, maximumBuyQuantity / 4);
+                int halfQuantity = Math.max(1, maximumBuyQuantity / 2);
+                assertTrue(
+                        action.getQuantity() == partialQuantity
+                                || action.getQuantity() == halfQuantity
+                                || action.getQuantity() == maximumBuyQuantity
+                );
+            }
+        }
+    }
+
+    @Test
     @DisplayName("고빈도 조건은 일반 중립 검증과 구분한다.")
     void separateHighFrequencyStressTest() {
         assertFalse(GameBehaviorFrequencyCondition.LOW.isStressTest());

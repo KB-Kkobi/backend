@@ -250,6 +250,227 @@ class GameRuleEvaluationConditionTest {
         assertTotalScore(adjustedResults, "0", "0", "0");
     }
 
+    @Test
+    @DisplayName("급락장 매수는 매수 비율에 따라 5·10·15점의 정수 점수를 적용한다.")
+    void applyFixedCrashBuyScoresByActionRatio() {
+        assertFixedBuyScore(createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "5", "0", "0");
+        assertFixedBuyScore(createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "10", "-5", "5");
+        assertFixedBuyScore(createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "15", "-10", "5");
+    }
+
+    @Test
+    @DisplayName("급등장 매수는 매수 비율이 커질수록 RT·LH·RP 강도가 증가한다.")
+    void applyFixedBullBuyScoresByActionRatio() {
+        assertFixedBuyScore(createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "0", "5");
+        assertFixedBuyScore(createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "-5", "10");
+        assertFixedBuyScore(createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "10", "-10", "15");
+    }
+
+    @Test
+    @DisplayName("물타기 매수는 매수 비율에 따라 RT·LH만 정수 점수로 반영한다.")
+    void applyFixedLossAveragingScoresByActionRatio() {
+        assertFixedBuyScore(createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.LOSS_AVERAGING_BUY, "5", "0", "0");
+        assertFixedBuyScore(createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.LOSS_AVERAGING_BUY, "10", "-5", "0");
+        assertFixedBuyScore(createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.LOSS_AVERAGING_BUY, "15", "-10", "0");
+    }
+
+    @Test
+    @DisplayName("손절 매도는 전량 매도 점수가 일부 매도보다 작아지지 않는다.")
+    void applyMonotonicFixedLossCutScoresBySellRatio() {
+        assertFixedSellScore(19, 81, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-5", "5", "0");
+        assertFixedSellScore(20, 80, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-10", "10", "-5");
+        assertFixedSellScore(50, 50, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-15", "15", "-10");
+        assertFixedSellScore(100, 0, true,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-15", "15", "-10");
+    }
+
+    @Test
+    @DisplayName("급등장 익절 매도는 전량 매도 점수가 일부 매도보다 작아지지 않는다.")
+    void applyMonotonicFixedBullProfitScoresBySellRatio() {
+        assertFixedSellScore(19, 81, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "5", "0");
+        assertFixedSellScore(20, 80, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "10", "5");
+        assertFixedSellScore(50, 50, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "15", "10");
+        assertFixedSellScore(100, 0, true,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "15", "10");
+    }
+
+    @Test
+    @DisplayName("급락장 매도는 20%·50%·전량 구간에 정수 점수를 적용한다.")
+    void applyFixedCrashSellScoresBySellRatio() {
+        assertFixedCrashSellScore(20, 80, false, "-5", "5", "0");
+        assertFixedCrashSellScore(50, 50, false, "-10", "5", "-5");
+        assertFixedCrashSellScore(100, 0, true, "-15", "10", "-5");
+    }
+
+    @Test
+    @DisplayName("중간 정수안의 급락장 매수는 RT 중심으로 점수를 적용한다.")
+    void applyModerateCrashBuyScoresByActionRatio() {
+        assertModerateBuyScore(createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "5", "0", "0");
+        assertModerateBuyScore(createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "10", "-5", "0");
+        assertModerateBuyScore(createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.CRASH_BUY, "15", "-10", "0");
+    }
+
+    @Test
+    @DisplayName("중간 정수안의 급등장 매수는 대규모 RP를 10점으로 제한한다.")
+    void applyModerateBullBuyScoresByActionRatio() {
+        assertModerateBuyScore(createBuyContext(900_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "0", "5");
+        assertModerateBuyScore(createBuyContext(1_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "5", "-5", "10");
+        assertModerateBuyScore(createBuyContext(3_000_000L, 10_000_000L),
+                BehaviorRuleCode.BULL_BUY, "10", "-10", "10");
+    }
+
+    @Test
+    @DisplayName("중간 정수안의 손절 매도는 LH를 최대 10점으로 제한한다.")
+    void applyModerateLossCutScoresBySellRatio() {
+        assertModerateSellScore(19, 81, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-5", "5", "0");
+        assertModerateSellScore(20, 80, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-5", "5", "-5");
+        assertModerateSellScore(50, 50, false,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-10", "10", "-5");
+        assertModerateSellScore(100, 0, true,
+                BehaviorRuleCode.LOSS_CUT_SELL, "-15", "10", "-10");
+    }
+
+    @Test
+    @DisplayName("중간 정수안의 급등장 익절은 LH를 최대 10점으로 제한한다.")
+    void applyModerateBullProfitScoresBySellRatio() {
+        assertModerateSellScore(19, 81, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "5", "0");
+        assertModerateSellScore(20, 80, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "5", "5");
+        assertModerateSellScore(50, 50, false,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "10", "0");
+        assertModerateSellScore(100, 0, true,
+                BehaviorRuleCode.BULL_PROFIT_SELL, "0", "10", "0");
+    }
+
+    private void assertFixedBuyScore(
+            BehaviorContext behaviorContext,
+            BehaviorRuleCode ruleCode,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
+                .adjustAnalysisResult(
+                        behaviorContext,
+                        createAnalysisResult(createRule(ruleCode, 1, 1, 1))
+                );
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertModerateBuyScore(
+            BehaviorContext behaviorContext,
+            BehaviorRuleCode ruleCode,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
+                .adjustAnalysisResult(
+                        behaviorContext,
+                        createAnalysisResult(createRule(ruleCode, 1, 1, 1))
+                );
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertFixedSellScore(
+            int sellQuantity,
+            int remainingQuantity,
+            boolean fullSecuritySell,
+            BehaviorRuleCode ruleCode,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorContext behaviorContext = createSellContext(
+                sellQuantity,
+                remainingQuantity,
+                fullSecuritySell
+        );
+        behaviorContext.setMarketState(ruleCode == BehaviorRuleCode.BULL_PROFIT_SELL
+                ? MarketState.BULL
+                : MarketState.NORMAL);
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
+                .adjustAnalysisResult(
+                        behaviorContext,
+                        createAnalysisResult(createRule(ruleCode, 1, 1, 1))
+                );
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertFixedCrashSellScore(
+            int sellQuantity,
+            int remainingQuantity,
+            boolean fullSecuritySell,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorContext behaviorContext = createSellContext(
+                sellQuantity,
+                remainingQuantity,
+                fullSecuritySell
+        );
+        BehaviorAnalysisResult analysisResult = fullSecuritySell
+                ? createAnalysisResult(createRule(BehaviorRuleCode.CRASH_FULL_SELL, 1, 1, 1))
+                : createAnalysisResult();
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
+                .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertModerateSellScore(
+            int sellQuantity,
+            int remainingQuantity,
+            boolean fullSecuritySell,
+            BehaviorRuleCode ruleCode,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorContext behaviorContext = createSellContext(
+                sellQuantity,
+                remainingQuantity,
+                fullSecuritySell
+        );
+        behaviorContext.setMarketState(ruleCode == BehaviorRuleCode.BULL_PROFIT_SELL
+                ? MarketState.BULL
+                : MarketState.NORMAL);
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
+                .adjustAnalysisResult(
+                        behaviorContext,
+                        createAnalysisResult(createRule(ruleCode, 1, 1, 1))
+                );
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
     private BehaviorContext createBuyContext(long actionAmount, long totalAssetPrincipal) {
         BehaviorEvent behaviorEvent = new BehaviorEvent();
         behaviorEvent.setActionType(BehaviorActionType.BUY);

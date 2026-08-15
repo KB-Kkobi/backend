@@ -300,6 +300,33 @@ public class GameBehaviorSimulationAnalyzer {
             LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
             GameRuleEvaluationCondition ruleEvaluationCondition,
             Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                lossAveragingRtWeightCondition,
+                ruleEvaluationCondition,
+                TradeQuantityGenerationCondition.CURRENT_RANDOM_BUY_PERCENTAGE,
+                simulationResultConsumer
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition,
+            TradeQuantityGenerationCondition tradeQuantityCondition,
+            Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
         validateAnalysisInput(scenario, simulationCount);
         Objects.requireNonNull(
                 simulationResultConsumer,
@@ -313,6 +340,7 @@ public class GameBehaviorSimulationAnalyzer {
                 "물타기 RT 가중치 조건은 필수입니다."
         );
         Objects.requireNonNull(ruleEvaluationCondition, "게임 규칙 평가 조건은 필수입니다.");
+        Objects.requireNonNull(tradeQuantityCondition, "거래 수량 생성 조건은 필수입니다.");
         long initialStockPrice = getInitialStockPrice(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         EnumMap<PersonaType, MutablePersonaSummary> personaSummaryByType =
@@ -339,7 +367,8 @@ public class GameBehaviorSimulationAnalyzer {
                     sameTickRuleCondition,
                     ruleAccumulationCondition,
                     lossAveragingRtWeightCondition,
-                    ruleEvaluationCondition
+                    ruleEvaluationCondition,
+                    tradeQuantityCondition
             );
             simulationResultConsumer.accept(simulationResult);
             personaSummaryByType.get(simulationResult.getPersonaType())

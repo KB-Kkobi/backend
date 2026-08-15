@@ -28,6 +28,24 @@ public class NeutralGameBehaviorGenerator {
             SimulatedGamePortfolio portfolio,
             long randomSeed,
             GameBehaviorFrequencyCondition frequencyCondition) {
+        return generateGameBehavior(
+                scenario,
+                portfolio,
+                randomSeed,
+                frequencyCondition,
+                TradeQuantityGenerationCondition.CURRENT_RANDOM_BUY_PERCENTAGE
+        );
+    }
+
+    public GameBehaviorGenerationResult generateGameBehavior(
+            ScenarioDto scenario,
+            SimulatedGamePortfolio portfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
+        if (tradeQuantityCondition == null) {
+            throw new IllegalArgumentException("거래 수량 생성 조건은 필수입니다.");
+        }
         List<ScenarioTickDto> decisionTicks = getDecisionTicks(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         List<SimulatedGameAction> actions = new ArrayList<>();
@@ -50,7 +68,8 @@ public class NeutralGameBehaviorGenerator {
                     portfolio,
                     random,
                     actions,
-                    frequencyCondition
+                    frequencyCondition,
+                    tradeQuantityCondition
             );
             if (actionCount == 0) {
                 noActionTickCount++;
@@ -73,9 +92,16 @@ public class NeutralGameBehaviorGenerator {
             SimulatedGamePortfolio portfolio,
             SplittableRandom random,
             List<SimulatedGameAction> actions,
-            GameBehaviorFrequencyCondition frequencyCondition) {
+            GameBehaviorFrequencyCondition frequencyCondition,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
         if (frequencyCondition == null) {
-            return generateBaselineTickActions(scenarioTick, portfolio, random, actions);
+            return generateBaselineTickActions(
+                    scenarioTick,
+                    portfolio,
+                    random,
+                    actions,
+                    tradeQuantityCondition
+            );
         }
         if (!canApplyPercentage(random, frequencyCondition.getActionStartPercentage())) {
             return 0;
@@ -92,7 +118,13 @@ public class NeutralGameBehaviorGenerator {
                 break;
             }
 
-            actions.add(createAction(selectedAction, scenarioTick, portfolio, random));
+            actions.add(createAction(
+                    selectedAction,
+                    scenarioTick,
+                    portfolio,
+                    random,
+                    tradeQuantityCondition
+            ));
             actionCount++;
             if (actionCount >= frequencyCondition.getMaximumActionCountPerTick()
                     || !canApplyPercentage(
@@ -109,7 +141,8 @@ public class NeutralGameBehaviorGenerator {
             ScenarioTickDto scenarioTick,
             SimulatedGamePortfolio portfolio,
             SplittableRandom random,
-            List<SimulatedGameAction> actions) {
+            List<SimulatedGameAction> actions,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
         int actionCount = 0;
 
         while (actionCount < MAXIMUM_ACTION_COUNT_PER_TICK) {
@@ -126,7 +159,8 @@ public class NeutralGameBehaviorGenerator {
                     selectedAction,
                     scenarioTick,
                     portfolio,
-                    random
+                    random,
+                    tradeQuantityCondition
             ));
             actionCount++;
         }
@@ -178,13 +212,15 @@ public class NeutralGameBehaviorGenerator {
             CandidateAction selectedAction,
             ScenarioTickDto scenarioTick,
             SimulatedGamePortfolio portfolio,
-            SplittableRandom random) {
+            SplittableRandom random,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
         return switch (selectedAction) {
             case BUY -> portfolio.buyStock(
                     scenarioTick.getTick(),
-                    generateQuantity(
+                    generateBuyQuantity(
                             portfolio.getMaximumBuyQuantity(scenarioTick.getPrice()),
-                            random
+                            random,
+                            tradeQuantityCondition
                     ),
                     scenarioTick.getPrice()
             );
@@ -223,13 +259,19 @@ public class NeutralGameBehaviorGenerator {
         return 1;
     }
 
-    private int generateQuantity(
+    private int generateBuyQuantity(
             int maximumQuantity,
-            SplittableRandom random) {
+            SplittableRandom random,
+            TradeQuantityGenerationCondition tradeQuantityCondition) {
         if (maximumQuantity <= 0) {
             throw new IllegalArgumentException("최대 거래 가능 수량은 0보다 커야 합니다.");
         }
         int investmentPercentage = random.nextInt(1, 101);
+        if (tradeQuantityCondition
+                == TradeQuantityGenerationCondition.SYMMETRIC_THREE_LEVEL) {
+            return TradeQuantityType.fromPercentage(investmentPercentage)
+                    .calculateQuantity(maximumQuantity);
+        }
         return Math.max(
                 1,
                 (int) ((long) maximumQuantity * investmentPercentage / 100)
@@ -242,10 +284,10 @@ public class NeutralGameBehaviorGenerator {
         if (currentStockQuantity <= 0) {
             throw new IllegalArgumentException("보유 주식 수량은 0보다 커야 합니다.");
         }
-        SellQuantityType sellQuantityType = SellQuantityType.values()[
-                random.nextInt(SellQuantityType.values().length)
+        TradeQuantityType tradeQuantityType = TradeQuantityType.values()[
+                random.nextInt(TradeQuantityType.values().length)
         ];
-        return sellQuantityType.calculateQuantity(currentStockQuantity);
+        return tradeQuantityType.calculateQuantity(currentStockQuantity);
     }
 
     private List<ScenarioTickDto> getDecisionTicks(ScenarioDto scenario) {
@@ -299,7 +341,7 @@ public class NeutralGameBehaviorGenerator {
         SELL
     }
 
-    private enum SellQuantityType {
+    private enum TradeQuantityType {
         PARTIAL {
             @Override
             int calculateQuantity(int currentStockQuantity) {
@@ -318,6 +360,16 @@ public class NeutralGameBehaviorGenerator {
                 return currentStockQuantity;
             }
         };
+
+        private static TradeQuantityType fromPercentage(int percentage) {
+            if (percentage <= 33) {
+                return PARTIAL;
+            }
+            if (percentage <= 66) {
+                return HALF;
+            }
+            return FULL;
+        }
 
         abstract int calculateQuantity(int currentStockQuantity);
     }
