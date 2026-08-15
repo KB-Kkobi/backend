@@ -18,9 +18,20 @@ import java.util.List;
 @Getter
 public enum GameRuleEvaluationCondition {
 
-    BASELINE("기존 규칙", false, false),
-    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false),
-    EXCLUSIVE_PRIORITY_AND_ACTION_RATIO("규칙 우선순위와 거래 비율 적용", true, true);
+    BASELINE("기존 규칙", false, false, false),
+    EXCLUSIVE_RULE_PRIORITY("구체적인 규칙 우선 적용", true, false, false),
+    EXCLUSIVE_PRIORITY_AND_ACTION_RATIO(
+            "규칙 우선순위와 거래 비율 적용",
+            true,
+            true,
+            false
+    ),
+    EXCLUSIVE_RATIO_AND_AXIS_SEPARATION(
+            "규칙 우선순위·거래 비율·RT/RP 역할 분리",
+            true,
+            true,
+            true
+    );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
     private static final BigDecimal BUY_LARGE_RATIO = BigDecimal.valueOf(30);
@@ -28,19 +39,25 @@ public enum GameRuleEvaluationCondition {
     private static final BigDecimal SELL_MAJORITY_RATIO = BigDecimal.valueOf(50);
     private static final BigDecimal SMALL_ACTION_MULTIPLIER = BigDecimal.valueOf(0.5);
     private static final BigDecimal LARGE_ACTION_MULTIPLIER = BigDecimal.valueOf(1.25);
+    private static final BigDecimal LOSS_AVERAGING_RT_MULTIPLIER =
+            BigDecimal.valueOf(10).divide(BigDecimal.valueOf(15), 4, RoundingMode.HALF_UP);
     private static final int RATIO_SCALE = 4;
+    private static final int SCORE_SCALE = 2;
 
     private final String description;
     private final boolean exclusiveRulePriority;
     private final boolean actionRatioWeight;
+    private final boolean axisSeparation;
 
     GameRuleEvaluationCondition(
             String description,
             boolean exclusiveRulePriority,
-            boolean actionRatioWeight) {
+            boolean actionRatioWeight,
+            boolean axisSeparation) {
         this.description = description;
         this.exclusiveRulePriority = exclusiveRulePriority;
         this.actionRatioWeight = actionRatioWeight;
+        this.axisSeparation = axisSeparation;
     }
 
     public BehaviorAnalysisResult adjustAnalysisResult(
@@ -54,6 +71,9 @@ public enum GameRuleEvaluationCondition {
                 behaviorContext,
                 analysisResult.getAppliedRules()
         );
+        if (axisSeparation) {
+            adjustedRules = applyAxisSeparation(adjustedRules);
+        }
         if (actionRatioWeight) {
             adjustedRules = applyActionRatioWeight(behaviorContext, adjustedRules);
         }
@@ -79,6 +99,39 @@ public enum GameRuleEvaluationCondition {
                     ruleResult.getRuleCode() == BehaviorRuleCode.LOSS_CUT_SELL);
         }
         return adjustedRules;
+    }
+
+    private List<RuleResult> applyAxisSeparation(List<RuleResult> appliedRules) {
+        return appliedRules.stream()
+                .map(this::adjustAxisSeparationRule)
+                .toList();
+    }
+
+    private RuleResult adjustAxisSeparationRule(RuleResult ruleResult) {
+        ScoreDelta scoreDelta = ruleResult.getScoreDelta();
+        ScoreDelta adjustedScoreDelta = switch (ruleResult.getRuleCode()) {
+            case CRASH_BUY -> new ScoreDelta(
+                    scoreDelta.getRtDelta(),
+                    scoreDelta.getLhDelta(),
+                    BigDecimal.ZERO
+            );
+            case LOSS_AVERAGING_BUY -> new ScoreDelta(
+                    multiplyScore(scoreDelta.getRtDelta(), LOSS_AVERAGING_RT_MULTIPLIER),
+                    scoreDelta.getLhDelta(),
+                    BigDecimal.ZERO
+            );
+            case DEPOSIT_CANCEL_AND_SECURITY_BUY -> new ScoreDelta(
+                    scoreDelta.getRtDelta(),
+                    scoreDelta.getLhDelta(),
+                    multiplyScore(scoreDelta.getRpDelta(), BigDecimal.valueOf(0.5))
+            );
+            default -> scoreDelta;
+        };
+        return new RuleResult(
+                ruleResult.getRuleCode(),
+                adjustedScoreDelta,
+                ruleResult.getReason()
+        );
     }
 
     private List<RuleResult> applyActionRatioWeight(
@@ -231,5 +284,9 @@ public enum GameRuleEvaluationCondition {
         } catch (ArithmeticException exception) {
             throw new IllegalArgumentException("시뮬레이션 자산 금액이 허용 범위를 초과했습니다.", exception);
         }
+    }
+
+    private BigDecimal multiplyScore(BigDecimal score, BigDecimal multiplier) {
+        return score.multiply(multiplier).setScale(SCORE_SCALE, RoundingMode.HALF_UP);
     }
 }

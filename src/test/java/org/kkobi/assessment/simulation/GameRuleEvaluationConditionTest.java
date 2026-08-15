@@ -100,6 +100,66 @@ class GameRuleEvaluationConditionTest {
         assertScore(adjustedResult, "12.50", "-6.25", "6.25");
     }
 
+    @Test
+    @DisplayName("급락장 매수는 RT를 유지하고 RP 기여를 제거한다.")
+    void separateCrashBuyRtAndRpContribution() {
+        BehaviorContext behaviorContext = createBuyContext(2_000_000L, 10_000_000L);
+        BehaviorAnalysisResult analysisResult = createAnalysisResult(
+                createRule(BehaviorRuleCode.CRASH_BUY, 10, -5, 5)
+        );
+
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AND_AXIS_SEPARATION
+                .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, "10", "-5", "0");
+    }
+
+    @Test
+    @DisplayName("물타기 매수는 RT를 10점으로 낮추고 RP 기여를 제거한다.")
+    void separateLossAveragingRtAndRpContribution() {
+        BehaviorContext behaviorContext = createBuyContext(2_000_000L, 10_000_000L);
+        BehaviorAnalysisResult analysisResult = createAnalysisResult(
+                createRule(BehaviorRuleCode.LOSS_AVERAGING_BUY, 15, -5, 5)
+        );
+
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AND_AXIS_SEPARATION
+                .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, "10.00", "-5", "0");
+    }
+
+    @Test
+    @DisplayName("급등장 매수의 RT·LH·RP 가중치는 유지한다.")
+    void maintainBullBuyContribution() {
+        BehaviorContext behaviorContext = createBuyContext(2_000_000L, 10_000_000L);
+        BehaviorAnalysisResult analysisResult = createAnalysisResult(
+                createRule(BehaviorRuleCode.BULL_BUY, 5, -5, 10)
+        );
+
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AND_AXIS_SEPARATION
+                .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, "5", "-5", "10");
+    }
+
+    @Test
+    @DisplayName("예금 해지 후 매수의 RP 가중치를 5점으로 낮춘다.")
+    void reduceDepositCancelAndBuyRpContribution() {
+        BehaviorContext behaviorContext = createBuyContext(2_000_000L, 10_000_000L);
+        BehaviorAnalysisResult analysisResult = createAnalysisResult(
+                createRule(BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY, 5, -10, 10)
+        );
+
+        BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
+                .EXCLUSIVE_RATIO_AND_AXIS_SEPARATION
+                .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, "5", "-10", "5.00");
+    }
+
     private BehaviorContext createBuyContext(long actionAmount, long totalAssetPrincipal) {
         BehaviorEvent behaviorEvent = new BehaviorEvent();
         behaviorEvent.setActionType(BehaviorActionType.BUY);
