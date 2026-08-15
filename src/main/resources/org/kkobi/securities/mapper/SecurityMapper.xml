@@ -58,8 +58,11 @@
             GROUP BY security_id
         ) price_data ON price_data.security_id = s.security_id
         <where>
-            <if test="type != null">
-                s.type = #{type}
+            <if test="types != null and types.size() > 0">
+                s.type IN
+                <foreach collection="types" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
             </if>
             <if test="keyword != null and keyword != ''">
                 AND (s.name LIKE CONCAT('%', #{keyword}, '%')
@@ -101,8 +104,11 @@
         SELECT COUNT(*)
         FROM securities
         <where>
-            <if test="type != null">
-                type = #{type}
+            <if test="types != null and types.size() > 0">
+                type IN
+                <foreach collection="types" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
             </if>
             <if test="keyword != null and keyword != ''">
                 AND (name LIKE CONCAT('%', #{keyword}, '%') OR ticker LIKE CONCAT('%', #{keyword}, '%'))
