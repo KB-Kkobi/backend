@@ -8,6 +8,10 @@ public enum SimulationExperimentCatalog {
     SMALL_TRADE_DEAD_ZONE_FREQUENCY(
             "소규모 거래 제외 전후의 저·중·고빈도 비교",
             createSmallTradeDeadZoneFrequencyCases()
+    ),
+    CRASH_HOLDING_FREQUENCY(
+            "급락 구간 보유 유지 규칙 적용 전후의 저·중·고빈도 비교",
+            createCrashHoldingFrequencyCases()
     );
 
     private final String description;
@@ -39,6 +43,21 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "소규모 매수·매도 점수 제외 후보",
                 GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase> createCrashHoldingFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "급락 구간 보유 유지 규칙 적용 전",
+                GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
+        );
+        addFrequencyCases(
+                experimentCases,
+                "급락 구간 보유 유지 규칙 적용 후",
+                GameBiasMitigationCondition.CRASH_HOLDING_WITH_SMALL_TRADE_DEAD_ZONE
         );
         return experimentCases;
     }

@@ -36,15 +36,20 @@ import java.util.Set;
 public class GameBehaviorSimulator {
 
     private static final Long GAME_SECURITY_ID = 1L;
+    private static final BigDecimal CRASH_HOLDING_MINIMUM_RATIO = BigDecimal.valueOf(50);
+    private static final ScoreDelta CRASH_HOLDING_SCORE =
+            ScoreDelta.createScoreDelta(5, 0, 0);
 
     private final NeutralGameBehaviorGenerator behaviorGenerator =
             new NeutralGameBehaviorGenerator();
     private final AssetRatioCalculator assetRatioCalculator =
             new AssetRatioCalculator();
+    private final MarketStateCalculator marketStateCalculator =
+            new MarketStateCalculator();
     private final BehaviorContextFactory behaviorContextFactory =
             new BehaviorContextFactory(
                     assetRatioCalculator,
-                    new MarketStateCalculator()
+                    marketStateCalculator
             );
     private final BehaviorRuleEngine behaviorRuleEngine =
             new BehaviorRuleEngine();
@@ -305,9 +310,19 @@ public class GameBehaviorSimulator {
                 analysisResults
         );
 
-        List<ScoreDelta> scoreDeltas = analysisResults.stream()
+        int crashHoldingEpisodeCount = ruleEvaluationCondition.appliesCrashHoldingRule()
+                ? calculateCrashHoldingEpisodeCount(
+                scenario,
+                initialStockQuantity,
+                generationResult.getActions()
+        )
+                : 0;
+        List<ScoreDelta> scoreDeltas = new ArrayList<>(analysisResults.stream()
                 .map(BehaviorAnalysisResult::getTotalScoreDelta)
-                .toList();
+                .toList());
+        for (int count = 0; count < crashHoldingEpisodeCount; count++) {
+            scoreDeltas.add(CRASH_HOLDING_SCORE);
+        }
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
                 analysisResults
@@ -322,6 +337,7 @@ public class GameBehaviorSimulator {
                 initialDeposit,
                 generationResult,
                 behaviorContexts,
+                crashHoldingEpisodeCount,
                 assessmentScore,
                 ruleApplicationCounts,
                 ruleScoreContributions
@@ -597,6 +613,7 @@ public class GameBehaviorSimulator {
             long initialDeposit,
             GameBehaviorGenerationResult generationResult,
             List<BehaviorContext> behaviorContexts,
+            int crashHoldingEpisodeCount,
             AssessmentScore assessmentScore,
             Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
             Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions) {
@@ -645,6 +662,7 @@ public class GameBehaviorSimulator {
                         ruleApplicationCounts,
                         BehaviorRuleCode.LOSS_CUT_SELL
                 ))
+                .crashHoldingEpisodeCount(crashHoldingEpisodeCount)
                 .depositCancelled(actions.stream()
                         .anyMatch(action -> action.getActionType() == BehaviorActionType.CANCEL_PRODUCT))
                 .depositMatured(actions.stream()
@@ -678,6 +696,72 @@ public class GameBehaviorSimulator {
                 .finalRpScore(assessmentScore.getRpScore())
                 .personaType(personaClassifier.calculatePersona(assessmentScore))
                 .build();
+    }
+
+    int calculateCrashHoldingEpisodeCount(
+            ScenarioDto scenario,
+            int initialStockQuantity,
+            List<SimulatedGameAction> actions) {
+        int currentStockQuantity = initialStockQuantity;
+        int episodeStartQuantity = 0;
+        int episodeEndQuantity = 0;
+        int maintainedEpisodeCount = 0;
+        boolean crashEpisode = false;
+
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = actions.stream()
+                .filter(action -> action.getActionType() != BehaviorActionType.MATURITY)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        SimulatedGameAction::getGameTick,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+        List<ScenarioTickDto> scenarioTicks = scenario.getTicks().stream()
+                .filter(tick -> tick.getTick() >= 0 && tick.getTick() < scenario.getTotalTicks())
+                .sorted(java.util.Comparator.comparingInt(ScenarioTickDto::getTick))
+                .toList();
+
+        for (ScenarioTickDto scenarioTick : scenarioTicks) {
+            MarketState marketState = marketStateCalculator.calculateMarketState(
+                    gamePriceRateCalculator.calculateTickPriceChangeRate(
+                            scenario,
+                            scenarioTick.getTick()
+                    ),
+                    null
+            );
+            if (marketState == MarketState.CRASH && !crashEpisode) {
+                crashEpisode = true;
+                episodeStartQuantity = currentStockQuantity;
+            } else if (marketState != MarketState.CRASH && crashEpisode) {
+                if (isCrashHoldingMaintained(episodeStartQuantity, episodeEndQuantity)) {
+                    maintainedEpisodeCount++;
+                }
+                crashEpisode = false;
+            }
+
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                currentStockQuantity = action.getCurrentStockQuantity();
+            }
+            if (crashEpisode) {
+                episodeEndQuantity = currentStockQuantity;
+            }
+        }
+        if (crashEpisode && isCrashHoldingMaintained(episodeStartQuantity, episodeEndQuantity)) {
+            maintainedEpisodeCount++;
+        }
+        return maintainedEpisodeCount;
+    }
+
+    private boolean isCrashHoldingMaintained(int startQuantity, int endQuantity) {
+        if (startQuantity <= 0 || endQuantity <= 0) {
+            return false;
+        }
+        return BigDecimal.valueOf(endQuantity)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(startQuantity), 4, RoundingMode.HALF_UP)
+                .compareTo(CRASH_HOLDING_MINIMUM_RATIO) >= 0;
     }
 
     private int countActions(

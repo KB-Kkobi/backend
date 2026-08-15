@@ -4,11 +4,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.enums.BehaviorActionType;
+import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.service.ScenarioService;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -107,6 +110,39 @@ class GameBehaviorSimulatorTest {
         assertEquals(350, initialPortfolio.getCurrentStockQuantity());
         assertFalse(initialPortfolio.isDepositCancelled());
         assertFalse(initialPortfolio.isDepositMatured());
+    }
+
+    @Test
+    @DisplayName("급락 구간 종료 시 기존 주식의 50% 이상을 유지한 구간만 계산한다.")
+    void calculateCrashHoldingEpisodeCount() {
+        ScenarioDto scenario = scenarioService.getScenario("SC001");
+        int maintainedCount = gameBehaviorSimulator.calculateCrashHoldingEpisodeCount(
+                scenario,
+                100,
+                List.of()
+        );
+        SimulatedGameAction majoritySoldAction = new SimulatedGameAction(
+                19,
+                BehaviorActionType.SELL,
+                BehaviorAssetType.SECURITY,
+                1_000_000L,
+                60,
+                16_860L,
+                null,
+                null,
+                1_000_000L,
+                800_000L,
+                0L,
+                40
+        );
+        int reducedCount = gameBehaviorSimulator.calculateCrashHoldingEpisodeCount(
+                scenario,
+                100,
+                List.of(majoritySoldAction)
+        );
+
+        assertTrue(maintainedCount > 0);
+        assertTrue(reducedCount < maintainedCount);
     }
 
     private SimulatedGamePortfolio createInitialPortfolio() {

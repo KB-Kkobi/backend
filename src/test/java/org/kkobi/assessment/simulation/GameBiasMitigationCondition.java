@@ -88,6 +88,13 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
             GameRuleEvaluationCondition
                     .EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE
+    ),
+    CRASH_HOLDING_WITH_SMALL_TRADE_DEAD_ZONE(
+            "소규모 거래 제외·급락 구간 주식 50% 이상 보유 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.BULL_BUY_MEDIAN_HARD_CAP,
+            GameRuleEvaluationCondition
+                    .EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING
     );
 
     private final String description;

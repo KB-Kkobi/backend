@@ -5,6 +5,8 @@ import org.kkobi.game.dto.ScenarioDto;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,10 +45,12 @@ public class SimulationComparisonCsvExporter {
             Files.createDirectories(outputDirectory);
             Map<String, GameBehaviorSimulationAnalysis> analyses = new LinkedHashMap<>();
             Map<String, ScoreAxisCorrelationAnalysis> correlations = new LinkedHashMap<>();
+            Map<String, Long> crashHoldingEpisodeTotals = new LinkedHashMap<>();
 
             for (SimulationExperimentCase experimentCase : experimentCases) {
                 ScoreAxisCorrelationAnalysis correlationAnalysis =
                         new ScoreAxisCorrelationAnalysis();
+                long[] crashHoldingEpisodeTotal = {0L};
                 GameBiasMitigationCondition mitigationCondition =
                         experimentCase.mitigationCondition();
                 GameBehaviorSimulationAnalysis analysis =
@@ -61,19 +65,27 @@ public class SimulationComparisonCsvExporter {
                                 LossAveragingRtWeightCondition.RT_15,
                                 mitigationCondition.getRuleEvaluationCondition(),
                                 TradeQuantityGenerationCondition.SYMMETRIC_THREE_LEVEL,
-                                correlationAnalysis::addResult
+                                result -> {
+                                    correlationAnalysis.addResult(result);
+                                    crashHoldingEpisodeTotal[0] += result.getCrashHoldingEpisodeCount();
+                                }
                         );
                 if (analyses.putIfAbsent(experimentCase.name(), analysis) != null) {
                     throw new IllegalArgumentException("실험 이름이 중복되었습니다: " + experimentCase.name());
                 }
                 correlations.put(experimentCase.name(), correlationAnalysis);
+                crashHoldingEpisodeTotals.put(
+                        experimentCase.name(),
+                        crashHoldingEpisodeTotal[0]
+                );
             }
 
             writeComparison(
                     outputDirectory.resolve(FILE_NAME),
                     experimentCases,
                     analyses,
-                    correlations
+                    correlations,
+                    crashHoldingEpisodeTotals
             );
             return Map.copyOf(analyses);
         } catch (IOException exception) {
@@ -85,7 +97,8 @@ public class SimulationComparisonCsvExporter {
             Path outputPath,
             List<SimulationExperimentCase> experimentCases,
             Map<String, GameBehaviorSimulationAnalysis> analyses,
-            Map<String, ScoreAxisCorrelationAnalysis> correlations) throws IOException {
+            Map<String, ScoreAxisCorrelationAnalysis> correlations,
+            Map<String, Long> crashHoldingEpisodeTotals) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(
                 outputPath,
                 StandardCharsets.UTF_8
@@ -96,7 +109,8 @@ public class SimulationComparisonCsvExporter {
                 writeCsvRow(writer, createRow(
                         experimentCase,
                         analyses.get(experimentCase.name()),
-                        correlations.get(experimentCase.name())
+                        correlations.get(experimentCase.name()),
+                        crashHoldingEpisodeTotals.get(experimentCase.name())
                 ));
             }
         }
@@ -116,6 +130,7 @@ public class SimulationComparisonCsvExporter {
                 "평균_매도_횟수(average_sell_count)",
                 "평균_무행동_Tick수(average_no_action_tick_count)",
                 "Tick당_평균_행동수(average_action_count_per_tick)",
+                "평균_급락구간_보유유지_횟수(average_crash_holding_episode_count)",
                 "RT_평균(rt_average)",
                 "LH_평균(lh_average)",
                 "RP_평균(rp_average)",
@@ -132,7 +147,8 @@ public class SimulationComparisonCsvExporter {
     private List<String> createRow(
             SimulationExperimentCase experimentCase,
             GameBehaviorSimulationAnalysis analysis,
-            ScoreAxisCorrelationAnalysis correlationAnalysis) {
+            ScoreAxisCorrelationAnalysis correlationAnalysis,
+            long crashHoldingEpisodeTotal) {
         GameBehaviorSimulationAnalysis.BehaviorStatistics behaviorStatistics =
                 analysis.getBehaviorStatistics();
         List<String> row = new ArrayList<>(List.of(
@@ -148,6 +164,13 @@ public class SimulationComparisonCsvExporter {
                 behaviorStatistics.getAverageSellCount().toPlainString(),
                 behaviorStatistics.getAverageNoActionTickCount().toPlainString(),
                 behaviorStatistics.getAverageActionCountPerTick().toPlainString(),
+                BigDecimal.valueOf(crashHoldingEpisodeTotal)
+                        .divide(
+                                BigDecimal.valueOf(analysis.getTotalSimulationCount()),
+                                4,
+                                RoundingMode.HALF_UP
+                        )
+                        .toPlainString(),
                 analysis.getOverallRtScoreSummary().getAverage().toPlainString(),
                 analysis.getOverallLhScoreSummary().getAverage().toPlainString(),
                 analysis.getOverallRpScoreSummary().getAverage().toPlainString(),

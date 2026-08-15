@@ -101,6 +101,15 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING(
+            "소규모 거래 제외·급락 구간 주식 50% 이상 보유 유지",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -725,12 +734,18 @@ public enum GameRuleEvaluationCondition {
     }
 
     private boolean excludesSmallTradeScores() {
-        return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE;
+        return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE
+                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING;
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
         return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_AND_DEPOSIT_DECISION
                 || excludesSmallTradeScores();
+    }
+
+    public boolean appliesCrashHoldingRule() {
+        return this
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING;
     }
 
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {

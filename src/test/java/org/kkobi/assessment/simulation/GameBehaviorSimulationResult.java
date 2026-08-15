@@ -36,6 +36,7 @@ public class GameBehaviorSimulationResult {
     private final int bullProfitSellCount;
     private final int lossAveragingBuyCount;
     private final int lossCutSellCount;
+    private final int crashHoldingEpisodeCount;
     private final boolean depositCancelled;
     private final boolean depositMatured;
     private final boolean boughtStockAfterDepositCancel;
@@ -68,6 +69,7 @@ public class GameBehaviorSimulationResult {
             int bullProfitSellCount,
             int lossAveragingBuyCount,
             int lossCutSellCount,
+            int crashHoldingEpisodeCount,
             boolean depositCancelled,
             boolean depositMatured,
             boolean boughtStockAfterDepositCancel,
@@ -98,6 +100,10 @@ public class GameBehaviorSimulationResult {
         this.bullProfitSellCount = validateCount(bullProfitSellCount, "급등장 익절 횟수");
         this.lossAveragingBuyCount = validateCount(lossAveragingBuyCount, "손실 구간 추가 매수 횟수");
         this.lossCutSellCount = validateCount(lossCutSellCount, "손절 횟수");
+        this.crashHoldingEpisodeCount = validateCount(
+                crashHoldingEpisodeCount,
+                "급락 구간 보유 유지 횟수"
+        );
         validateDepositStatus(depositCancelled, depositMatured);
         this.depositCancelled = depositCancelled;
         this.depositMatured = depositMatured;
