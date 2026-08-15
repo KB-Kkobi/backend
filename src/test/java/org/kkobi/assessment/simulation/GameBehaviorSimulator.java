@@ -379,7 +379,9 @@ public class GameBehaviorSimulator {
                     crashHoldingEpisodeCount,
                     normalPlannedBuyCount,
                     cashBufferMaintenanceCount,
-                    ruleEvaluationCondition.appliesBalancedRuleGroupMaximum()
+                    ruleEvaluationCondition.getBuyGroupMaximumMultiplier(),
+                    ruleEvaluationCondition.getSellGroupMaximumMultiplier(),
+                    ruleEvaluationCondition.getStateGroupMaximumMultiplier()
             );
         } else if (ruleEvaluationCondition.appliesOpportunityWeightedRepeatedScore()) {
             scoreDeltas = calculateOpportunityWeightedScoreDeltas(
@@ -541,7 +543,9 @@ public class GameBehaviorSimulator {
                 crashHoldingEpisodeCount,
                 normalPlannedBuyCount,
                 cashBufferMaintenanceCount,
-                false
+                BigDecimal.ONE,
+                BigDecimal.ONE,
+                BigDecimal.ONE
         );
     }
 
@@ -551,6 +555,25 @@ public class GameBehaviorSimulator {
             int normalPlannedBuyCount,
             int cashBufferMaintenanceCount,
             boolean appliesBalancedMaximum) {
+        return calculateLogDiminishingRuleGroupScores(
+                analysisResults,
+                crashHoldingEpisodeCount,
+                normalPlannedBuyCount,
+                cashBufferMaintenanceCount,
+                appliesBalancedMaximum ? BUY_GROUP_MAXIMUM_MULTIPLIER : BigDecimal.ONE,
+                appliesBalancedMaximum ? SELL_GROUP_MAXIMUM_MULTIPLIER : BigDecimal.ONE,
+                appliesBalancedMaximum ? STATE_GROUP_MAXIMUM_MULTIPLIER : BigDecimal.ONE
+        );
+    }
+
+    List<ScoreDelta> calculateLogDiminishingRuleGroupScores(
+            List<BehaviorAnalysisResult> analysisResults,
+            int crashHoldingEpisodeCount,
+            int normalPlannedBuyCount,
+            int cashBufferMaintenanceCount,
+            BigDecimal buyMaximumMultiplier,
+            BigDecimal sellMaximumMultiplier,
+            BigDecimal stateMaximumMultiplier) {
         List<ScoreDelta> oneTimeScores = new ArrayList<>();
         EnumMap<RepeatedRuleGroup, ScoreDelta> groupScoreSums =
                 new EnumMap<>(RepeatedRuleGroup.class);
@@ -612,9 +635,11 @@ public class GameBehaviorSimulator {
                     applicationCount,
                     ruleGroup.getP95ApplicationCount()
             );
-            scores.add(appliesBalancedMaximum
-                    ? groupScore.multiplyScoreDelta(ruleGroup.getMaximumMultiplier())
-                    : groupScore);
+            scores.add(groupScore.multiplyScoreDelta(ruleGroup.selectMaximumMultiplier(
+                    buyMaximumMultiplier,
+                    sellMaximumMultiplier,
+                    stateMaximumMultiplier
+            )));
         });
         return scores;
     }
@@ -651,6 +676,17 @@ public class GameBehaviorSimulator {
 
         BigDecimal getMaximumMultiplier() {
             return maximumMultiplier;
+        }
+
+        BigDecimal selectMaximumMultiplier(
+                BigDecimal buyMaximumMultiplier,
+                BigDecimal sellMaximumMultiplier,
+                BigDecimal stateMaximumMultiplier) {
+            return switch (this) {
+                case BUY -> buyMaximumMultiplier;
+                case SELL -> sellMaximumMultiplier;
+                case STATE_MAINTENANCE -> stateMaximumMultiplier;
+            };
         }
 
         static RepeatedRuleGroup from(BehaviorRuleCode ruleCode) {

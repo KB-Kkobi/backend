@@ -934,6 +934,24 @@ public enum GameRuleEvaluationCondition {
         return this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
+    public BigDecimal getBuyGroupMaximumMultiplier() {
+        return appliesBalancedRuleGroupMaximum()
+                ? BigDecimal.valueOf(2.5)
+                : BigDecimal.ONE;
+    }
+
+    public BigDecimal getSellGroupMaximumMultiplier() {
+        return appliesBalancedRuleGroupMaximum()
+                ? BigDecimal.valueOf(2.5)
+                : BigDecimal.ONE;
+    }
+
+    public BigDecimal getStateGroupMaximumMultiplier() {
+        return appliesBalancedRuleGroupMaximum()
+                ? BigDecimal.valueOf(1.5)
+                : BigDecimal.ONE;
+    }
+
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {
         return excludesSmallTradeScores()
                 && calculateBuyRatio(behaviorEvent).compareTo(BUY_SMALL_RATIO) < 0;
