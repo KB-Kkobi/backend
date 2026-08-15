@@ -20,6 +20,10 @@ public enum SimulationExperimentCatalog {
     CASH_BUFFER_MAINTENANCE_FREQUENCY(
             "현금 완충 비중 유지 규칙 적용 전후의 저·중·고빈도 비교",
             createCashBufferMaintenanceFrequencyCases()
+    ),
+    CRASH_PARTIAL_SELL_FREQUENCY(
+            "급락장 일부 매도 LH·RP 중심 규칙 적용 전후의 저·중·고빈도 비교",
+            createCrashPartialSellFrequencyCases()
     );
 
     private final String description;
@@ -96,6 +100,21 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "현금 완충 비중 유지 규칙 적용 후",
                 GameBiasMitigationCondition.CASH_BUFFER_WITH_SMALL_TRADE_DEAD_ZONE
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase> createCrashPartialSellFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "급락장 일부 매도 LH·RP 중심 적용 전",
+                GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
+        );
+        addFrequencyCases(
+                experimentCases,
+                "급락장 일부 매도 LH·RP 중심 적용 후",
+                GameBiasMitigationCondition.CRASH_PARTIAL_SELL_WITH_SMALL_TRADE_DEAD_ZONE
         );
         return experimentCases;
     }

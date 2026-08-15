@@ -318,6 +318,18 @@ class GameRuleEvaluationConditionTest {
     }
 
     @Test
+    @DisplayName("급락장 일부 매도 LH·RP 중심안은 20~49% 매도의 RT를 제거하고 RP를 낮춘다.")
+    void applyCrashPartialSellAxisSeparationScoresBySellRatio() {
+        GameRuleEvaluationCondition condition = GameRuleEvaluationCondition
+                .EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL;
+
+        assertCrashSellScore(condition, 20, 80, false, "0", "5", "-5");
+        assertCrashSellScore(condition, 49, 51, false, "0", "5", "-5");
+        assertCrashSellScore(condition, 50, 50, false, "-10", "5", "-5");
+        assertCrashSellScore(condition, 100, 0, true, "-15", "10", "-5");
+    }
+
+    @Test
     @DisplayName("중간 정수안의 급락장 매수는 RT 중심으로 점수를 적용한다.")
     void applyModerateCrashBuyScoresByActionRatio() {
         assertModerateBuyScore(createBuyContext(900_000L, 10_000_000L),
@@ -537,6 +549,30 @@ class GameRuleEvaluationConditionTest {
         BehaviorAnalysisResult adjustedResult = GameRuleEvaluationCondition
                 .EXCLUSIVE_FIXED_ACTION_SCORE_AND_DEPOSIT_DECISION
                 .adjustAnalysisResult(behaviorContext, analysisResult);
+
+        assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
+    }
+
+    private void assertCrashSellScore(
+            GameRuleEvaluationCondition condition,
+            int sellQuantity,
+            int remainingQuantity,
+            boolean fullSecuritySell,
+            String expectedRtDelta,
+            String expectedLhDelta,
+            String expectedRpDelta) {
+        BehaviorContext behaviorContext = createSellContext(
+                sellQuantity,
+                remainingQuantity,
+                fullSecuritySell
+        );
+        BehaviorAnalysisResult analysisResult = fullSecuritySell
+                ? createAnalysisResult(createRule(BehaviorRuleCode.CRASH_FULL_SELL, 1, 1, 1))
+                : createAnalysisResult();
+        BehaviorAnalysisResult adjustedResult = condition.adjustAnalysisResult(
+                behaviorContext,
+                analysisResult
+        );
 
         assertScore(adjustedResult, expectedRtDelta, expectedLhDelta, expectedRpDelta);
     }
