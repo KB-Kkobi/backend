@@ -161,6 +161,31 @@ public class GameBehaviorSimulator {
             SameTickRuleApplicationCondition sameTickRuleCondition,
             RuleAccumulationCondition ruleAccumulationCondition,
             LossAveragingRtWeightCondition lossAveragingRtWeightCondition) {
+        return simulateGame(
+                simulationUserId,
+                scenario,
+                initialPortfolio,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                lossAveragingRtWeightCondition,
+                GameRuleEvaluationCondition.BASELINE
+        );
+    }
+
+    public GameBehaviorSimulationResult simulateGame(
+            long simulationUserId,
+            ScenarioDto scenario,
+            SimulatedGamePortfolio initialPortfolio,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition) {
         validateSimulationInput(simulationUserId, scenario, initialPortfolio);
         if (multiplierCondition == null) {
             throw new IllegalArgumentException("연속 행동 배율 조건은 필수입니다.");
@@ -173,6 +198,9 @@ public class GameBehaviorSimulator {
         }
         if (lossAveragingRtWeightCondition == null) {
             throw new IllegalArgumentException("물타기 RT 가중치 조건은 필수입니다.");
+        }
+        if (ruleEvaluationCondition == null) {
+            throw new IllegalArgumentException("게임 규칙 평가 조건은 필수입니다.");
         }
 
         long initialCash = initialPortfolio.getCurrentCash();
@@ -215,7 +243,8 @@ public class GameBehaviorSimulator {
                 appliedRuleCodesByTick,
                 ruleAccumulationCondition,
                 accumulatedRuleCounts,
-                lossAveragingRtWeightCondition
+                lossAveragingRtWeightCondition,
+                ruleEvaluationCondition
         );
 
         long actionSequence = 1L;
@@ -235,7 +264,8 @@ public class GameBehaviorSimulator {
                     appliedRuleCodesByTick,
                     ruleAccumulationCondition,
                     accumulatedRuleCounts,
-                    lossAveragingRtWeightCondition
+                    lossAveragingRtWeightCondition,
+                    ruleEvaluationCondition
             );
         }
 
@@ -272,7 +302,8 @@ public class GameBehaviorSimulator {
             Map<Integer, Set<BehaviorRuleCode>> appliedRuleCodesByTick,
             RuleAccumulationCondition ruleAccumulationCondition,
             Map<BehaviorRuleCode, Integer> accumulatedRuleCounts,
-            LossAveragingRtWeightCondition lossAveragingRtWeightCondition) {
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition) {
         BehaviorContext behaviorContext = behaviorContextFactory.createBehaviorContext(
                 behaviorEvent,
                 previousEvents
@@ -300,6 +331,10 @@ public class GameBehaviorSimulator {
         analysisResult = applyLossAveragingRtWeight(
                 analysisResult,
                 lossAveragingRtWeightCondition
+        );
+        analysisResult = ruleEvaluationCondition.adjustAnalysisResult(
+                behaviorContext,
+                analysisResult
         );
 
         behaviorContexts.add(behaviorContext);

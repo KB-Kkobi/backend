@@ -64,6 +64,30 @@ public class GameBehaviorSimulationAnalyzer {
                 sameTickRuleCondition,
                 ruleAccumulationCondition,
                 lossAveragingRtWeightCondition,
+                GameRuleEvaluationCondition.BASELINE
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                lossAveragingRtWeightCondition,
+                ruleEvaluationCondition,
                 simulationResult -> {
                 }
         );
@@ -251,6 +275,31 @@ public class GameBehaviorSimulationAnalyzer {
             RuleAccumulationCondition ruleAccumulationCondition,
             LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
             Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
+        return analyzeGameSimulations(
+                scenario,
+                simulationCount,
+                randomSeed,
+                frequencyCondition,
+                multiplierCondition,
+                sameTickRuleCondition,
+                ruleAccumulationCondition,
+                lossAveragingRtWeightCondition,
+                GameRuleEvaluationCondition.BASELINE,
+                simulationResultConsumer
+        );
+    }
+
+    public GameBehaviorSimulationAnalysis analyzeGameSimulations(
+            ScenarioDto scenario,
+            int simulationCount,
+            long randomSeed,
+            GameBehaviorFrequencyCondition frequencyCondition,
+            ConsecutiveActionMultiplierCondition multiplierCondition,
+            SameTickRuleApplicationCondition sameTickRuleCondition,
+            RuleAccumulationCondition ruleAccumulationCondition,
+            LossAveragingRtWeightCondition lossAveragingRtWeightCondition,
+            GameRuleEvaluationCondition ruleEvaluationCondition,
+            Consumer<GameBehaviorSimulationResult> simulationResultConsumer) {
         validateAnalysisInput(scenario, simulationCount);
         Objects.requireNonNull(
                 simulationResultConsumer,
@@ -263,6 +312,7 @@ public class GameBehaviorSimulationAnalyzer {
                 lossAveragingRtWeightCondition,
                 "물타기 RT 가중치 조건은 필수입니다."
         );
+        Objects.requireNonNull(ruleEvaluationCondition, "게임 규칙 평가 조건은 필수입니다.");
         long initialStockPrice = getInitialStockPrice(scenario);
         SplittableRandom random = new SplittableRandom(randomSeed);
         EnumMap<PersonaType, MutablePersonaSummary> personaSummaryByType =
@@ -288,7 +338,8 @@ public class GameBehaviorSimulationAnalyzer {
                     multiplierCondition,
                     sameTickRuleCondition,
                     ruleAccumulationCondition,
-                    lossAveragingRtWeightCondition
+                    lossAveragingRtWeightCondition,
+                    ruleEvaluationCondition
             );
             simulationResultConsumer.accept(simulationResult);
             personaSummaryByType.get(simulationResult.getPersonaType())
