@@ -12,6 +12,10 @@ public enum SimulationExperimentCatalog {
     CRASH_HOLDING_FREQUENCY(
             "급락 구간 보유 유지 규칙 적용 전후의 저·중·고빈도 비교",
             createCrashHoldingFrequencyCases()
+    ),
+    NORMAL_PLANNED_BUY_FREQUENCY(
+            "평범장 계획 매수 규칙 적용 전후의 저·중·고빈도 비교",
+            createNormalPlannedBuyFrequencyCases()
     );
 
     private final String description;
@@ -58,6 +62,21 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "급락 구간 보유 유지 규칙 적용 후",
                 GameBiasMitigationCondition.CRASH_HOLDING_WITH_SMALL_TRADE_DEAD_ZONE
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase> createNormalPlannedBuyFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "평범장 계획 매수 규칙 적용 전",
+                GameBiasMitigationCondition.SMALL_TRADE_DEAD_ZONE_ONCE_AND_CAPPED
+        );
+        addFrequencyCases(
+                experimentCases,
+                "평범장 계획 매수 규칙 적용 후",
+                GameBiasMitigationCondition.NORMAL_PLANNED_BUY_WITH_SMALL_TRADE_DEAD_ZONE
         );
         return experimentCases;
     }

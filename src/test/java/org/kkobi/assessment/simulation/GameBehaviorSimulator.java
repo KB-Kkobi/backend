@@ -39,6 +39,10 @@ public class GameBehaviorSimulator {
     private static final BigDecimal CRASH_HOLDING_MINIMUM_RATIO = BigDecimal.valueOf(50);
     private static final ScoreDelta CRASH_HOLDING_SCORE =
             ScoreDelta.createScoreDelta(5, 0, 0);
+    private static final BigDecimal NORMAL_BUY_MINIMUM_RATIO = BigDecimal.valueOf(10);
+    private static final BigDecimal NORMAL_BUY_MAXIMUM_RATIO = BigDecimal.valueOf(30);
+    private static final ScoreDelta NORMAL_PLANNED_BUY_SCORE =
+            ScoreDelta.createScoreDelta(0, -5, 5);
 
     private final NeutralGameBehaviorGenerator behaviorGenerator =
             new NeutralGameBehaviorGenerator();
@@ -317,11 +321,17 @@ public class GameBehaviorSimulator {
                 generationResult.getActions()
         )
                 : 0;
+        int normalPlannedBuyCount = ruleEvaluationCondition.appliesNormalPlannedBuyRule()
+                ? calculateNormalPlannedBuyCount(behaviorContexts, analysisResults)
+                : 0;
         List<ScoreDelta> scoreDeltas = new ArrayList<>(analysisResults.stream()
                 .map(BehaviorAnalysisResult::getTotalScoreDelta)
                 .toList());
         for (int count = 0; count < crashHoldingEpisodeCount; count++) {
             scoreDeltas.add(CRASH_HOLDING_SCORE);
+        }
+        for (int count = 0; count < normalPlannedBuyCount; count++) {
+            scoreDeltas.add(NORMAL_PLANNED_BUY_SCORE);
         }
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
@@ -338,6 +348,7 @@ public class GameBehaviorSimulator {
                 generationResult,
                 behaviorContexts,
                 crashHoldingEpisodeCount,
+                normalPlannedBuyCount,
                 assessmentScore,
                 ruleApplicationCounts,
                 ruleScoreContributions
@@ -614,6 +625,7 @@ public class GameBehaviorSimulator {
             GameBehaviorGenerationResult generationResult,
             List<BehaviorContext> behaviorContexts,
             int crashHoldingEpisodeCount,
+            int normalPlannedBuyCount,
             AssessmentScore assessmentScore,
             Map<BehaviorRuleCode, Integer> ruleApplicationCounts,
             Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions) {
@@ -663,6 +675,7 @@ public class GameBehaviorSimulator {
                         BehaviorRuleCode.LOSS_CUT_SELL
                 ))
                 .crashHoldingEpisodeCount(crashHoldingEpisodeCount)
+                .normalPlannedBuyCount(normalPlannedBuyCount)
                 .depositCancelled(actions.stream()
                         .anyMatch(action -> action.getActionType() == BehaviorActionType.CANCEL_PRODUCT))
                 .depositMatured(actions.stream()
@@ -762,6 +775,62 @@ public class GameBehaviorSimulator {
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(startQuantity), 4, RoundingMode.HALF_UP)
                 .compareTo(CRASH_HOLDING_MINIMUM_RATIO) >= 0;
+    }
+
+    int calculateNormalPlannedBuyCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+        Set<Integer> appliedTicks = new HashSet<>();
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorContext behaviorContext = behaviorContexts.get(index);
+            BehaviorEvent behaviorEvent = behaviorContext.getCurrentEvent();
+            if (behaviorEvent == null
+                    || behaviorEvent.getGameTick() == null
+                    || behaviorEvent.getActionType() != BehaviorActionType.BUY
+                    || behaviorEvent.getAssetType() != BehaviorAssetType.SECURITY
+                    || behaviorContext.getMarketState() != MarketState.NORMAL
+                    || containsRule(
+                    analysisResults.get(index),
+                    BehaviorRuleCode.LOSS_AVERAGING_BUY
+            )) {
+                continue;
+            }
+            BigDecimal buyRatio = calculateActionAmountRatio(behaviorEvent);
+            if (buyRatio.compareTo(NORMAL_BUY_MINIMUM_RATIO) >= 0
+                    && buyRatio.compareTo(NORMAL_BUY_MAXIMUM_RATIO) < 0) {
+                appliedTicks.add(behaviorEvent.getGameTick());
+            }
+        }
+        return appliedTicks.size();
+    }
+
+    private boolean containsRule(
+            BehaviorAnalysisResult analysisResult,
+            BehaviorRuleCode ruleCode) {
+        return analysisResult.getAppliedRules().stream()
+                .anyMatch(ruleResult -> ruleResult.getRuleCode() == ruleCode);
+    }
+
+    private BigDecimal calculateActionAmountRatio(BehaviorEvent behaviorEvent) {
+        if (behaviorEvent.getActionAmount() == null || behaviorEvent.getActionAmount() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        long totalPrincipal = Math.addExact(
+                Math.addExact(
+                        behaviorEvent.getCurrentCash(),
+                        behaviorEvent.getCurrentStockPrincipal()
+                ),
+                behaviorEvent.getCurrentDeposit()
+        );
+        if (totalPrincipal <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(behaviorEvent.getActionAmount())
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(totalPrincipal), 4, RoundingMode.HALF_UP);
     }
 
     private int countActions(

@@ -110,6 +110,15 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY(
+            "소규모 거래 제외·평범장 중간 규모 계획 매수",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -735,7 +744,8 @@ public enum GameRuleEvaluationCondition {
 
     private boolean excludesSmallTradeScores() {
         return this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_BULL_BUY_WITH_SMALL_TRADE_DEAD_ZONE
-                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING;
+                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING
+                || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY;
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
@@ -746,6 +756,11 @@ public enum GameRuleEvaluationCondition {
     public boolean appliesCrashHoldingRule() {
         return this
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING;
+    }
+
+    public boolean appliesNormalPlannedBuyRule() {
+        return this
+                == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY;
     }
 
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {

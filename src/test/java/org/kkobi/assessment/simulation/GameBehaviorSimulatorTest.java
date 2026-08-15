@@ -4,9 +4,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.domain.AssessmentScore;
+import org.kkobi.assessment.domain.BehaviorAnalysisResult;
+import org.kkobi.assessment.domain.BehaviorContext;
+import org.kkobi.assessment.domain.BehaviorEvent;
+import org.kkobi.assessment.domain.RuleResult;
+import org.kkobi.assessment.domain.ScoreDelta;
 import org.kkobi.assessment.enums.BehaviorActionType;
 import org.kkobi.assessment.enums.BehaviorAssetType;
 import org.kkobi.assessment.enums.BehaviorRuleCode;
+import org.kkobi.assessment.enums.MarketState;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.service.ScenarioService;
 
@@ -145,6 +151,30 @@ class GameBehaviorSimulatorTest {
         assertTrue(reducedCount < maintainedCount);
     }
 
+    @Test
+    @DisplayName("평범장 총자산 10~29% 매수는 물타기가 아닐 때 Tick당 한 번 계산한다.")
+    void calculateNormalPlannedBuyCount() {
+        BehaviorContext firstBuy = createNormalBuyContext(1, 2_000_000L);
+        BehaviorContext duplicateTickBuy = createNormalBuyContext(1, 1_500_000L);
+        BehaviorContext smallBuy = createNormalBuyContext(2, 900_000L);
+        BehaviorContext lossAveragingBuy = createNormalBuyContext(3, 2_000_000L);
+        BehaviorAnalysisResult emptyResult = new BehaviorAnalysisResult(List.of());
+        BehaviorAnalysisResult lossAveragingResult = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.LOSS_AVERAGING_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "손실 종목 추가 매수"
+                )
+        ));
+
+        int count = gameBehaviorSimulator.calculateNormalPlannedBuyCount(
+                List.of(firstBuy, duplicateTickBuy, smallBuy, lossAveragingBuy),
+                List.of(emptyResult, emptyResult, emptyResult, lossAveragingResult)
+        );
+
+        assertEquals(1, count);
+    }
+
     private SimulatedGamePortfolio createInitialPortfolio() {
         return new SimulatedGamePortfolio(
                 2_000_000L,
@@ -152,6 +182,22 @@ class GameBehaviorSimulatorTest {
                 1_000_000L,
                 350
         );
+    }
+
+    private BehaviorContext createNormalBuyContext(int gameTick, long actionAmount) {
+        BehaviorEvent behaviorEvent = new BehaviorEvent();
+        behaviorEvent.setGameTick(gameTick);
+        behaviorEvent.setActionType(BehaviorActionType.BUY);
+        behaviorEvent.setAssetType(BehaviorAssetType.SECURITY);
+        behaviorEvent.setActionAmount(actionAmount);
+        behaviorEvent.setCurrentCash(10_000_000L - actionAmount);
+        behaviorEvent.setCurrentStockPrincipal(actionAmount);
+        behaviorEvent.setCurrentDeposit(0L);
+
+        BehaviorContext behaviorContext = new BehaviorContext();
+        behaviorContext.setCurrentEvent(behaviorEvent);
+        behaviorContext.setMarketState(MarketState.NORMAL);
+        return behaviorContext;
     }
 
     private void assertScoreRange(BigDecimal score) {

@@ -46,11 +46,13 @@ public class SimulationComparisonCsvExporter {
             Map<String, GameBehaviorSimulationAnalysis> analyses = new LinkedHashMap<>();
             Map<String, ScoreAxisCorrelationAnalysis> correlations = new LinkedHashMap<>();
             Map<String, Long> crashHoldingEpisodeTotals = new LinkedHashMap<>();
+            Map<String, Long> normalPlannedBuyTotals = new LinkedHashMap<>();
 
             for (SimulationExperimentCase experimentCase : experimentCases) {
                 ScoreAxisCorrelationAnalysis correlationAnalysis =
                         new ScoreAxisCorrelationAnalysis();
                 long[] crashHoldingEpisodeTotal = {0L};
+                long[] normalPlannedBuyTotal = {0L};
                 GameBiasMitigationCondition mitigationCondition =
                         experimentCase.mitigationCondition();
                 GameBehaviorSimulationAnalysis analysis =
@@ -68,6 +70,7 @@ public class SimulationComparisonCsvExporter {
                                 result -> {
                                     correlationAnalysis.addResult(result);
                                     crashHoldingEpisodeTotal[0] += result.getCrashHoldingEpisodeCount();
+                                    normalPlannedBuyTotal[0] += result.getNormalPlannedBuyCount();
                                 }
                         );
                 if (analyses.putIfAbsent(experimentCase.name(), analysis) != null) {
@@ -78,6 +81,10 @@ public class SimulationComparisonCsvExporter {
                         experimentCase.name(),
                         crashHoldingEpisodeTotal[0]
                 );
+                normalPlannedBuyTotals.put(
+                        experimentCase.name(),
+                        normalPlannedBuyTotal[0]
+                );
             }
 
             writeComparison(
@@ -85,7 +92,8 @@ public class SimulationComparisonCsvExporter {
                     experimentCases,
                     analyses,
                     correlations,
-                    crashHoldingEpisodeTotals
+                    crashHoldingEpisodeTotals,
+                    normalPlannedBuyTotals
             );
             return Map.copyOf(analyses);
         } catch (IOException exception) {
@@ -98,7 +106,8 @@ public class SimulationComparisonCsvExporter {
             List<SimulationExperimentCase> experimentCases,
             Map<String, GameBehaviorSimulationAnalysis> analyses,
             Map<String, ScoreAxisCorrelationAnalysis> correlations,
-            Map<String, Long> crashHoldingEpisodeTotals) throws IOException {
+            Map<String, Long> crashHoldingEpisodeTotals,
+            Map<String, Long> normalPlannedBuyTotals) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(
                 outputPath,
                 StandardCharsets.UTF_8
@@ -110,7 +119,8 @@ public class SimulationComparisonCsvExporter {
                         experimentCase,
                         analyses.get(experimentCase.name()),
                         correlations.get(experimentCase.name()),
-                        crashHoldingEpisodeTotals.get(experimentCase.name())
+                        crashHoldingEpisodeTotals.get(experimentCase.name()),
+                        normalPlannedBuyTotals.get(experimentCase.name())
                 ));
             }
         }
@@ -131,6 +141,7 @@ public class SimulationComparisonCsvExporter {
                 "평균_무행동_Tick수(average_no_action_tick_count)",
                 "Tick당_평균_행동수(average_action_count_per_tick)",
                 "평균_급락구간_보유유지_횟수(average_crash_holding_episode_count)",
+                "평균_평범장_계획매수_횟수(average_normal_planned_buy_count)",
                 "RT_평균(rt_average)",
                 "LH_평균(lh_average)",
                 "RP_평균(rp_average)",
@@ -148,7 +159,8 @@ public class SimulationComparisonCsvExporter {
             SimulationExperimentCase experimentCase,
             GameBehaviorSimulationAnalysis analysis,
             ScoreAxisCorrelationAnalysis correlationAnalysis,
-            long crashHoldingEpisodeTotal) {
+            long crashHoldingEpisodeTotal,
+            long normalPlannedBuyTotal) {
         GameBehaviorSimulationAnalysis.BehaviorStatistics behaviorStatistics =
                 analysis.getBehaviorStatistics();
         List<String> row = new ArrayList<>(List.of(
@@ -165,6 +177,13 @@ public class SimulationComparisonCsvExporter {
                 behaviorStatistics.getAverageNoActionTickCount().toPlainString(),
                 behaviorStatistics.getAverageActionCountPerTick().toPlainString(),
                 BigDecimal.valueOf(crashHoldingEpisodeTotal)
+                        .divide(
+                                BigDecimal.valueOf(analysis.getTotalSimulationCount()),
+                                4,
+                                RoundingMode.HALF_UP
+                        )
+                        .toPlainString(),
+                BigDecimal.valueOf(normalPlannedBuyTotal)
                         .divide(
                                 BigDecimal.valueOf(analysis.getTotalSimulationCount()),
                                 4,
