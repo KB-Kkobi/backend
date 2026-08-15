@@ -99,7 +99,11 @@ public class ProductPreferentialConditionService {
                                + "|"
                                + condition.getAdditionalRate()
                                + "|"
-                               + condition.isSelectable();
+                               + condition.isSelectable()
+                               + "|"
+                               + condition.getConditionGroupId()
+                               + "|"
+                               + condition.getConditionRole();
 
                if (!savedConditionKeys.add(conditionKey)) {
                    continue;
@@ -111,7 +115,9 @@ public class ProductPreferentialConditionService {
                        condition.getConditionName(),
                        condition.getAdditionalRate(),
                        condition.isSelectable(),
-                       displayOrder
+                       displayOrder,
+                       condition.getConditionGroupId(),
+                       condition.getConditionRole()
                );
 
                displayOrder++;

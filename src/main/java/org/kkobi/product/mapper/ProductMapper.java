@@ -8,9 +8,9 @@ import org.kkobi.product.dto.response.ProductDetailResponseDto;
 import org.kkobi.product.dto.response.ProductListItemResponseDto;
 import org.kkobi.product.dto.response.ProductOptionResponseDto;
 import org.kkobi.product.enums.PreferentialConditionType;
+import org.kkobi.product.enums.PreferentialRateConditionRole;
 import org.kkobi.product.saving.dto.SavingProductDto;
 import org.kkobi.product.saving.dto.SavingProductOptionDto;
-import org.springframework.security.core.parameters.P;
 
 import java.util.List;
 
@@ -108,6 +108,8 @@ public interface ProductMapper {
             @Param("conditionName") String conditionName,
             @Param("additionalRate") java.math.BigDecimal additionalRate,
             @Param("selectable") boolean selectable,
-            @Param("displayOrder") int displayOrder
-    );
+            @Param("displayOrder") int displayOrder,
+            @Param("conditionGroupId") Long conditionGroupId,
+            @Param("conditionRole") PreferentialRateConditionRole conditionRole
+            );
 }
