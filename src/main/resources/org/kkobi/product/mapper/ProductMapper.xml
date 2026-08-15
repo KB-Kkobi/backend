@@ -229,7 +229,9 @@
             condition_name,
             additional_rate,
             selectable,
-            display_order
+            display_order,
+            condition_group_id,
+            condition_role
         FROM product_preferential_rate_conditions
         WHERE product_option_id = #{productOptionId}
         ORDER BY
@@ -443,7 +445,9 @@
             condition_name,
             additional_rate,
             selectable,
-            display_order
+            display_order,
+            condition_group_id,
+            condition_role
         )
         VALUES (
                    #{productOptionId},
@@ -451,7 +455,9 @@
                    #{conditionName},
                    #{additionalRate},
                    #{selectable},
-                   #{displayOrder}
+                   #{displayOrder},
+                   #{conditionGroupId},
+                   #{conditionRole}
                )
     </insert>
 </mapper>

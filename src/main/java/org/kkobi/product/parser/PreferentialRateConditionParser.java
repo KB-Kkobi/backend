@@ -1,6 +1,7 @@
 package org.kkobi.product.parser;
 
 import org.kkobi.product.enums.PreferentialConditionType;
+import org.kkobi.product.enums.PreferentialRateConditionRole;
 import org.kkobi.product.parser.dto.ParsedPreferentialRateCondition;
 import org.springframework.stereotype.Component;
 
@@ -48,6 +49,12 @@ public class PreferentialRateConditionParser {
             return result;
         }
 
+        // 같은 상품 옵션 안에서 사용할 그룹 번호
+        long nextConditionGroupId = 1L;
+
+        Long activeGroupId = null;
+        GroupRule activeGroupRule = GroupRule.NONE;
+
         // 우대조건 원문을 줄 단위로 분리
         String[] lines =
                 preferentialConditions.split("\\r?\\n");
@@ -80,17 +87,132 @@ public class PreferentialRateConditionParser {
             boolean selectable =
                     additionalRate != null;
 
+            // 기본값은 독립 우대조건
+            Long conditionGroupId = null;
+            PreferentialRateConditionRole conditionRole =
+                    PreferentialRateConditionRole.STANDALONE;
+
+            // SC제일은행형 그룹 시작
+            if (isAllRequiredBonusNotice(conditionText)) {
+                activeGroupId = nextConditionGroupId++;
+                activeGroupRule = GroupRule.ALL_REQUIRED_BONUS;
+
+                conditionGroupId = activeGroupId;
+                conditionRole =
+                        PreferentialRateConditionRole.GROUP_NOTICE;
+            }
+
+            // 우리은행형 그룹 시작
+            else if (isCommonPerformanceNotice(conditionText)) {
+                activeGroupId = nextConditionGroupId++;
+                activeGroupRule = GroupRule.COMMON_PERFORMANCE;
+
+                conditionGroupId = activeGroupId;
+                conditionRole =
+                        PreferentialRateConditionRole.GROUP_NOTICE;
+            }
+
+            // SC제일은행형 그룹 내부 조건 처리
+            else if (activeGroupRule == GroupRule.ALL_REQUIRED_BONUS) {
+                conditionGroupId = activeGroupId;
+
+                if (isBonusRateCondition(conditionText)) {
+                    conditionRole =
+                            PreferentialRateConditionRole.GROUP_CONDITION;
+
+                    // 보너스 금리 조건 문장을 찾으면 그룹 종료
+                    activeGroupId = null;
+                    activeGroupRule = GroupRule.NONE;
+                } else {
+                    conditionRole =
+                            PreferentialRateConditionRole.GROUP_DETAIL;
+                }
+            }
+
+            // 우리은행형 그룹 내부 조건 처리
+            else if (activeGroupRule == GroupRule.COMMON_PERFORMANCE) {
+                if (isCommonPerformanceCondition(
+                        conditionType,
+                        additionalRate
+                )) {
+                    conditionGroupId = activeGroupId;
+                    conditionRole =
+                            PreferentialRateConditionRole.GROUP_CONDITION;
+                } else {
+                    // 확실하지 않은 조건은 억지로 그룹화하지 않음
+                    activeGroupId = null;
+                    activeGroupRule = GroupRule.NONE;
+                }
+            }
+
             result.add(
                     new ParsedPreferentialRateCondition(
                             conditionType,
                             conditionText,
                             additionalRate,
-                            selectable
+                            selectable,
+                            conditionGroupId,
+                            conditionRole
                     )
             );
         }
 
         return result;
+    }
+
+    // 모든 세부조건 충족이 필요한 보너스 우대 안내인지 확인
+    private boolean isAllRequiredBonusNotice(
+            String conditionText
+    ) {
+        String compact =
+                conditionText.replaceAll("\\s+", "");
+
+        boolean hasAllRequiredCondition =
+                compact.contains("아래의조건을모두충족")
+                        || compact.contains("아래조건을모두충족");
+
+        return hasAllRequiredCondition
+                && compact.contains("보너스이율");
+    }
+
+    // 실제 보너스 금리 조건 문장인지 확인
+    private boolean isBonusRateCondition(
+            String conditionText
+    ) {
+        String compact =
+                conditionText.replaceAll("\\s+", "");
+
+        return compact.contains("보너스이율")
+                && RATE_PATTERN.matcher(conditionText).find();
+    }
+
+    // 여러 우대조건에 공통으로 적용되는 실적 안내인지 확인
+    private boolean isCommonPerformanceNotice(
+            String conditionText
+    ) {
+        String compact =
+                conditionText.replaceAll("\\s+", "");
+
+        return compact.contains("입출식계좌")
+                && compact.contains("각항목별실적월수")
+                && compact.contains("계약기간의1/2이상");
+    }
+
+    // 공통 실적 그룹에서 각각 금리가 적용되는 조건인지 확인
+    private boolean isCommonPerformanceCondition(
+            PreferentialConditionType conditionType,
+            BigDecimal additionalRate
+    ) {
+        if (additionalRate == null) {
+            return false;
+        }
+
+        return conditionType
+                == PreferentialConditionType.INCOME_TRANSFER
+                || conditionType
+                == PreferentialConditionType.AUTOMATIC_TRANSFER
+                || conditionType
+                == PreferentialConditionType.CARD_USAGE;
     }
 
     // 줄 앞의 번호 및 불필요한 기호와 공백 제거
@@ -375,5 +497,12 @@ public class PreferentialRateConditionParser {
         }
 
         return false;
+    }
+
+    // 현재 적용 중인 우대조건 그룹 규칙
+    private enum GroupRule {
+        NONE,
+        ALL_REQUIRED_BONUS,
+        COMMON_PERFORMANCE
     }
 }

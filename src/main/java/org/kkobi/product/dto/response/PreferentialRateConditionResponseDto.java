@@ -1,6 +1,7 @@
 package org.kkobi.product.dto.response;
 
 import lombok.Data;
+import org.kkobi.product.enums.PreferentialRateConditionRole;
 
 import java.math.BigDecimal;
 
@@ -24,4 +25,10 @@ public class PreferentialRateConditionResponseDto {
 
     // 우대조건 표시 순서
     private Integer displayOrder;
+
+    // 같은 UI 그룹을 묶기 위한 식별자
+    private Long conditionGroupId;
+
+    // 우대조건의 UI 역할
+    private PreferentialRateConditionRole conditionRole;
 }
