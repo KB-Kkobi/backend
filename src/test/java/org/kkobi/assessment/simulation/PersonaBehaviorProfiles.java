@@ -39,12 +39,12 @@ public final class PersonaBehaviorProfiles {
         profiles.put(PersonaType.HLH, profile(PersonaType.HLH, 75, 95, 0, 5,
                 85, 95, 5, 95, 5, 90, 5, 95,
                 95, 0, 0, 90, 95, 0, 5, 0, 20, 80));
-        profiles.put(PersonaType.HLL, profile(PersonaType.HLL, 55, 75, 15, 35,
-                45, 80, 5, 5, 10, 10, 15, 10,
-                0, 20, 10, 95, 80, 10, 5, 0, 30, 70));
-        profiles.put(PersonaType.LHH, profile(PersonaType.LHH, 55, 65, 0, 5,
-                90, 0, 80, 100, 100, 80, 100, 0,
-                0, 100, 100, 0, 0, 90, 100, 0, 100, 0));
+        profiles.put(PersonaType.HLL, profile(PersonaType.HLL, 55, 75, 45, 80,
+                45, 80, 55, 30, 50, 10, 15, 10,
+                0, 80, 10, 95, 80, 80, 5, 0, 30, 70));
+        profiles.put(PersonaType.LHH, profile(PersonaType.LHH, 65, 90, 0, 5,
+                80, 0, 80, 80, 80, 80, 80, 40,
+                30, 70, 100, 0, 0, 90, 100, 0, 100, 0));
         profiles.put(PersonaType.LHL, profile(PersonaType.LHL, 0, 15, 45, 70,
                 35, 0, 95, 0, 95, 5, 95, 5,
                 0, 100, 100, 0, 0, 95, 10, 25, 60, 15));
