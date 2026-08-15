@@ -173,6 +173,42 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    LOG_DIMINISHING_CANDIDATE_RULES(
+            "반복 정책·세 후보 규칙 P95 로그 감쇠",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    LOG_DIMINISHING_ALL_REPEATED_RULES(
+            "모든 반복 매수·매도와 세 후보 규칙 P95 로그 감쇠",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    LOG_DIMINISHING_RULE_GROUPS(
+            "매수·매도·상태 유지 계열별 P95 로그 감쇠",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP(
+            "계열별 P95 로그 감쇠·매수매도 2.5회·상태 유지 1.5회분",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -807,7 +843,11 @@ public enum GameRuleEvaluationCondition {
                 || this == RECOMMENDED_GAME_REPETITION_POLICY
                 || this == THREE_CANDIDATE_RULES
                 || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
-                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
+                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
@@ -819,28 +859,44 @@ public enum GameRuleEvaluationCondition {
         return this
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_HOLDING
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     public boolean appliesNormalPlannedBuyRule() {
         return this
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_NORMAL_BUY
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     public boolean appliesCashBufferMaintenanceRule() {
         return this
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     public boolean appliesCashBufferMaintenancePerEpisodeRule() {
         return this
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CASH_BUFFER
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     private boolean appliesCrashPartialSellAxisSeparation() {
@@ -849,11 +905,33 @@ public enum GameRuleEvaluationCondition {
                 || this == RECOMMENDED_GAME_REPETITION_POLICY
                 || this == THREE_CANDIDATE_RULES
                 || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
-                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
+                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY
+                || this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES
+                || this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     public boolean appliesOpportunityWeightedRepeatedScore() {
         return this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
+    }
+
+    public boolean appliesLogDiminishingCandidateScore() {
+        return this == LOG_DIMINISHING_CANDIDATE_RULES
+                || this == LOG_DIMINISHING_ALL_REPEATED_RULES;
+    }
+
+    public boolean appliesLogDiminishingRepeatedRuleScore() {
+        return this == LOG_DIMINISHING_ALL_REPEATED_RULES;
+    }
+
+    public boolean appliesLogDiminishingRuleGroupScore() {
+        return this == LOG_DIMINISHING_RULE_GROUPS
+                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+    }
+
+    public boolean appliesBalancedRuleGroupMaximum() {
+        return this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
     }
 
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {

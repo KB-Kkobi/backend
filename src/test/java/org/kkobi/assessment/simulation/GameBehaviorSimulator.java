@@ -48,6 +48,23 @@ public class GameBehaviorSimulator {
     private static final int CASH_BUFFER_MAINTENANCE_TICKS = 3;
     private static final ScoreDelta CASH_BUFFER_MAINTENANCE_SCORE =
             ScoreDelta.createScoreDelta(0, 5, 0);
+    private static final int CRASH_HOLDING_P95 = 4;
+    private static final int NORMAL_PLANNED_BUY_P95 = 9;
+    private static final int CASH_BUFFER_MAINTENANCE_P95 = 4;
+    private static final int BUY_GROUP_P95 = 19;
+    private static final int SELL_GROUP_P95 = 9;
+    private static final int STATE_MAINTENANCE_GROUP_P95 = 8;
+    private static final BigDecimal BUY_GROUP_MAXIMUM_MULTIPLIER = BigDecimal.valueOf(2.5);
+    private static final BigDecimal SELL_GROUP_MAXIMUM_MULTIPLIER = BigDecimal.valueOf(2.5);
+    private static final BigDecimal STATE_GROUP_MAXIMUM_MULTIPLIER = BigDecimal.valueOf(1.5);
+    private static final Map<BehaviorRuleCode, Integer> REPEATED_RULE_P95 = Map.of(
+            BehaviorRuleCode.CRASH_BUY, 4,
+            BehaviorRuleCode.CRASH_FULL_SELL, 1,
+            BehaviorRuleCode.BULL_BUY, 4,
+            BehaviorRuleCode.BULL_PROFIT_SELL, 4,
+            BehaviorRuleCode.LOSS_AVERAGING_BUY, 2,
+            BehaviorRuleCode.LOSS_CUT_SELL, 4
+    );
     private static final int OPPORTUNITY_CONFIDENCE_K = 1;
     private static final Set<BehaviorRuleCode> ONE_TIME_GAME_RULE_CODES = Set.of(
             BehaviorRuleCode.INITIAL_STOCK_ALLOCATION,
@@ -355,37 +372,73 @@ public class GameBehaviorSimulator {
                                 generationResult.getActions()
                         )
                         : 0;
-        List<ScoreDelta> scoreDeltas = ruleEvaluationCondition
-                .appliesOpportunityWeightedRepeatedScore()
-                ? calculateOpportunityWeightedScoreDeltas(
+        List<ScoreDelta> scoreDeltas;
+        if (ruleEvaluationCondition.appliesLogDiminishingRuleGroupScore()) {
+            scoreDeltas = calculateLogDiminishingRuleGroupScores(
+                    analysisResults,
+                    crashHoldingEpisodeCount,
+                    normalPlannedBuyCount,
+                    cashBufferMaintenanceCount,
+                    ruleEvaluationCondition.appliesBalancedRuleGroupMaximum()
+            );
+        } else if (ruleEvaluationCondition.appliesOpportunityWeightedRepeatedScore()) {
+            scoreDeltas = calculateOpportunityWeightedScoreDeltas(
                         scenario,
                         behaviorContexts,
                         analysisResults
-                )
-                : new ArrayList<>(analysisResults.stream()
-                        .map(BehaviorAnalysisResult::getTotalScoreDelta)
-                        .toList());
-        for (int count = 0; count < crashHoldingEpisodeCount; count++) {
-            scoreDeltas.add(CRASH_HOLDING_SCORE);
+            );
+        } else if (ruleEvaluationCondition.appliesLogDiminishingRepeatedRuleScore()) {
+            scoreDeltas = new ArrayList<>(calculateLogDiminishingRuleContributions(
+                    analysisResults
+            ).values());
+        } else {
+            scoreDeltas = new ArrayList<>(analysisResults.stream()
+                    .map(BehaviorAnalysisResult::getTotalScoreDelta)
+                    .toList());
         }
-        for (int count = 0; count < normalPlannedBuyCount; count++) {
-            scoreDeltas.add(NORMAL_PLANNED_BUY_SCORE);
-        }
-        for (int count = 0; count < cashBufferMaintenanceCount; count++) {
-            scoreDeltas.add(CASH_BUFFER_MAINTENANCE_SCORE);
+        if (!ruleEvaluationCondition.appliesLogDiminishingRuleGroupScore()) {
+            if (ruleEvaluationCondition.appliesLogDiminishingCandidateScore()) {
+                scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                        CRASH_HOLDING_SCORE,
+                        crashHoldingEpisodeCount,
+                        CRASH_HOLDING_P95
+                ));
+                scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                        NORMAL_PLANNED_BUY_SCORE,
+                        normalPlannedBuyCount,
+                        NORMAL_PLANNED_BUY_P95
+                ));
+                scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                        CASH_BUFFER_MAINTENANCE_SCORE,
+                        cashBufferMaintenanceCount,
+                        CASH_BUFFER_MAINTENANCE_P95
+                ));
+            } else {
+                addRepeatedScore(scoreDeltas, CRASH_HOLDING_SCORE, crashHoldingEpisodeCount);
+                addRepeatedScore(scoreDeltas, NORMAL_PLANNED_BUY_SCORE, normalPlannedBuyCount);
+                addRepeatedScore(
+                        scoreDeltas,
+                        CASH_BUFFER_MAINTENANCE_SCORE,
+                        cashBufferMaintenanceCount
+                );
+            }
         }
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
                 analysisResults
         );
-        Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions = ruleEvaluationCondition
-                .appliesOpportunityWeightedRepeatedScore()
-                ? calculateOpportunityWeightedRuleContributions(
+        Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions;
+        if (ruleEvaluationCondition.appliesOpportunityWeightedRepeatedScore()) {
+            ruleScoreContributions = calculateOpportunityWeightedRuleContributions(
                         scenario,
                         behaviorContexts,
                         analysisResults
-                )
-                : calculateRuleScoreContributions(analysisResults);
+            );
+        } else if (ruleEvaluationCondition.appliesLogDiminishingRepeatedRuleScore()) {
+            ruleScoreContributions = calculateLogDiminishingRuleContributions(analysisResults);
+        } else {
+            ruleScoreContributions = calculateRuleScoreContributions(analysisResults);
+        }
 
         return createSimulationResult(
                 simulationUserId,
@@ -412,6 +465,213 @@ public class GameBehaviorSimulator {
                 behaviorContexts,
                 analysisResults
         ).values());
+    }
+
+    ScoreDelta calculateLogDiminishingCandidateScore(
+            ScoreDelta maximumScore,
+            int applicationCount,
+            int p95ApplicationCount) {
+        if (applicationCount <= 0) {
+            return ScoreDelta.createZeroScoreDelta();
+        }
+        if (p95ApplicationCount <= 0) {
+            throw new IllegalArgumentException("P95 적용 횟수는 1 이상이어야 합니다.");
+        }
+
+        int effectiveCount = Math.min(applicationCount, p95ApplicationCount);
+        BigDecimal weight = BigDecimal.valueOf(
+                Math.log1p(effectiveCount) / Math.log1p(p95ApplicationCount)
+        );
+        return maximumScore.multiplyScoreDelta(weight);
+    }
+
+    Map<BehaviorRuleCode, ScoreDelta> calculateLogDiminishingRuleContributions(
+            List<BehaviorAnalysisResult> analysisResults) {
+        EnumMap<BehaviorRuleCode, ScoreDelta> scoreSums =
+                new EnumMap<>(BehaviorRuleCode.class);
+        EnumMap<BehaviorRuleCode, Integer> applicationCounts =
+                new EnumMap<>(BehaviorRuleCode.class);
+
+        for (BehaviorAnalysisResult analysisResult : analysisResults) {
+            for (RuleResult ruleResult : analysisResult.getAppliedRules()) {
+                scoreSums.merge(
+                        ruleResult.getRuleCode(),
+                        ruleResult.getScoreDelta(),
+                        ScoreDelta::addScoreDelta
+                );
+                applicationCounts.merge(ruleResult.getRuleCode(), 1, Integer::sum);
+            }
+        }
+
+        EnumMap<BehaviorRuleCode, ScoreDelta> contributions =
+                new EnumMap<>(BehaviorRuleCode.class);
+        scoreSums.forEach((ruleCode, scoreSum) -> {
+            int applicationCount = applicationCounts.get(ruleCode);
+            if (ONE_TIME_GAME_RULE_CODES.contains(ruleCode)) {
+                contributions.put(ruleCode, scoreSum);
+                return;
+            }
+            int p95ApplicationCount = REPEATED_RULE_P95.getOrDefault(
+                    ruleCode,
+                    Math.max(1, applicationCount)
+            );
+            ScoreDelta averageScore = divideScoreDelta(
+                    scoreSum,
+                    BigDecimal.valueOf(applicationCount)
+            );
+            contributions.put(
+                    ruleCode,
+                    calculateLogDiminishingCandidateScore(
+                            averageScore,
+                            applicationCount,
+                            p95ApplicationCount
+                    )
+            );
+        });
+        return contributions;
+    }
+
+    List<ScoreDelta> calculateLogDiminishingRuleGroupScores(
+            List<BehaviorAnalysisResult> analysisResults,
+            int crashHoldingEpisodeCount,
+            int normalPlannedBuyCount,
+            int cashBufferMaintenanceCount) {
+        return calculateLogDiminishingRuleGroupScores(
+                analysisResults,
+                crashHoldingEpisodeCount,
+                normalPlannedBuyCount,
+                cashBufferMaintenanceCount,
+                false
+        );
+    }
+
+    List<ScoreDelta> calculateLogDiminishingRuleGroupScores(
+            List<BehaviorAnalysisResult> analysisResults,
+            int crashHoldingEpisodeCount,
+            int normalPlannedBuyCount,
+            int cashBufferMaintenanceCount,
+            boolean appliesBalancedMaximum) {
+        List<ScoreDelta> oneTimeScores = new ArrayList<>();
+        EnumMap<RepeatedRuleGroup, ScoreDelta> groupScoreSums =
+                new EnumMap<>(RepeatedRuleGroup.class);
+        EnumMap<RepeatedRuleGroup, Integer> groupApplicationCounts =
+                new EnumMap<>(RepeatedRuleGroup.class);
+
+        for (BehaviorAnalysisResult analysisResult : analysisResults) {
+            for (RuleResult ruleResult : analysisResult.getAppliedRules()) {
+                BehaviorRuleCode ruleCode = ruleResult.getRuleCode();
+                if (ONE_TIME_GAME_RULE_CODES.contains(ruleCode)) {
+                    oneTimeScores.add(ruleResult.getScoreDelta());
+                    continue;
+                }
+                RepeatedRuleGroup ruleGroup = RepeatedRuleGroup.from(ruleCode);
+                if (ruleGroup == null) {
+                    oneTimeScores.add(ruleResult.getScoreDelta());
+                    continue;
+                }
+                mergeGroupScore(
+                        groupScoreSums,
+                        groupApplicationCounts,
+                        ruleGroup,
+                        ruleResult.getScoreDelta(),
+                        1
+                );
+            }
+        }
+
+        mergeGroupScore(
+                groupScoreSums,
+                groupApplicationCounts,
+                RepeatedRuleGroup.BUY,
+                NORMAL_PLANNED_BUY_SCORE.multiplyScoreDelta(
+                        BigDecimal.valueOf(normalPlannedBuyCount)
+                ),
+                normalPlannedBuyCount
+        );
+        mergeGroupScore(
+                groupScoreSums,
+                groupApplicationCounts,
+                RepeatedRuleGroup.STATE_MAINTENANCE,
+                CRASH_HOLDING_SCORE.multiplyScoreDelta(
+                        BigDecimal.valueOf(crashHoldingEpisodeCount)
+                ).addScoreDelta(CASH_BUFFER_MAINTENANCE_SCORE.multiplyScoreDelta(
+                        BigDecimal.valueOf(cashBufferMaintenanceCount)
+                )),
+                crashHoldingEpisodeCount + cashBufferMaintenanceCount
+        );
+
+        List<ScoreDelta> scores = new ArrayList<>(oneTimeScores);
+        groupScoreSums.forEach((ruleGroup, scoreSum) -> {
+            int applicationCount = groupApplicationCounts.get(ruleGroup);
+            ScoreDelta averageScore = divideScoreDelta(
+                    scoreSum,
+                    BigDecimal.valueOf(applicationCount)
+            );
+            ScoreDelta groupScore = calculateLogDiminishingCandidateScore(
+                    averageScore,
+                    applicationCount,
+                    ruleGroup.getP95ApplicationCount()
+            );
+            scores.add(appliesBalancedMaximum
+                    ? groupScore.multiplyScoreDelta(ruleGroup.getMaximumMultiplier())
+                    : groupScore);
+        });
+        return scores;
+    }
+
+    private void mergeGroupScore(
+            Map<RepeatedRuleGroup, ScoreDelta> scoreSums,
+            Map<RepeatedRuleGroup, Integer> applicationCounts,
+            RepeatedRuleGroup ruleGroup,
+            ScoreDelta scoreDelta,
+            int applicationCount) {
+        if (applicationCount <= 0) {
+            return;
+        }
+        scoreSums.merge(ruleGroup, scoreDelta, ScoreDelta::addScoreDelta);
+        applicationCounts.merge(ruleGroup, applicationCount, Integer::sum);
+    }
+
+    private enum RepeatedRuleGroup {
+        BUY(BUY_GROUP_P95, BUY_GROUP_MAXIMUM_MULTIPLIER),
+        SELL(SELL_GROUP_P95, SELL_GROUP_MAXIMUM_MULTIPLIER),
+        STATE_MAINTENANCE(STATE_MAINTENANCE_GROUP_P95, STATE_GROUP_MAXIMUM_MULTIPLIER);
+
+        private final int p95ApplicationCount;
+        private final BigDecimal maximumMultiplier;
+
+        RepeatedRuleGroup(int p95ApplicationCount, BigDecimal maximumMultiplier) {
+            this.p95ApplicationCount = p95ApplicationCount;
+            this.maximumMultiplier = maximumMultiplier;
+        }
+
+        int getP95ApplicationCount() {
+            return p95ApplicationCount;
+        }
+
+        BigDecimal getMaximumMultiplier() {
+            return maximumMultiplier;
+        }
+
+        static RepeatedRuleGroup from(BehaviorRuleCode ruleCode) {
+            return switch (ruleCode) {
+                case CRASH_BUY, BULL_BUY, LOSS_AVERAGING_BUY -> BUY;
+                case CRASH_FULL_SELL, BULL_PROFIT_SELL, LOSS_CUT_SELL -> SELL;
+                case VERY_LOW_CASH_MAINTENANCE,
+                        MEDIUM_CASH_MAINTENANCE,
+                        HIGH_CASH_MAINTENANCE -> STATE_MAINTENANCE;
+                default -> null;
+            };
+        }
+    }
+
+    private void addRepeatedScore(
+            List<ScoreDelta> scoreDeltas,
+            ScoreDelta scoreDelta,
+            int applicationCount) {
+        for (int count = 0; count < applicationCount; count++) {
+            scoreDeltas.add(scoreDelta);
+        }
     }
 
     private Map<BehaviorRuleCode, ScoreDelta> calculateOpportunityWeightedRuleContributions(

@@ -144,6 +144,34 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.UNLIMITED,
             GameRuleEvaluationCondition.OPPORTUNITY_WEIGHTED_REPETITION_POLICY,
             ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    LOG_DIMINISHING_CANDIDATE_RULES(
+            "반복 정책·세 후보 규칙 P95 로그 감쇠",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.DOMINANT_BUY_RULE_HARD_CAP,
+            GameRuleEvaluationCondition.LOG_DIMINISHING_CANDIDATE_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    LOG_DIMINISHING_ALL_REPEATED_RULES(
+            "모든 반복 매수·매도와 세 후보 규칙 P95 로그 감쇠",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.LOG_DIMINISHING_ALL_REPEATED_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    LOG_DIMINISHING_RULE_GROUPS(
+            "매수·매도·상태 유지 계열별 P95 로그 감쇠",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.LOG_DIMINISHING_RULE_GROUPS,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP(
+            "계열별 로그 감쇠·매수매도 2.5회·상태 유지 1.5회분",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP,
+            ConsecutiveActionMultiplierCondition.DISABLED
     );
 
     private final String description;

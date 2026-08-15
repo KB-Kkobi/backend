@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,9 @@ public class SimulationComparisonCsvExporter {
             Map<String, Long> crashHoldingEpisodeTotals = new LinkedHashMap<>();
             Map<String, Long> normalPlannedBuyTotals = new LinkedHashMap<>();
             Map<String, Long> cashBufferMaintenanceTotals = new LinkedHashMap<>();
+            Map<String, List<Integer>> crashHoldingEpisodeCounts = new LinkedHashMap<>();
+            Map<String, List<Integer>> normalPlannedBuyCounts = new LinkedHashMap<>();
+            Map<String, List<Integer>> cashBufferMaintenanceCounts = new LinkedHashMap<>();
 
             for (SimulationExperimentCase experimentCase : experimentCases) {
                 ScoreAxisCorrelationAnalysis correlationAnalysis =
@@ -55,6 +59,9 @@ public class SimulationComparisonCsvExporter {
                 long[] crashHoldingEpisodeTotal = {0L};
                 long[] normalPlannedBuyTotal = {0L};
                 long[] cashBufferMaintenanceTotal = {0L};
+                List<Integer> crashHoldingCounts = new ArrayList<>();
+                List<Integer> normalBuyCounts = new ArrayList<>();
+                List<Integer> cashBufferCounts = new ArrayList<>();
                 GameBiasMitigationCondition mitigationCondition =
                         experimentCase.mitigationCondition();
                 GameBehaviorSimulationAnalysis analysis =
@@ -75,6 +82,9 @@ public class SimulationComparisonCsvExporter {
                                     normalPlannedBuyTotal[0] += result.getNormalPlannedBuyCount();
                                     cashBufferMaintenanceTotal[0] +=
                                             result.getCashBufferMaintenanceCount();
+                                    crashHoldingCounts.add(result.getCrashHoldingEpisodeCount());
+                                    normalBuyCounts.add(result.getNormalPlannedBuyCount());
+                                    cashBufferCounts.add(result.getCashBufferMaintenanceCount());
                                 }
                         );
                 if (analyses.putIfAbsent(experimentCase.name(), analysis) != null) {
@@ -93,6 +103,9 @@ public class SimulationComparisonCsvExporter {
                         experimentCase.name(),
                         cashBufferMaintenanceTotal[0]
                 );
+                crashHoldingEpisodeCounts.put(experimentCase.name(), crashHoldingCounts);
+                normalPlannedBuyCounts.put(experimentCase.name(), normalBuyCounts);
+                cashBufferMaintenanceCounts.put(experimentCase.name(), cashBufferCounts);
             }
 
             writeComparison(
@@ -102,7 +115,10 @@ public class SimulationComparisonCsvExporter {
                     correlations,
                     crashHoldingEpisodeTotals,
                     normalPlannedBuyTotals,
-                    cashBufferMaintenanceTotals
+                    cashBufferMaintenanceTotals,
+                    crashHoldingEpisodeCounts,
+                    normalPlannedBuyCounts,
+                    cashBufferMaintenanceCounts
             );
             return Map.copyOf(analyses);
         } catch (IOException exception) {
@@ -117,7 +133,10 @@ public class SimulationComparisonCsvExporter {
             Map<String, ScoreAxisCorrelationAnalysis> correlations,
             Map<String, Long> crashHoldingEpisodeTotals,
             Map<String, Long> normalPlannedBuyTotals,
-            Map<String, Long> cashBufferMaintenanceTotals) throws IOException {
+            Map<String, Long> cashBufferMaintenanceTotals,
+            Map<String, List<Integer>> crashHoldingEpisodeCounts,
+            Map<String, List<Integer>> normalPlannedBuyCounts,
+            Map<String, List<Integer>> cashBufferMaintenanceCounts) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(
                 outputPath,
                 StandardCharsets.UTF_8
@@ -131,7 +150,19 @@ public class SimulationComparisonCsvExporter {
                         correlations.get(experimentCase.name()),
                         crashHoldingEpisodeTotals.get(experimentCase.name()),
                         normalPlannedBuyTotals.get(experimentCase.name()),
-                        cashBufferMaintenanceTotals.get(experimentCase.name())
+                        cashBufferMaintenanceTotals.get(experimentCase.name()),
+                        calculatePercentile(
+                                crashHoldingEpisodeCounts.get(experimentCase.name()),
+                                95
+                        ),
+                        calculatePercentile(
+                                normalPlannedBuyCounts.get(experimentCase.name()),
+                                95
+                        ),
+                        calculatePercentile(
+                                cashBufferMaintenanceCounts.get(experimentCase.name()),
+                                95
+                        )
                 ));
             }
         }
@@ -154,6 +185,9 @@ public class SimulationComparisonCsvExporter {
                 "평균_급락구간_보유유지_횟수(average_crash_holding_episode_count)",
                 "평균_평범장_계획매수_횟수(average_normal_planned_buy_count)",
                 "평균_현금완충_유지_횟수(average_cash_buffer_maintenance_count)",
+                "급락구간_보유유지_P95(crash_holding_episode_p95)",
+                "평범장_계획매수_P95(normal_planned_buy_p95)",
+                "현금완충_유지_P95(cash_buffer_maintenance_p95)",
                 "RT_평균(rt_average)",
                 "LH_평균(lh_average)",
                 "RP_평균(rp_average)",
@@ -173,7 +207,10 @@ public class SimulationComparisonCsvExporter {
             ScoreAxisCorrelationAnalysis correlationAnalysis,
             long crashHoldingEpisodeTotal,
             long normalPlannedBuyTotal,
-            long cashBufferMaintenanceTotal) {
+            long cashBufferMaintenanceTotal,
+            int crashHoldingEpisodeP95,
+            int normalPlannedBuyP95,
+            int cashBufferMaintenanceP95) {
         GameBehaviorSimulationAnalysis.BehaviorStatistics behaviorStatistics =
                 analysis.getBehaviorStatistics();
         List<String> row = new ArrayList<>(List.of(
@@ -210,6 +247,9 @@ public class SimulationComparisonCsvExporter {
                                 RoundingMode.HALF_UP
                         )
                         .toPlainString(),
+                String.valueOf(crashHoldingEpisodeP95),
+                String.valueOf(normalPlannedBuyP95),
+                String.valueOf(cashBufferMaintenanceP95),
                 analysis.getOverallRtScoreSummary().getAverage().toPlainString(),
                 analysis.getOverallLhScoreSummary().getAverage().toPlainString(),
                 analysis.getOverallRpScoreSummary().getAverage().toPlainString(),
@@ -223,6 +263,16 @@ public class SimulationComparisonCsvExporter {
                     .toPlainString());
         }
         return row;
+    }
+
+    private int calculatePercentile(List<Integer> values, int percentile) {
+        if (values == null || values.isEmpty()) {
+            return 0;
+        }
+        List<Integer> sortedValues = new ArrayList<>(values);
+        Collections.sort(sortedValues);
+        int rank = (int) Math.ceil(sortedValues.size() * percentile / 100.0);
+        return sortedValues.get(Math.max(0, rank - 1));
     }
 
     private void writeCsvRow(BufferedWriter writer, List<String> values) throws IOException {

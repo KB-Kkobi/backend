@@ -36,6 +36,22 @@ public enum SimulationExperimentCatalog {
     OPPORTUNITY_WEIGHTED_REPETITION_FREQUENCY(
             "반복 행동 상한과 기회 비율·신뢰도 보정 방식 비교",
             createOpportunityWeightedRepetitionFrequencyCases()
+    ),
+    LOG_DIMINISHING_CANDIDATE_RULES_FREQUENCY(
+            "세 후보 규칙 단순 누적과 P95 로그 감쇠 방식 비교",
+            createLogDiminishingCandidateRulesFrequencyCases()
+    ),
+    LOG_DIMINISHING_ALL_REPEATED_RULES_FREQUENCY(
+            "기존 반복 상한과 모든 반복 규칙 P95 로그 감쇠 방식 비교",
+            createLogDiminishingAllRepeatedRulesFrequencyCases()
+    ),
+    LOG_DIMINISHING_RULE_GROUPS_FREQUENCY(
+            "개별 반복 규칙과 매수·매도·상태 유지 계열 로그 감쇠 비교",
+            createLogDiminishingRuleGroupsFrequencyCases()
+    ),
+    LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP_FREQUENCY(
+            "계열별 로그 감쇠의 최대 기여도 1회분과 권장 중간안 비교",
+            createLogDiminishingRuleGroupsBalancedCapFrequencyCases()
     );
 
     private final String description;
@@ -180,6 +196,86 @@ public enum SimulationExperimentCatalog {
                 experimentCases,
                 "행동 기회 비율·관측 신뢰도 보정 방식",
                 GameBiasMitigationCondition.OPPORTUNITY_WEIGHTED_REPETITION_POLICY
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createLogDiminishingCandidateRulesFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "최신 반복 정책만 적용",
+                GameBiasMitigationCondition.RECOMMENDED_GAME_REPETITION_POLICY
+        );
+        addFrequencyCases(
+                experimentCases,
+                "세 후보 규칙 단순 누적",
+                GameBiasMitigationCondition
+                        .RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "세 후보 규칙 P95 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_CANDIDATE_RULES
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createLogDiminishingAllRepeatedRulesFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "기존 매수 상한과 후보 규칙 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_CANDIDATE_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "모든 반복 매수·매도와 후보 규칙 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_ALL_REPEATED_RULES
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createLogDiminishingRuleGroupsFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "후보 규칙만 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_CANDIDATE_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "반복 규칙별 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_ALL_REPEATED_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "매수·매도·상태 유지 계열별 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_RULE_GROUPS
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createLogDiminishingRuleGroupsBalancedCapFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "후보 규칙만 로그 감쇠",
+                GameBiasMitigationCondition.LOG_DIMINISHING_CANDIDATE_RULES
+        );
+        addFrequencyCases(
+                experimentCases,
+                "계열별 최대 평균 1회분",
+                GameBiasMitigationCondition.LOG_DIMINISHING_RULE_GROUPS
+        );
+        addFrequencyCases(
+                experimentCases,
+                "매수매도 최대 2.5회·상태 유지 최대 1.5회분",
+                GameBiasMitigationCondition.LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP
         );
         return experimentCases;
     }

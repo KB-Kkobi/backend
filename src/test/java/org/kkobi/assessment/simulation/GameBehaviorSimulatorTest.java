@@ -253,6 +253,206 @@ class GameBehaviorSimulatorTest {
         assertScoreDelta(tenOfTen, "13.64", "-4.55", "0.00");
     }
 
+    @Test
+    @DisplayName("후보 규칙 반복 점수는 P95까지 로그 비율로 증가하고 이후 최대 점수로 제한한다.")
+    void calculateLogDiminishingCandidateScore() {
+        ScoreDelta maximumScore = ScoreDelta.createScoreDelta(5, 0, 0);
+
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        0,
+                        4
+                ),
+                "0.00",
+                "0.00",
+                "0.00"
+        );
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        1,
+                        4
+                ),
+                "2.15",
+                "0.00",
+                "0.00"
+        );
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        2,
+                        4
+                ),
+                "3.41",
+                "0.00",
+                "0.00"
+        );
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        3,
+                        4
+                ),
+                "4.31",
+                "0.00",
+                "0.00"
+        );
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        4,
+                        4
+                ),
+                "5.00",
+                "0.00",
+                "0.00"
+        );
+        assertScoreDelta(
+                gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                        maximumScore,
+                        10,
+                        4
+                ),
+                "5.00",
+                "0.00",
+                "0.00"
+        );
+    }
+
+    @Test
+    @DisplayName("로그 감쇠는 후보 규칙의 음수와 양수 축 방향을 유지한다.")
+    void preserveLogDiminishingCandidateScoreDirection() {
+        ScoreDelta scoreDelta = gameBehaviorSimulator.calculateLogDiminishingCandidateScore(
+                ScoreDelta.createScoreDelta(0, -5, 5),
+                1,
+                9
+        );
+
+        assertScoreDelta(scoreDelta, "0.00", "-1.51", "1.51");
+    }
+
+    @Test
+    @DisplayName("1회성 규칙은 유지하고 반복 규칙은 규칙별 P95 로그 감쇠를 적용한다.")
+    void calculateLogDiminishingRuleContributions() {
+        BehaviorAnalysisResult oneTimeResult = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.INITIAL_STOCK_ALLOCATION,
+                        ScoreDelta.createScoreDelta(10, -5, 5),
+                        "초기 주식 배분"
+                )
+        ));
+        BehaviorAnalysisResult firstCrashBuy = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "급락 매수"
+                )
+        ));
+        BehaviorAnalysisResult secondCrashBuy = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "급락 매수"
+                )
+        ));
+
+        var contributions = gameBehaviorSimulator.calculateLogDiminishingRuleContributions(
+                List.of(oneTimeResult, firstCrashBuy, secondCrashBuy)
+        );
+
+        assertScoreDelta(
+                contributions.get(BehaviorRuleCode.INITIAL_STOCK_ALLOCATION),
+                "10.00",
+                "-5.00",
+                "5.00"
+        );
+        assertScoreDelta(
+                contributions.get(BehaviorRuleCode.CRASH_BUY),
+                "6.83",
+                "-3.41",
+                "0.00"
+        );
+    }
+
+    @Test
+    @DisplayName("반복 규칙은 매수·매도·상태 유지 계열별로 한 번만 로그 감쇠한다.")
+    void calculateLogDiminishingRuleGroupScores() {
+        BehaviorAnalysisResult oneTimeResult = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.INITIAL_STOCK_ALLOCATION,
+                        ScoreDelta.createScoreDelta(10, -5, 5),
+                        "초기 주식 배분"
+                )
+        ));
+        BehaviorAnalysisResult firstCrashBuy = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "급락 매수"
+                )
+        ));
+        BehaviorAnalysisResult secondCrashBuy = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "급락 매수"
+                )
+        ));
+
+        List<ScoreDelta> scores = gameBehaviorSimulator.calculateLogDiminishingRuleGroupScores(
+                List.of(oneTimeResult, firstCrashBuy, secondCrashBuy),
+                4,
+                0,
+                0
+        );
+
+        assertEquals(3, scores.size());
+        assertScoreDelta(scores.get(0), "10.00", "-5.00", "5.00");
+        assertTrue(scores.stream().anyMatch(scoreDelta ->
+                new BigDecimal("3.67").compareTo(scoreDelta.getRtDelta()) == 0
+                        && new BigDecimal("-1.83").compareTo(scoreDelta.getLhDelta()) == 0));
+        assertTrue(scores.stream().anyMatch(scoreDelta ->
+                new BigDecimal("3.66").compareTo(scoreDelta.getRtDelta()) == 0
+                        && BigDecimal.ZERO.compareTo(scoreDelta.getLhDelta()) == 0));
+    }
+
+    @Test
+    @DisplayName("권장 중간안은 매수매도 2.5회분과 상태 유지 1.5회분까지 허용한다.")
+    void calculateBalancedLogDiminishingRuleGroupScores() {
+        BehaviorAnalysisResult oneTimeResult = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.INITIAL_STOCK_ALLOCATION,
+                        ScoreDelta.createScoreDelta(10, -5, 5),
+                        "초기 주식 배분"
+                )
+        ));
+        BehaviorAnalysisResult crashBuyResult = new BehaviorAnalysisResult(List.of(
+                new RuleResult(
+                        BehaviorRuleCode.CRASH_BUY,
+                        ScoreDelta.createScoreDelta(10, -5, 0),
+                        "급락 매수"
+                )
+        ));
+
+        List<ScoreDelta> scores = gameBehaviorSimulator.calculateLogDiminishingRuleGroupScores(
+                List.of(oneTimeResult, crashBuyResult, crashBuyResult),
+                4,
+                0,
+                0,
+                true
+        );
+
+        assertEquals(3, scores.size());
+        assertScoreDelta(scores.get(0), "10.00", "-5.00", "5.00");
+        assertTrue(scores.stream().anyMatch(scoreDelta ->
+                new BigDecimal("9.18").compareTo(scoreDelta.getRtDelta()) == 0
+                        && new BigDecimal("-4.58").compareTo(scoreDelta.getLhDelta()) == 0));
+        assertTrue(scores.stream().anyMatch(scoreDelta ->
+                new BigDecimal("5.49").compareTo(scoreDelta.getRtDelta()) == 0
+                        && BigDecimal.ZERO.compareTo(scoreDelta.getLhDelta()) == 0));
+    }
+
     private SimulatedGamePortfolio createInitialPortfolio() {
         return new SimulatedGamePortfolio(
                 2_000_000L,
