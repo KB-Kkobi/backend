@@ -32,6 +32,10 @@ public enum SimulationExperimentCatalog {
     REPETITION_POLICY_AND_CANDIDATE_RULES_FREQUENCY(
             "반복 정책·세 후보 규칙·동시 적용의 저·중·고빈도 비교",
             createRepetitionPolicyAndCandidateRulesFrequencyCases()
+    ),
+    OPPORTUNITY_WEIGHTED_REPETITION_FREQUENCY(
+            "반복 행동 상한과 기회 비율·신뢰도 보정 방식 비교",
+            createOpportunityWeightedRepetitionFrequencyCases()
     );
 
     private final String description;
@@ -160,6 +164,22 @@ public enum SimulationExperimentCatalog {
                 "최신 반복 정책과 세 후보 규칙 동시 적용",
                 GameBiasMitigationCondition
                         .RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+        );
+        return experimentCases;
+    }
+
+    private static List<SimulationExperimentCase>
+    createOpportunityWeightedRepetitionFrequencyCases() {
+        List<SimulationExperimentCase> experimentCases = new ArrayList<>();
+        addFrequencyCases(
+                experimentCases,
+                "규칙별 반복 상한 방식",
+                GameBiasMitigationCondition.RECOMMENDED_GAME_REPETITION_POLICY
+        );
+        addFrequencyCases(
+                experimentCases,
+                "행동 기회 비율·관측 신뢰도 보정 방식",
+                GameBiasMitigationCondition.OPPORTUNITY_WEIGHTED_REPETITION_POLICY
         );
         return experimentCases;
     }

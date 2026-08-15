@@ -137,6 +137,13 @@ public enum GameBiasMitigationCondition {
             GameRuleEvaluationCondition
                     .RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES,
             ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    OPPORTUNITY_WEIGHTED_REPETITION_POLICY(
+            "반복 행동 기회 비율·관측 신뢰도 보정",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.OPPORTUNITY_WEIGHTED_REPETITION_POLICY,
+            ConsecutiveActionMultiplierCondition.DISABLED
     );
 
     private final String description;

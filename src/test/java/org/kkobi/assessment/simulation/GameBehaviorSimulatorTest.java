@@ -232,6 +232,27 @@ class GameBehaviorSimulatorTest {
         assertEquals(2, count);
     }
 
+    @Test
+    @DisplayName("반복 행동 점수는 행동 비율과 k=1 관측 신뢰도로 보정한다.")
+    void calculateOpportunityWeightedScore() {
+        ScoreDelta oneOfOne = gameBehaviorSimulator.calculateOpportunityWeightedScore(
+                ScoreDelta.createScoreDelta(15, -5, 0),
+                1
+        );
+        ScoreDelta sevenOfTen = gameBehaviorSimulator.calculateOpportunityWeightedScore(
+                ScoreDelta.createScoreDelta(105, -35, 0),
+                10
+        );
+        ScoreDelta tenOfTen = gameBehaviorSimulator.calculateOpportunityWeightedScore(
+                ScoreDelta.createScoreDelta(150, -50, 0),
+                10
+        );
+
+        assertScoreDelta(oneOfOne, "7.50", "-2.50", "0.00");
+        assertScoreDelta(sevenOfTen, "9.55", "-3.18", "0.00");
+        assertScoreDelta(tenOfTen, "13.64", "-4.55", "0.00");
+    }
+
     private SimulatedGamePortfolio createInitialPortfolio() {
         return new SimulatedGamePortfolio(
                 2_000_000L,
@@ -275,6 +296,16 @@ class GameBehaviorSimulatorTest {
                 0L,
                 1
         );
+    }
+
+    private void assertScoreDelta(
+            ScoreDelta scoreDelta,
+            String expectedRt,
+            String expectedLh,
+            String expectedRp) {
+        assertEquals(0, new BigDecimal(expectedRt).compareTo(scoreDelta.getRtDelta()));
+        assertEquals(0, new BigDecimal(expectedLh).compareTo(scoreDelta.getLhDelta()));
+        assertEquals(0, new BigDecimal(expectedRp).compareTo(scoreDelta.getRpDelta()));
     }
 
     private ScenarioDto createScenario(int totalTicks) {

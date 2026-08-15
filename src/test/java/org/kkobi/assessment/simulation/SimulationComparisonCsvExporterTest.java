@@ -108,4 +108,27 @@ class SimulationComparisonCsvExporterTest {
                 combined.getMultiplierCondition()
         );
     }
+
+    @Test
+    void configureOpportunityWeightedRepetitionCases() {
+        List<SimulationExperimentCase> experimentCases = SimulationExperimentCatalog
+                .OPPORTUNITY_WEIGHTED_REPETITION_FREQUENCY
+                .getExperimentCases();
+        GameBiasMitigationCondition condition =
+                GameBiasMitigationCondition.OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
+
+        assertEquals(6, experimentCases.size());
+        assertTrue(
+                condition.getRuleEvaluationCondition()
+                        .appliesOpportunityWeightedRepeatedScore()
+        );
+        assertEquals(
+                RuleAccumulationCondition.UNLIMITED,
+                condition.getRuleAccumulationCondition()
+        );
+        assertEquals(
+                ConsecutiveActionMultiplierCondition.DISABLED,
+                condition.getMultiplierCondition()
+        );
+    }
 }

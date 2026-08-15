@@ -164,6 +164,15 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    OPPORTUNITY_WEIGHTED_REPETITION_POLICY(
+            "반복 행동 기회 비율·관측 신뢰도 보정",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -797,7 +806,8 @@ public enum GameRuleEvaluationCondition {
                 || this == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL
                 || this == RECOMMENDED_GAME_REPETITION_POLICY
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
@@ -838,7 +848,12 @@ public enum GameRuleEvaluationCondition {
                 == EXCLUSIVE_MODERATE_SIZE_SEPARATED_WITH_SMALL_TRADE_DEAD_ZONE_AND_CRASH_PARTIAL_SELL
                 || this == RECOMMENDED_GAME_REPETITION_POLICY
                 || this == THREE_CANDIDATE_RULES
-                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES;
+                || this == RECOMMENDED_REPETITION_POLICY_AND_THREE_CANDIDATE_RULES
+                || this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
+    }
+
+    public boolean appliesOpportunityWeightedRepeatedScore() {
+        return this == OPPORTUNITY_WEIGHTED_REPETITION_POLICY;
     }
 
     private boolean isExcludedSmallBuy(BehaviorEvent behaviorEvent) {

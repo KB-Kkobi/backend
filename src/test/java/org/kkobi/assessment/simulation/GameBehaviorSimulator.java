@@ -48,6 +48,14 @@ public class GameBehaviorSimulator {
     private static final int CASH_BUFFER_MAINTENANCE_TICKS = 3;
     private static final ScoreDelta CASH_BUFFER_MAINTENANCE_SCORE =
             ScoreDelta.createScoreDelta(0, 5, 0);
+    private static final int OPPORTUNITY_CONFIDENCE_K = 1;
+    private static final Set<BehaviorRuleCode> ONE_TIME_GAME_RULE_CODES = Set.of(
+            BehaviorRuleCode.INITIAL_STOCK_ALLOCATION,
+            BehaviorRuleCode.INITIAL_DEPOSIT_ALLOCATION,
+            BehaviorRuleCode.INITIAL_CASH_ALLOCATION,
+            BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
+            BehaviorRuleCode.DEPOSIT_MATURITY
+    );
 
     private final NeutralGameBehaviorGenerator behaviorGenerator =
             new NeutralGameBehaviorGenerator();
@@ -347,9 +355,16 @@ public class GameBehaviorSimulator {
                                 generationResult.getActions()
                         )
                         : 0;
-        List<ScoreDelta> scoreDeltas = new ArrayList<>(analysisResults.stream()
-                .map(BehaviorAnalysisResult::getTotalScoreDelta)
-                .toList());
+        List<ScoreDelta> scoreDeltas = ruleEvaluationCondition
+                .appliesOpportunityWeightedRepeatedScore()
+                ? calculateOpportunityWeightedScoreDeltas(
+                        scenario,
+                        behaviorContexts,
+                        analysisResults
+                )
+                : new ArrayList<>(analysisResults.stream()
+                        .map(BehaviorAnalysisResult::getTotalScoreDelta)
+                        .toList());
         for (int count = 0; count < crashHoldingEpisodeCount; count++) {
             scoreDeltas.add(CRASH_HOLDING_SCORE);
         }
@@ -363,8 +378,14 @@ public class GameBehaviorSimulator {
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
                 analysisResults
         );
-        Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions =
-                calculateRuleScoreContributions(analysisResults);
+        Map<BehaviorRuleCode, ScoreDelta> ruleScoreContributions = ruleEvaluationCondition
+                .appliesOpportunityWeightedRepeatedScore()
+                ? calculateOpportunityWeightedRuleContributions(
+                        scenario,
+                        behaviorContexts,
+                        analysisResults
+                )
+                : calculateRuleScoreContributions(analysisResults);
 
         return createSimulationResult(
                 simulationUserId,
@@ -380,6 +401,117 @@ public class GameBehaviorSimulator {
                 ruleApplicationCounts,
                 ruleScoreContributions
         );
+    }
+
+    List<ScoreDelta> calculateOpportunityWeightedScoreDeltas(
+            ScenarioDto scenario,
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        return new ArrayList<>(calculateOpportunityWeightedRuleContributions(
+                scenario,
+                behaviorContexts,
+                analysisResults
+        ).values());
+    }
+
+    private Map<BehaviorRuleCode, ScoreDelta> calculateOpportunityWeightedRuleContributions(
+            ScenarioDto scenario,
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+
+        EnumMap<BehaviorRuleCode, ScoreDelta> scoreSums =
+                new EnumMap<>(BehaviorRuleCode.class);
+        EnumMap<BehaviorRuleCode, Integer> applicationCounts =
+                new EnumMap<>(BehaviorRuleCode.class);
+        EnumMap<BehaviorRuleCode, ScoreDelta> weightedContributions =
+                new EnumMap<>(BehaviorRuleCode.class);
+
+        for (BehaviorAnalysisResult analysisResult : analysisResults) {
+            for (RuleResult ruleResult : analysisResult.getAppliedRules()) {
+                BehaviorRuleCode ruleCode = ruleResult.getRuleCode();
+                if (ONE_TIME_GAME_RULE_CODES.contains(ruleCode)) {
+                    weightedContributions.merge(
+                            ruleCode,
+                            ruleResult.getScoreDelta(),
+                            ScoreDelta::addScoreDelta
+                    );
+                    continue;
+                }
+                scoreSums.merge(
+                        ruleCode,
+                        ruleResult.getScoreDelta(),
+                        ScoreDelta::addScoreDelta
+                );
+                applicationCounts.merge(ruleCode, 1, Integer::sum);
+            }
+        }
+
+        Map<BehaviorRuleCode, Integer> opportunityCounts = calculateOpportunityCounts(
+                scenario,
+                behaviorContexts,
+                applicationCounts
+        );
+        scoreSums.forEach((ruleCode, scoreSum) -> {
+            int opportunityCount = opportunityCounts.getOrDefault(
+                    ruleCode,
+                    applicationCounts.getOrDefault(ruleCode, 0)
+            );
+            weightedContributions.put(
+                    ruleCode,
+                    calculateOpportunityWeightedScore(scoreSum, opportunityCount)
+            );
+        });
+        return weightedContributions;
+    }
+
+    ScoreDelta calculateOpportunityWeightedScore(
+            ScoreDelta accumulatedScore,
+            int opportunityCount) {
+        if (accumulatedScore == null) {
+            throw new IllegalArgumentException("누적 점수는 필수입니다.");
+        }
+        if (opportunityCount <= 0) {
+            throw new IllegalArgumentException("행동 가능 기회 수는 0보다 커야 합니다.");
+        }
+        return divideScoreDelta(
+                accumulatedScore,
+                BigDecimal.valueOf(opportunityCount + OPPORTUNITY_CONFIDENCE_K)
+        );
+    }
+
+    private Map<BehaviorRuleCode, Integer> calculateOpportunityCounts(
+            ScenarioDto scenario,
+            List<BehaviorContext> behaviorContexts,
+            Map<BehaviorRuleCode, Integer> applicationCounts) {
+        EnumMap<BehaviorRuleCode, Integer> opportunityCounts =
+                new EnumMap<>(BehaviorRuleCode.class);
+        int crashOpportunityCount = countMarketStateTicks(scenario, MarketState.CRASH);
+        int bullOpportunityCount = countMarketStateTicks(scenario, MarketState.BULL);
+
+        opportunityCounts.put(BehaviorRuleCode.CRASH_BUY, crashOpportunityCount);
+        opportunityCounts.put(BehaviorRuleCode.CRASH_FULL_SELL, crashOpportunityCount);
+        opportunityCounts.put(BehaviorRuleCode.BULL_BUY, bullOpportunityCount);
+        opportunityCounts.put(BehaviorRuleCode.BULL_PROFIT_SELL, bullOpportunityCount);
+
+        applicationCounts.forEach((ruleCode, applicationCount) ->
+                opportunityCounts.merge(ruleCode, applicationCount, Math::max));
+        return opportunityCounts;
+    }
+
+    private int countMarketStateTicks(ScenarioDto scenario, MarketState targetMarketState) {
+        return (int) scenario.getTicks().stream()
+                .filter(tick -> tick.getTick() >= 0 && tick.getTick() < scenario.getTotalTicks())
+                .filter(tick -> marketStateCalculator.calculateMarketState(
+                        gamePriceRateCalculator.calculateTickPriceChangeRate(
+                                scenario,
+                                tick.getTick()
+                        ),
+                        null
+                ) == targetMarketState)
+                .count();
     }
 
     private void analyzeBehaviorEvent(
