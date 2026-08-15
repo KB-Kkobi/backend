@@ -14,6 +14,7 @@ import java.util.SplittableRandom;
 public class NeutralGameBehaviorGenerator {
 
     private static final int MAXIMUM_ACTION_COUNT_PER_TICK = 2;
+    private static final int DEPOSIT_HOLD_PERCENTAGE = 50;
 
     public GameBehaviorGenerationResult generateGameBehavior(
             ScenarioDto scenario,
@@ -31,9 +32,20 @@ public class NeutralGameBehaviorGenerator {
         SplittableRandom random = new SplittableRandom(randomSeed);
         List<SimulatedGameAction> actions = new ArrayList<>();
         int noActionTickCount = 0;
+        DepositDecision depositDecision = createDepositDecision(
+                portfolio,
+                decisionTicks,
+                random
+        );
 
         for (ScenarioTickDto scenarioTick : decisionTicks) {
-            int actionCount = generateTickActions(
+            int actionCount = applyDepositDecision(
+                    scenarioTick,
+                    portfolio,
+                    actions,
+                    depositDecision
+            );
+            actionCount += generateTickActions(
                     scenarioTick,
                     portfolio,
                     random,
@@ -132,9 +144,6 @@ public class NeutralGameBehaviorGenerator {
         if (portfolio.canSellStock()) {
             candidateActions.add(CandidateAction.SELL);
         }
-        if (portfolio.canCancelDeposit()) {
-            candidateActions.add(CandidateAction.CANCEL_DEPOSIT);
-        }
         if (candidateActions.isEmpty()) {
             return null;
         }
@@ -160,9 +169,6 @@ public class NeutralGameBehaviorGenerator {
         if (portfolio.canSellStock()) {
             candidateActions.add(CandidateAction.SELL);
         }
-        if (portfolio.canCancelDeposit()) {
-            candidateActions.add(CandidateAction.CANCEL_DEPOSIT);
-        }
 
         List<CandidateAction> selectableActions = List.copyOf(candidateActions);
         return selectableActions.get(random.nextInt(selectableActions.size()));
@@ -184,12 +190,37 @@ public class NeutralGameBehaviorGenerator {
             );
             case SELL -> portfolio.sellStock(
                     scenarioTick.getTick(),
-                    generateQuantity(portfolio.getCurrentStockQuantity(), random),
+                    generateSellQuantity(portfolio.getCurrentStockQuantity(), random),
                     scenarioTick.getPrice()
             );
-            case CANCEL_DEPOSIT -> portfolio.cancelDeposit(scenarioTick.getTick());
             case STOP -> throw new IllegalStateException("무행동은 거래 행동으로 생성할 수 없습니다.");
         };
+    }
+
+    private DepositDecision createDepositDecision(
+            SimulatedGamePortfolio portfolio,
+            List<ScenarioTickDto> decisionTicks,
+            SplittableRandom random) {
+        if (!portfolio.existsActiveDeposit()
+                || canApplyPercentage(random, DEPOSIT_HOLD_PERCENTAGE)) {
+            return DepositDecision.hold();
+        }
+        int cancellationTick = decisionTicks.get(
+                random.nextInt(decisionTicks.size())
+        ).getTick();
+        return DepositDecision.cancelAt(cancellationTick);
+    }
+
+    private int applyDepositDecision(
+            ScenarioTickDto scenarioTick,
+            SimulatedGamePortfolio portfolio,
+            List<SimulatedGameAction> actions,
+            DepositDecision depositDecision) {
+        if (!depositDecision.shouldCancelAt(scenarioTick.getTick())) {
+            return 0;
+        }
+        actions.add(portfolio.cancelDeposit(scenarioTick.getTick()));
+        return 1;
     }
 
     private int generateQuantity(
@@ -203,6 +234,18 @@ public class NeutralGameBehaviorGenerator {
                 1,
                 (int) ((long) maximumQuantity * investmentPercentage / 100)
         );
+    }
+
+    private int generateSellQuantity(
+            int currentStockQuantity,
+            SplittableRandom random) {
+        if (currentStockQuantity <= 0) {
+            throw new IllegalArgumentException("보유 주식 수량은 0보다 커야 합니다.");
+        }
+        SellQuantityType sellQuantityType = SellQuantityType.values()[
+                random.nextInt(SellQuantityType.values().length)
+        ];
+        return sellQuantityType.calculateQuantity(currentStockQuantity);
     }
 
     private List<ScenarioTickDto> getDecisionTicks(ScenarioDto scenario) {
@@ -253,7 +296,44 @@ public class NeutralGameBehaviorGenerator {
     private enum CandidateAction {
         STOP,
         BUY,
-        SELL,
-        CANCEL_DEPOSIT
+        SELL
+    }
+
+    private enum SellQuantityType {
+        PARTIAL {
+            @Override
+            int calculateQuantity(int currentStockQuantity) {
+                return Math.max(1, currentStockQuantity / 4);
+            }
+        },
+        HALF {
+            @Override
+            int calculateQuantity(int currentStockQuantity) {
+                return Math.max(1, currentStockQuantity / 2);
+            }
+        },
+        FULL {
+            @Override
+            int calculateQuantity(int currentStockQuantity) {
+                return currentStockQuantity;
+            }
+        };
+
+        abstract int calculateQuantity(int currentStockQuantity);
+    }
+
+    private record DepositDecision(boolean cancellation, Integer cancellationTick) {
+
+        private static DepositDecision hold() {
+            return new DepositDecision(false, null);
+        }
+
+        private static DepositDecision cancelAt(int cancellationTick) {
+            return new DepositDecision(true, cancellationTick);
+        }
+
+        private boolean shouldCancelAt(int gameTick) {
+            return cancellation && cancellationTick == gameTick;
+        }
     }
 }

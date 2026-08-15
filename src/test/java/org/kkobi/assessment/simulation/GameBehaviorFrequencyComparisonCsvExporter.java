@@ -81,6 +81,7 @@ public class GameBehaviorFrequencyComparisonCsvExporter {
         List<String> header = new ArrayList<>(List.of(
                 "빈도_조건_코드(frequency_condition)",
                 "빈도_조건_설명(frequency_name)",
+                "검증_구분(validation_type)",
                 "행동_시작_확률(action_start_percentage)",
                 "추가_행동_확률(additional_action_percentage)",
                 "조건별_사용자수(simulation_count)",
@@ -113,6 +114,7 @@ public class GameBehaviorFrequencyComparisonCsvExporter {
         List<String> row = new ArrayList<>(List.of(
                 condition.name(),
                 condition.getDescription(),
+                condition.getValidationType(),
                 String.valueOf(condition.getActionStartPercentage()),
                 String.valueOf(condition.getAdditionalActionPercentage()),
                 String.valueOf(analysis.getTotalSimulationCount()),

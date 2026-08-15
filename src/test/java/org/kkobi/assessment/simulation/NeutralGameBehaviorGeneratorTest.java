@@ -115,6 +115,91 @@ class NeutralGameBehaviorGeneratorTest {
     }
 
     @Test
+    @DisplayName("예금 보유 사용자는 유지 또는 해지를 한 번만 결정한다.")
+    void decideDepositStrategyOnce() {
+        ScenarioDto scenario = scenarioService.getScenario("SC001");
+        int cancelledUserCount = 0;
+        int maturedUserCount = 0;
+
+        for (long randomSeed = 1L; randomSeed <= 1_000L; randomSeed++) {
+            GameBehaviorGenerationResult result = behaviorGenerator.generateGameBehavior(
+                    scenario,
+                    createPortfolio(),
+                    randomSeed,
+                    GameBehaviorFrequencyCondition.MEDIUM
+            );
+            long cancelCount = result.getActions().stream()
+                    .filter(action -> action.getActionType()
+                            == BehaviorActionType.CANCEL_PRODUCT)
+                    .count();
+            long maturityCount = result.getActions().stream()
+                    .filter(action -> action.getActionType() == BehaviorActionType.MATURITY)
+                    .count();
+
+            assertEquals(1L, cancelCount + maturityCount);
+            assertTrue(cancelCount <= 1L);
+            assertTrue(maturityCount <= 1L);
+            cancelledUserCount += cancelCount;
+            maturedUserCount += maturityCount;
+        }
+
+        assertTrue(cancelledUserCount > 400);
+        assertTrue(cancelledUserCount < 600);
+        assertTrue(maturedUserCount > 400);
+        assertTrue(maturedUserCount < 600);
+    }
+
+    @Test
+    @DisplayName("매도 수량은 일부·절반·전량 구간에서 생성한다.")
+    void generateCategorizedSellQuantity() {
+        ScenarioDto scenario = scenarioService.getScenario("SC001");
+
+        for (long randomSeed = 1L; randomSeed <= 100L; randomSeed++) {
+            GameBehaviorGenerationResult result = behaviorGenerator.generateGameBehavior(
+                    scenario,
+                    createPortfolio(),
+                    randomSeed,
+                    GameBehaviorFrequencyCondition.HIGH
+            );
+            int currentStockQuantity = 200;
+            for (SimulatedGameAction action : result.getActions()) {
+                if (action.getActionType() == BehaviorActionType.BUY) {
+                    currentStockQuantity += action.getQuantity();
+                    continue;
+                }
+                if (action.getActionType() != BehaviorActionType.SELL) {
+                    continue;
+                }
+
+                int partialQuantity = Math.max(1, currentStockQuantity / 4);
+                int halfQuantity = Math.max(1, currentStockQuantity / 2);
+                assertTrue(
+                        action.getQuantity() == partialQuantity
+                                || action.getQuantity() == halfQuantity
+                                || action.getQuantity() == currentStockQuantity
+                );
+                currentStockQuantity -= action.getQuantity();
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("고빈도 조건은 일반 중립 검증과 구분한다.")
+    void separateHighFrequencyStressTest() {
+        assertFalse(GameBehaviorFrequencyCondition.LOW.isStressTest());
+        assertFalse(GameBehaviorFrequencyCondition.MEDIUM.isStressTest());
+        assertTrue(GameBehaviorFrequencyCondition.HIGH.isStressTest());
+        assertEquals(
+                "NEUTRAL_VALIDATION",
+                GameBehaviorFrequencyCondition.MEDIUM.getValidationType()
+        );
+        assertEquals(
+                "STRESS_TEST",
+                GameBehaviorFrequencyCondition.HIGH.getValidationType()
+        );
+    }
+
+    @Test
     @DisplayName("게임 종료 Tick이 없으면 행동을 생성할 수 없다.")
     void rejectScenarioWithoutCompletionTick() {
         ScenarioDto scenario = scenarioService.getScenario("SC001");

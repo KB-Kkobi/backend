@@ -34,7 +34,8 @@ class GameBehaviorSimulationCsvExecutionTest {
                         new ScenarioService().getScenario("SC001"),
                         simulationCount,
                         randomSeed,
-                        outputDirectory
+                        outputDirectory,
+                        GameBehaviorFrequencyCondition.MEDIUM
                 );
 
         System.out.println("simulation_count=" + analysis.getTotalSimulationCount());
