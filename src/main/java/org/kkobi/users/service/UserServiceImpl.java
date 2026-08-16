@@ -2,7 +2,9 @@ package org.kkobi.users.service;
 
 import lombok.RequiredArgsConstructor;
 import org.kkobi.exception.DuplicateUserException;
+import org.kkobi.exception.UserNotFoundException;
 import org.kkobi.users.domain.UserVO;
+import org.kkobi.users.dto.request.ProfileUpdateRequest;
 import org.kkobi.users.dto.request.SignupRequest;
 import org.kkobi.users.dto.response.UserInfoResponse;
 import org.kkobi.users.mapper.UserMapper;
@@ -47,6 +49,52 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
         }
+        return UserInfoResponse.from(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserInfoResponse getProfile(String email) {
+        return toUserInfoResponse(findUserByEmail(email));
+    }
+
+    @Override
+    @Transactional
+    public UserInfoResponse updateProfile(String email, ProfileUpdateRequest request) {
+        UserVO user = findUserByEmail(email);
+        validateNicknameAvailable(request.getNickname(), user.getUserId());
+
+        int updatedRows = userMapper.updateProfile(
+                user.getUserId(),
+                request.getNickname(),
+                request.getBirthDate()
+        );
+
+        if (updatedRows != 1) {
+            throw new IllegalStateException("프로필 수정에 실패했습니다.");
+        }
+
+        user.setNickname(request.getNickname());
+        user.setBirthDate(request.getBirthDate());
+        return toUserInfoResponse(user);
+    }
+
+    private UserVO findUserByEmail(String email) {
+        UserVO user = userMapper.findByEmail(email);
+        if (user == null) {
+            throw new UserNotFoundException("회원 정보를 찾을 수 없습니다.");
+        }
+        return user;
+    }
+
+    private void validateNicknameAvailable(String nickname, Long currentUserId) {
+        UserVO nicknameOwner = userMapper.findByNickname(nickname);
+        if (nicknameOwner != null && !nicknameOwner.getUserId().equals(currentUserId)) {
+            throw new DuplicateUserException("이미 사용 중인 닉네임입니다.");
+        }
+    }
+
+    private UserInfoResponse toUserInfoResponse(UserVO user) {
         return UserInfoResponse.from(user);
     }
 

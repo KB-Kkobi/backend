@@ -16,21 +16,8 @@
         <result property="updatedAt" column="updated_at" />
     </resultMap>
 
-    <!-- 사용자 조회 시 공통으로 사용하는 컬럼 목록 -->
-    <sql id="userColumns">
-        user_id,
-        email,
-        password,
-        nickname,
-        birth_date,
-        postal_code,
-        address_line1,
-        address_line2,
-        created_at,
-        updated_at
-    </sql>
-
     <!-- 신규 사용자를 저장하고 생성된 user_id를 userId 필드에 채움 -->
+    <!--suppress SqlResolve -->
     <insert id="insert" parameterType="UserVO" useGeneratedKeys="true" keyProperty="userId">
         insert into users (
             email,
@@ -52,30 +39,58 @@
     </insert>
 
     <!-- user_id로 사용자 한 명을 조회 -->
+    <!--suppress SqlResolve -->
     <select id="findById" resultMap="userMap">
-        select
-        <include refid="userColumns" />
+        select user_id,
+               email,
+               password,
+               nickname,
+               birth_date,
+               postal_code,
+               address_line1,
+               address_line2,
+               created_at,
+               updated_at
         from users
         where user_id = #{userId}
     </select>
 
     <!-- 이메일로 사용자 한 명을 조회한다. 로그인 인증에서 사용 -->
+    <!--suppress SqlResolve -->
     <select id="findByEmail" resultMap="userMap">
-        select
-        <include refid="userColumns" />
+        select user_id,
+               email,
+               password,
+               nickname,
+               birth_date,
+               postal_code,
+               address_line1,
+               address_line2,
+               created_at,
+               updated_at
         from users
         where email = #{email}
     </select>
 
     <!-- 닉네임으로 사용자 한 명을 조회 -->
+    <!--suppress SqlResolve -->
     <select id="findByNickname" resultMap="userMap">
-        select
-        <include refid="userColumns" />
+        select user_id,
+               email,
+               password,
+               nickname,
+               birth_date,
+               postal_code,
+               address_line1,
+               address_line2,
+               created_at,
+               updated_at
         from users
         where nickname = #{nickname}
     </select>
 
     <!-- 이메일 중복 여부를 확인하기 위해 같은 이메일의 사용자 수를 조회 -->
+    <!--suppress SqlResolve -->
     <select id="countByEmail" resultType="int">
         select count(*)
         from users
@@ -83,6 +98,7 @@
     </select>
 
     <!-- 닉네임 중복 여부를 확인하기 위해 같은 닉네임의 사용자 수를 조회 -->
+    <!--suppress SqlResolve -->
     <select id="countByNickname" resultType="int">
         select count(*)
         from users
@@ -90,6 +106,7 @@
     </select>
 
     <!-- 사용자 기본 정보를 수정한다. 비밀번호는 별도 쿼리에서 수정 -->
+    <!--suppress SqlResolve -->
     <update id="update" parameterType="UserVO">
         update users
         set
@@ -102,7 +119,19 @@
         where user_id = #{userId}
     </update>
 
+    <!-- 사용자 프로필을 수정 -->
+    <!--suppress SqlResolve -->
+    <update id="updateProfile">
+        update users
+        set
+            nickname = #{nickname},
+            birth_date = #{birthDate},
+            updated_at = current_timestamp
+        where user_id = #{userId}
+    </update>
+
     <!-- 사용자 비밀번호를 수정 -->
+    <!--suppress SqlResolve -->
     <update id="updatePassword" parameterType="UserVO">
         update users
         set
@@ -112,6 +141,7 @@
     </update>
 
     <!-- user_id로 사용자를 삭제 -->
+    <!--suppress SqlResolve -->
     <delete id="deleteById">
         delete from users
         where user_id = #{userId}

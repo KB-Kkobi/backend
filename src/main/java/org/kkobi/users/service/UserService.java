@@ -1,5 +1,6 @@
 package org.kkobi.users.service;
 
+import org.kkobi.users.dto.request.ProfileUpdateRequest;
 import org.kkobi.users.dto.request.SignupRequest;
 import org.kkobi.users.dto.response.UserInfoResponse;
 
@@ -11,4 +12,8 @@ public interface UserService {
 
     // 사용자 ID로 기본 정보를 조회
     UserInfoResponse getUserInfo(Long userId);
+
+    UserInfoResponse getProfile(String email);
+
+    UserInfoResponse updateProfile(String email, ProfileUpdateRequest request);
 }
