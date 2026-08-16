@@ -219,6 +219,26 @@
                  rsrv_type ASC
     </select>
 
+    <!-- 상품 옵션에 등록된 우대조건과 추가금리 조회 -->
+    <select id="getPreferentialRateConditions"
+            resultType="org.kkobi.product.dto.response.PreferentialRateConditionResponseDto">
+        SELECT
+            product_preferential_rate_condition_id
+                AS preferential_rate_condition_id,
+            condition_type,
+            condition_name,
+            additional_rate,
+            selectable,
+            display_order,
+            condition_group_id,
+            condition_role
+        FROM product_preferential_rate_conditions
+        WHERE product_option_id = #{productOptionId}
+        ORDER BY
+            display_order ASC,
+            product_preferential_rate_condition_id ASC
+    </select>
+
     <!-- 조건에 맞는 상품 목록 조회 -->
     <select id="getProductList"
             resultType="org.kkobi.product.dto.response.ProductListItemResponseDto">
@@ -408,4 +428,36 @@
         WHERE option_rank = 1
     </select>
 
+    <!-- 상품의 모든 옵션에 저장된 기존 우대금리 조건 삭제 -->
+    <delete id="deleteProductPreferentialRateConditions">
+        DELETE prc
+        FROM product_preferential_rate_conditions prc
+                 INNER JOIN product_options po
+                            ON po.product_option_id = prc.product_option_id
+        WHERE po.product_id = #{productId}
+    </delete>
+
+    <!-- 상품 옵션별 우대금리 조건 저장 -->
+    <insert id="saveProductPreferentialRateCondition">
+        INSERT INTO product_preferential_rate_conditions (
+            product_option_id,
+            condition_type,
+            condition_name,
+            additional_rate,
+            selectable,
+            display_order,
+            condition_group_id,
+            condition_role
+        )
+        VALUES (
+                   #{productOptionId},
+                   #{conditionType},
+                   #{conditionName},
+                   #{additionalRate},
+                   #{selectable},
+                   #{displayOrder},
+                   #{conditionGroupId},
+                   #{conditionRole}
+               )
+    </insert>
 </mapper>

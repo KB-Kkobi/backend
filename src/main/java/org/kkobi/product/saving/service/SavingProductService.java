@@ -90,32 +90,37 @@ public class SavingProductService {
     // 금감원에서 조회한 후 페이지의 적금 상품 및 옵션을 DB에 저장
     private void saveSavingProducts(SavingApiResponse.Result result) {
 
-        for (SavingProductDto product : result.getBaseList()){
-
-            //적금 상품 저장
+        // 적금 상품 기본 정보 저장
+        for(SavingProductDto product : result.getBaseList()) {
             productMapper.saveSavingProduct(product);
-
-            // 저장된 적금 상품 ID 조회
-            Long productId = productMapper.getSavingProductId(
-                    product.getFinancialCompanyNumber(),
-                    product.getProductCode()
-            );
-
-            // 적금 상품 우대조건 저장
-            productPreferentialConditionService.replacePreferentialConditions(
-                    productId,
-                    product.getPreferentialConditions()
-            );
         }
 
-        for (SavingProductOptionDto option : result.getOptionList()) {
-
+        // 적금 상품 옵션 저장
+        for(SavingProductOptionDto option : result.getOptionList()){
             Long productId = productMapper.getSavingProductId(
                     option.getFinancialCompanyNumber(),
                     option.getProductCode()
             );
 
-            productMapper.saveSavingProductOption(productId, option);
+            productMapper.saveSavingProductOption(
+                    productId,
+                    option
+            );
+        }
+
+        // 옵션 저장 완료 후 상품별 우대조건 저장
+        for(SavingProductDto product : result.getBaseList()){
+            Long productId =
+                    productMapper.getSavingProductId(
+                            product.getFinancialCompanyNumber(),
+                            product.getProductCode()
+                    );
+
+            productPreferentialConditionService
+                    .replacePreferentialConditions(
+                            productId,
+                            product.getPreferentialConditions()
+                    );
         }
     }
 
@@ -140,6 +145,15 @@ public class SavingProductService {
         // 적금 상품의 금리 옵션 목록 조회
         List<ProductOptionResponseDto> options =
                 productMapper.getProductOptions(productId);
+
+        // 각 상품 옵션에 등록된 우대조건 목록 설정
+        for (ProductOptionResponseDto option : options){
+            option.setPreferentialRateConditions(
+                    productMapper.getPreferentialRateConditions(
+                            option.getProductOptionId()
+                    )
+            );
+        }
 
         // 상품 기본 정보에 금리 옵션 목록 설정
         productDetail.setOptions(options);

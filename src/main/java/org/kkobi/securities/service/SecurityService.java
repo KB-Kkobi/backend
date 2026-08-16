@@ -59,9 +59,9 @@ public class SecurityService {
         BigDecimal rpScore = score != null ? score.getRpScore() : null;
 
         List<SecurityListItemResponse> content = securityMapper.getSecurityList(
-                request.getType(), keyword, offset, size, sort, rtScore, lhScore, rpScore);
+                request.getTypes(), keyword, offset, size, sort, rtScore, lhScore, rpScore);
 
-        long totalElements = securityMapper.countSecurityList(request.getType(), keyword);
+        long totalElements = securityMapper.countSecurityList(request.getTypes(), keyword);
         int totalPages = calculateTotalPages(totalElements, size);
 
         SecurityListResponse response = new SecurityListResponse();
@@ -98,7 +98,7 @@ public class SecurityService {
                 SecurityType.STOCK, SecurityType.EQUITY_ETF, SecurityType.BOND_ETF)) {
 
             List<SecurityListItemResponse> topMatch = securityMapper.getSecurityList(
-                    type, null, 0, 1, sort, rtScore, lhScore, rpScore);
+                    List.of(type), null, 0, 1, sort, rtScore, lhScore, rpScore);
 
             if (!topMatch.isEmpty()) {
                 content.add(topMatch.get(0));

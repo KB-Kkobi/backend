@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.mapper.AccountMapper;
 import org.kkobi.assessment.service.VirtualInvestmentAssessmentService;
+import org.kkobi.product.holding.dto.PreferentialRateConditionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.request.ProductSubscriptionRequestDto;
@@ -744,8 +745,14 @@ public class ProductHoldingService {
             throw new IllegalArgumentException("가입 금액은 원 단위로 입력해야 합니다.");
         }
 
-        if(request.getPreferentialRateApplied() == null){
-            throw new IllegalArgumentException("우대 금리 적용 여부는 필수입니다");
+        if(request.getSelectedPreferentialRateConditionIds() != null){
+            for(Long conditionId : request.getSelectedPreferentialRateConditionIds()){
+                if(conditionId == null || conditionId <= 0){
+                    throw new IllegalArgumentException(
+                            "우대조건 ID는 1 이상이어야 합니다."
+                    );
+                }
+            }
         }
     }
 
@@ -804,27 +811,59 @@ public class ProductHoldingService {
         }
     }
 
-    // 우대 조건 충족 여부에 따라 적용 금리 계산
+    // 사용자가 선택한 우대조건을 검증하고 최종 적용금리를 계산
     private BigDecimal calculateAppliedRate(
             ProductSubscriptionInfoDto subscriptionInfo,
             ProductSubscriptionRequestDto request
     ){
-        BigDecimal appliedRate;
+        BigDecimal baseRate = subscriptionInfo.getInterestRate();
 
-        if (Boolean.TRUE.equals(request.getPreferentialRateApplied())) {
-            appliedRate = subscriptionInfo.getMaximumInterestRate();
-
-            if (appliedRate == null) {
-                throw new IllegalArgumentException("우대 금리 정보가 없는 상품입니다.");
-            }
-        } else {
-            appliedRate = subscriptionInfo.getInterestRate();
-
-            if (appliedRate == null) {
-                throw new IllegalArgumentException("기본 금리 정보가 없는 상품입니다.");
-            }
+        if(baseRate == null){
+            throw new IllegalArgumentException("기본 금리 정보가 없는 상품입니다.");
         }
 
+        List<Long> selectedConditionIds = request.getSelectedPreferentialRateConditionIds();
+
+        if(selectedConditionIds == null || selectedConditionIds.isEmpty()){
+            return baseRate;
+        }
+
+        long distinctConditionCount = selectedConditionIds.stream()
+                .distinct()
+                .count();
+
+        if(distinctConditionCount != selectedConditionIds.size()){
+            throw new IllegalArgumentException(
+                    "동일한 우대조건을 중복 선택할 수 없습니다."
+            );
+        }
+
+        List<PreferentialRateConditionInfoDto> conditions = productHoldingMapper.getSelectedPreferentialRateConditions(
+                subscriptionInfo.getProductOptionId(),
+                selectedConditionIds
+        );
+
+        if(conditions.size() != selectedConditionIds.size()){
+            throw new IllegalArgumentException("선택할 수 없는 우대조건이 포함되어 있습니다.");
+        }
+
+        BigDecimal additionalRate = BigDecimal.ZERO;
+
+        for(PreferentialRateConditionInfoDto condition : conditions){
+            if(condition.getAdditionalRate() == null){
+                throw new IllegalArgumentException("추가 금리가 정의되지 않은 우대조건입니다.");
+            }
+
+            additionalRate = additionalRate.add(condition.getAdditionalRate());
+        }
+
+        BigDecimal appliedRate = baseRate.add(additionalRate);
+
+        BigDecimal maximumRate = subscriptionInfo.getMaximumInterestRate();
+
+        if(maximumRate != null && appliedRate.compareTo(maximumRate) > 0){
+            appliedRate = maximumRate;
+        }
         return appliedRate;
     }
 

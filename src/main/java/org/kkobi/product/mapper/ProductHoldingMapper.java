@@ -1,6 +1,7 @@
 package org.kkobi.product.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import org.kkobi.product.holding.dto.PreferentialRateConditionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingCreateDto;
 import org.kkobi.product.holding.dto.ProductSubscriptionInfoDto;
 import org.kkobi.product.holding.dto.ProductHoldingInfoDto;
@@ -96,5 +97,11 @@ public interface ProductHoldingMapper {
 
     // 계좌의 활성 예적금 가입금액 합계 조회
     Long sumActiveDepositByAccountId(@Param("accountId") Long accountId);
+
+    // 선택한 우대조건이 해당 상품 옵션에 속하는지 조회
+    List<PreferentialRateConditionInfoDto> getSelectedPreferentialRateConditions(
+            @Param("productOptionId") Long productOptionId,
+            @Param("conditionIds") List<Long> conditionIds
+    );
 
 }

@@ -109,6 +109,15 @@ public class DepositProductService {
         List<ProductOptionResponseDto> options =
                 productMapper.getProductOptions(productId);
 
+        // 각 상품 옵션에 등록된 우대조건 목록 설정
+        for(ProductOptionResponseDto option : options){
+            option.setPreferentialRateConditions(
+                    productMapper.getPreferentialRateConditions(
+                            option.getProductOptionId()
+                    )
+            );
+        }
+
         // 상품 기본 정보에 금리 옵션 목록 설정
         productDetail.setOptions(options);
 
@@ -119,30 +128,37 @@ public class DepositProductService {
     // 금감원에서 조회한 한 페이지의 예금 상품 및 옵션을 DB에 저장
     private void saveDepositProducts(DepositApiResponse.Result result){
 
+        // 예금 상품 기본 정보 저장
         for(DepositProductDto product : result.getBaseList()) {
-            // 예금 상품 저장
             productMapper.saveDepositProduct(product);
-
-            // 저장된 예금 상품 ID 조회
-            Long productId = productMapper.getDepositProductId(
-                    product.getFinancialCompanyNumber(),
-                    product.getProductCode()
-            );
-
-            // 예금 상품 우대조건 저장
-            productPreferentialConditionService.replacePreferentialConditions(
-                    productId,
-                    product.getPreferentialConditions()
-            );
         }
 
+        // 예금 상품 옵션 저장
         for(DepositProductOptionDto option : result.getOptionList()){
             Long productId = productMapper.getDepositProductId(
                     option.getFinancialCompanyNumber(),
                     option.getProductCode()
             );
 
-            productMapper.saveDepositProductOption(productId, option);
+            productMapper.saveDepositProductOption(
+                    productId,
+                    option
+            );
+        }
+
+        // 옵션 저장 완료 후 상품별 우대조건 저장
+        for(DepositProductDto product : result.getBaseList()) {
+            Long productId =
+                    productMapper.getDepositProductId(
+                            product.getFinancialCompanyNumber(),
+                            product.getProductCode()
+                    );
+
+            productPreferentialConditionService
+                    .replacePreferentialConditions(
+                            productId,
+                            product.getPreferentialConditions()
+                    );
         }
     }
 

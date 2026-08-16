@@ -4,6 +4,8 @@ import lombok.Data;
 
 import javax.validation.constraints.*;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class ProductSubscriptionRequestDto {
@@ -21,9 +23,8 @@ public class ProductSubscriptionRequestDto {
     )
     private BigDecimal joinAmount;
 
-    // 우대 조건 충족 여부
-    @NotNull(message = "우대 금리 적용 여부는 필수입니다.")
-    private Boolean preferentialRateApplied;
+    // 사용자가 선택한 우대조건 식별자 목록
+    private List<Long> selectedPreferentialRateConditionIds = new ArrayList<>();
 
     // 적금 월 납입일, 예금은 사용하지 않음
     @Min(
