@@ -5,8 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.dto.AccountAssetStatusResponseDto;
 import org.kkobi.account.mapper.AccountMapper;
+import org.kkobi.assessment.service.GameAssessmentService;
 import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.holding.service.ProductHoldingService;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 
@@ -30,7 +35,8 @@ class AccountServiceTest {
 
         AccountService service = new AccountService(
                 new StubAccountMapper(account),
-                new StubProductHoldingService(savings)
+                new StubProductHoldingService(savings),
+                null
         );
 
         AccountAssetStatusResponseDto response =
@@ -55,7 +61,8 @@ class AccountServiceTest {
                 new StubAccountMapper(null),
                 new StubProductHoldingService(
                         new SavingsAssetStatusResponseDto()
-                )
+                ),
+                null
         );
 
         assertThrows(
@@ -104,5 +111,66 @@ class AccountServiceTest {
         public SavingsAssetStatusResponseDto getSavingAssetStatus(Long userId) {
             return savings;
         }
+    }
+
+    @Test
+    @DisplayName("성향파악게임을 완료하지 않으면 계좌를 생성할 수 없다")
+    void rejectAccountCreationBeforeGameCompletion() {
+        AccountMapper accountMapper = mock(AccountMapper.class);
+        GameAssessmentService gameAssessmentService =
+                mock(GameAssessmentService.class);
+
+        when(gameAssessmentService.existsCompletedGame(10L))
+                .thenReturn(false);
+
+        AccountService service = new AccountService(
+                accountMapper,
+                null,
+                gameAssessmentService
+        );
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createAccount(10L)
+        );
+
+        assertEquals(
+                "성향 파악 게임을 완료한 후 계좌를 생성할 수 있습니다.",
+                exception.getMessage()
+        );
+
+        verify(accountMapper, never())
+                .saveAccount(anyLong(), any(BigDecimal.class));
+    }
+
+    @Test
+    @DisplayName("성향파악게임을 완료하면 계좌를 생성할 수 있다")
+    void createAccountAfterGameCompletion() {
+        AccountMapper accountMapper = mock(AccountMapper.class);
+        GameAssessmentService gameAssessmentService =
+                mock(GameAssessmentService.class);
+
+        when(gameAssessmentService.existsCompletedGame(10L))
+                .thenReturn(true);
+        when(accountMapper.existsAccountByUserId(10L))
+                .thenReturn(false);
+        when(accountMapper.saveAccount(
+                eq(10L),
+                eq(BigDecimal.valueOf(5_000_000L))
+        )).thenReturn(1);
+
+        AccountService service = new AccountService(
+                accountMapper,
+                null,
+                gameAssessmentService
+        );
+
+        service.createAccount(10L);
+
+        verify(accountMapper, times(1))
+                .saveAccount(
+                        10L,
+                        BigDecimal.valueOf(5_000_000L)
+                );
     }
 }

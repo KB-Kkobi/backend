@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.account.dto.AccountAssetInfoDto;
 import org.kkobi.account.dto.AccountAssetStatusResponseDto;
 import org.kkobi.account.mapper.AccountMapper;
+import org.kkobi.assessment.service.GameAssessmentService;
 import org.kkobi.product.holding.dto.response.SavingsAssetStatusResponseDto;
 import org.kkobi.product.holding.service.ProductHoldingService;
 import org.springframework.stereotype.Service;
@@ -21,17 +22,28 @@ public class AccountService {
 
     private final AccountMapper accountMapper;
     private final ProductHoldingService productHoldingService;
+    private final GameAssessmentService gameAssessmentService;
 
     // 가상투자 최초 시작 시 사용자 계좌 생성
     @Transactional
     public void createAccount(Long userId) {
         validateUserId(userId);
+        validateCompletedGame(userId);
         validateAccountNotExists(userId);
 
         int savedCount = accountMapper.saveAccount(userId, INITIAL_SEED_MONEY);
 
         if (savedCount != 1){
             throw new IllegalStateException("계좌 생성에 실패했습니다.");
+        }
+    }
+
+    // 성향 파악 게임 완료 여부 확인
+    private void validateCompletedGame(Long userId) {
+        if(!gameAssessmentService.existsCompletedGame(userId)){
+            throw new IllegalArgumentException(
+                    "성향 파악 게임을 완료한 후 계좌를 생성할 수 있습니다."
+            );
         }
     }
 
