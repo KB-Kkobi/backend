@@ -12,10 +12,13 @@ import org.kkobi.trade.mapper.TradeAccountMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
 public class OrderExecutionService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final TradeAccountMapper accountMapper;
     private final HoldingMapper holdingMapper;
@@ -57,6 +60,6 @@ public class OrderExecutionService {
             accountMapper.increaseCashBalance(accountId, amount);
         }
 
-        orderMapper.updateFilled(order.getSecurityOrderId(), executedPrice, LocalDateTime.now());
+        orderMapper.updateFilled(order.getSecurityOrderId(), executedPrice, LocalDateTime.now(KST));
     }
 }

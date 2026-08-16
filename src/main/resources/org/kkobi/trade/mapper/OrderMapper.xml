@@ -11,7 +11,7 @@
              order_price, quantity, status, ordered_at)
         VALUES
             (#{accountId}, #{securityId}, #{orderType}, #{orderMethod},
-             #{orderPrice}, #{quantity}, #{status}, NOW())
+             #{orderPrice}, #{quantity}, #{status}, #{orderedAt})
     </insert>
 
     <select id="findById" resultType="org.kkobi.trade.dto.OrderDto">
