@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 개별 주문 체결을 독립 트랜잭션으로 처리한다.
@@ -21,6 +22,8 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class OrderMatchTransactionService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final OrderMapper orderMapper;
     private final TradeAccountMapper accountMapper;
@@ -43,7 +46,7 @@ public class OrderMatchTransactionService {
         int affected = orderMapper.updateFilledConditional(
                 order.getSecurityOrderId(),
                 currentPrice,
-                LocalDateTime.now()
+                LocalDateTime.now(KST)
         );
         if (affected == 0) {
             log.debug("주문 이미 처리됨, 스킵 securityOrderId={}", order.getSecurityOrderId());

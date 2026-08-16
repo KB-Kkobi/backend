@@ -29,11 +29,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final TradeAccountMapper accountMapper;
     private final HoldingMapper holdingMapper;
@@ -188,7 +191,7 @@ public class OrderService {
         CancelOrderResult result = new CancelOrderResult();
         result.setSecurityOrderId(securityOrderId);
         result.setStatus(OrderStatus.CANCELLED);
-        result.setUpdatedAt(LocalDateTime.now());
+        result.setUpdatedAt(LocalDateTime.now(KST));
         return result;
     }
 
@@ -214,7 +217,7 @@ public class OrderService {
                 stock.getTicker(),
                 order.getQuantity(),
                 currentPrice * order.getQuantity(),
-                LocalDateTime.now(),
+                LocalDateTime.now(KST),
                 priceResp.changeRate(),
                 dailyPriceRangeRate
         );
@@ -258,6 +261,7 @@ public class OrderService {
         o.setOrderMethod(req.getOrderMethod());
         o.setOrderPrice(orderPrice);
         o.setQuantity(req.getQuantity());
+        o.setOrderedAt(LocalDateTime.now(KST));
         return o;
     }
 
@@ -276,7 +280,7 @@ public class OrderService {
         r.setExecutedAmount(executedPrice != null ? executedPrice * order.getQuantity() : null);
         r.setStatus(status);
         r.setOrderedAt(order.getOrderedAt());
-        r.setExecutedAt(executedPrice != null ? LocalDateTime.now() : null);
+        r.setExecutedAt(executedPrice != null ? LocalDateTime.now(KST) : null);
         return r;
     }
 }
