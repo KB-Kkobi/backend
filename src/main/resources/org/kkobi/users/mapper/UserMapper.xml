@@ -103,6 +103,15 @@
     </update>
 
     <!-- 사용자 비밀번호를 수정 -->
+    <update id="updateProfile">
+        update users
+        set
+            nickname = #{nickname},
+            birth_date = #{birthDate},
+            updated_at = current_timestamp
+        where user_id = #{userId}
+    </update>
+
     <update id="updatePassword" parameterType="UserVO">
         update users
         set

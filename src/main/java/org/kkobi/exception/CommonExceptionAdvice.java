@@ -31,6 +31,13 @@ public class CommonExceptionAdvice {
         return ResponseEntity.badRequest().body(new MessageResponse(message));
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleUserNotFound(UserNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
     // 이메일 또는 닉네임 중복 오류를 JSON으로 반환
     @ExceptionHandler(DuplicateUserException.class)
     @ResponseBody
