@@ -10,6 +10,7 @@ import org.kkobi.users.dto.request.FriendRequestDto;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.MessageResponse;
+import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.service.FriendService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +52,7 @@ public class FriendController {
     // 받은 친구 요청 목록을 조회
     @Operation(
             summary = "받은 친구 요청 조회",
-            description = "로그인한 사용자가 받은 대기 중인 친구 요청 목록을 조회합니다"
+            description = "로그인한 사용자가 받은 대기 중인 친구 요청 목록을 조회합니다."
     )
     @GetMapping("/requests/received")
     public ResponseEntity<List<FriendRequestResponseDto>> getReceivedFriendRequests(
@@ -60,6 +61,22 @@ public class FriendController {
     ) {
         List<FriendRequestResponseDto> requests =
                 friendService.getReceiverFriendRequests(authenticatedUser.getUserId());
+
+        return ResponseEntity.ok(requests);
+    }
+
+    // 보낸 친구 요청 목록을 조회
+    @Operation(
+            summary = "보낸 친구 요청 조회",
+            description = "로그인한 사용자가 보낸 대기 중인 친구 요청 목록을 조회합니다."
+    )
+    @GetMapping("/requests/sent")
+    public ResponseEntity<List<SentFriendRequestResponseDto>> getSentFriendRequests(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
+    ){
+        List<SentFriendRequestResponseDto> requests =
+                friendService.getSentFriendRequests(authenticatedUser.getUserId());
 
         return ResponseEntity.ok(requests);
     }
