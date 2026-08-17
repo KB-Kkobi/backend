@@ -3,6 +3,7 @@ package org.kkobi.users.service;
 import org.kkobi.users.dto.request.FriendRequestDto;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
+import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 
 import java.util.List;
 
@@ -13,6 +14,9 @@ public interface FriendService {
 
     // 받은 친구 요청 목록을 조회
     List<FriendRequestResponseDto> getReceiverFriendRequests(Long userId);
+
+    // 보낸 친구 요청 목록을 조회
+    List<SentFriendRequestResponseDto> getSentFriendRequests(Long userId);
 
     // 받은 친구 요청을 수락
     void acceptFriendRequest(Long userId, Long friendshipId);

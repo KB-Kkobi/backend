@@ -45,6 +45,22 @@
         ORDER BY f.created_at DESC
     </select>
 
+    <!-- 보낸 친구 요청 목록을 조회 -->
+    <select id="findSentFriendRequests"
+            resultType="org.kkobi.users.dto.response.SentFriendRequestResponseDto">
+        SELECT
+            f.friendship_id AS friendshipId,
+            f.receiver_id AS receiverId,
+            u.nickname AS nickname,
+            f.created_at AS createdAt
+        FROM friendships f
+                 INNER JOIN users u
+                            ON u.user_id = f.receiver_id
+        WHERE f.requester_id = #{userId}
+          AND f.status = 'PENDING'
+        ORDER BY f.created_at DESC
+    </select>
+
     <!-- 받은 친구 요청을 수락 -->
     <update id="acceptFriendRequest">
         UPDATE friendships

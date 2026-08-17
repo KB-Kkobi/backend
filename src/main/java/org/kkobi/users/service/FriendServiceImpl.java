@@ -5,6 +5,7 @@ import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.dto.request.FriendRequestDto;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
+import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
 import org.kkobi.users.mapper.FriendMapper;
 import org.kkobi.users.mapper.UserMapper;
@@ -108,5 +109,12 @@ public class FriendServiceImpl implements FriendService{
         if (deletedRows != 1){
             throw new IllegalArgumentException("삭제할 수 없는 친구 관계입니다.");
         }
+    }
+
+    // 보낸 친구 요청 목록을 조회
+    @Override
+    @Transactional(readOnly = true)
+    public List<SentFriendRequestResponseDto> getSentFriendRequests(Long userId) {
+        return friendMapper.findSentFriendRequests(userId);
     }
 }
