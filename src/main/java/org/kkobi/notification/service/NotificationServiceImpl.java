@@ -53,12 +53,6 @@ public class NotificationServiceImpl implements NotificationService{
                 tradeEnabled,
                 friendEnabled
         );
-
-        if(updatedRows < 1){
-            throw new IllegalArgumentException(
-                    "알림 설정 저장에 실패했습니다."
-            );
-        }
     }
 
     // 사용자 알림 목록을 조회
@@ -86,7 +80,7 @@ public class NotificationServiceImpl implements NotificationService{
     @Override
     @Transactional
     public void markAllAsRead(Long userId) {
-        notificationMapper.markAllasRead(userId);
+        notificationMapper.markAllAsRead(userId);
     }
 
     // 사용자 설정에 따라 신규 알림을 생성

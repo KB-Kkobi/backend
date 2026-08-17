@@ -38,7 +38,7 @@ public interface NotificationMapper {
     );
 
     // 사용자의 모든 알림을 읽음 처리
-    int markAllasRead(
+    int markAllAsRead(
             @Param("userId") Long userId
     );
 
