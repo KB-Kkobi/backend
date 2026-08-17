@@ -353,6 +353,87 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL(
+            "표적 규칙·정상장 의미있는 부분 매도",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL(
+            "표적 규칙·정상장 계획 익절",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL(
+            "표적 규칙·정상장 위험 축소 매도",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES(
+            "표적 규칙·정상장 매도 후보 전체",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT(
+            "표적 규칙·부분 매도·매도 전 주식 70% 미만",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE(
+            "표적 규칙·부분 매도·주식 제한·HLL 비추격 상호 배타",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND(
+            "표적 규칙·부분 매도·주식 제한·현금 25~50%",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION(
+            "표적 규칙·부분 매도·주식 제한·현금 2 Tick 유지",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE(
+            "표적 규칙·부분 매도 정제·HLL 비추격 상호 배타",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -1097,7 +1178,7 @@ public enum GameRuleEvaluationCondition {
                 || this == BALANCED_CAP_WITH_HHL_COMPOSITE
                 || this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
                 || this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
-                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+                || isAllTargetedFamily();
     }
 
     public boolean appliesRiskBudgetMaintenanceRule() {
@@ -1116,7 +1197,7 @@ public enum GameRuleEvaluationCondition {
                 || this == BALANCED_CAP_WITH_HHL_COMPOSITE
                 || this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
                 || this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
-                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+                || isAllTargetedFamily();
     }
 
     public boolean appliesPassiveHighRiskHoldingRule() {
@@ -1163,17 +1244,73 @@ public enum GameRuleEvaluationCondition {
 
     public boolean appliesHhlCompositeRule() {
         return this == BALANCED_CAP_WITH_HHL_COMPOSITE
-                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+                || isAllTargetedFamily();
     }
 
     public boolean appliesHllCappedNoChaseRule() {
         return this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
-                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+                || isAllTargetedFamily();
     }
 
     public boolean appliesLhhCompletedOpportunityRule() {
         return this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
-                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+                || isAllTargetedFamily();
+    }
+
+    public boolean appliesNormalPartialSellRule() {
+        return this == ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL
+                || this == ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
+    }
+
+    public boolean appliesNormalPlannedProfitSellRule() {
+        return this == ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL
+                || this == ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES;
+    }
+
+    public boolean appliesNormalRiskReductionSellRule() {
+        return this == ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL
+                || this == ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES;
+    }
+
+    public boolean requiresNormalPartialSellStockLimit() {
+        return this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
+    }
+
+    public boolean requiresNormalPartialSellCashBand() {
+        return this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
+    }
+
+    public boolean requiresNormalPartialSellCashRetention() {
+        return this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
+    }
+
+    public boolean excludesNormalPartialSellForHllNoChase() {
+        return this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
+    }
+
+    private boolean isAllTargetedFamily() {
+        return this == BALANCED_CAP_WITH_ALL_TARGETED_RULES
+                || this == ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL
+                || this == ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL
+                || this == ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL
+                || this == ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                || this == ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE;
     }
 
     public BigDecimal getBuyGroupMaximumMultiplier() {

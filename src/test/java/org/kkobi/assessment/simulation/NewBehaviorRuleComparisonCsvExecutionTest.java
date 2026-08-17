@@ -28,7 +28,7 @@ class NewBehaviorRuleComparisonCsvExecutionTest {
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     @Test
-    @DisplayName("HHL·HLL·LHH 표적 행동 규칙을 비교한다.")
+    @DisplayName("정상장 부분 매도 규칙의 단계별 정제 효과를 비교한다.")
     void exportNewRuleComparison() {
         ScenarioDto scenario = new ScenarioService().getScenario("SC001");
         Path root = Path.of(
@@ -97,40 +97,54 @@ class NewBehaviorRuleComparisonCsvExecutionTest {
                         GameRuleEvaluationCondition.LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP
                 ),
                 new RuleCase(
-                        "risk-budget",
-                        "위험 예산 유지",
-                        GameBiasMitigationCondition.BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE,
-                        GameRuleEvaluationCondition.BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE
-                ),
-                new RuleCase(
-                        "risk-budget-and-hhl-composite",
-                        "위험 예산 유지·HHL 복합 규칙",
-                        GameBiasMitigationCondition
-                                .BALANCED_CAP_WITH_HHL_COMPOSITE,
-                        GameRuleEvaluationCondition
-                                .BALANCED_CAP_WITH_HHL_COMPOSITE
-                ),
-                new RuleCase(
-                        "risk-budget-and-hll-capped-no-chase",
-                        "위험 예산 유지·HLL 정제 비추격 최대 1회",
-                        GameBiasMitigationCondition
-                                .BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE,
-                        GameRuleEvaluationCondition
-                                .BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
-                ),
-                new RuleCase(
-                        "risk-budget-and-lhh-completed-opportunity",
-                        "위험 예산 유지·LHH 완결형 기회 실행 최대 1회",
-                        GameBiasMitigationCondition
-                                .BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY,
-                        GameRuleEvaluationCondition
-                                .BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
-                ),
-                new RuleCase(
                         "all-targeted-rules",
                         "위험 예산 유지·HHL·HLL·LHH 표적 규칙 전체",
                         GameBiasMitigationCondition.BALANCED_CAP_WITH_ALL_TARGETED_RULES,
                         GameRuleEvaluationCondition.BALANCED_CAP_WITH_ALL_TARGETED_RULES
+                ),
+                new RuleCase(
+                        "normal-partial-sell",
+                        "표적 규칙·정상장 의미있는 부분 매도",
+                        GameBiasMitigationCondition.ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL,
+                        GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL
+                ),
+                new RuleCase(
+                        "partial-sell-stock-limit",
+                        "부분 매도·매도 전 주식 70% 미만",
+                        GameBiasMitigationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT,
+                        GameRuleEvaluationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT
+                ),
+                new RuleCase(
+                        "partial-sell-stock-limit-exclusive",
+                        "부분 매도·매도 전 주식 70% 미만·HLL 비추격 상호 배타",
+                        GameBiasMitigationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE,
+                        GameRuleEvaluationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE
+                ),
+                new RuleCase(
+                        "partial-sell-cash-band",
+                        "부분 매도·주식 제한·매도 후 현금 25~50%",
+                        GameBiasMitigationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND,
+                        GameRuleEvaluationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND
+                ),
+                new RuleCase(
+                        "partial-sell-cash-retention",
+                        "부분 매도·주식 제한·현금 2 Tick 유지",
+                        GameBiasMitigationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION,
+                        GameRuleEvaluationCondition
+                                .ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION
+                ),
+                new RuleCase(
+                        "partial-sell-exclusive",
+                        "부분 매도 최종 조건·HLL 비추격 상호 배타",
+                        GameBiasMitigationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE,
+                        GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE
                 )
         );
     }

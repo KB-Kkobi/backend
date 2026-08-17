@@ -93,6 +93,12 @@ public class GameBehaviorSimulator {
             ScoreDelta.createScoreDelta(5, -5, -5);
     private static final ScoreDelta LHH_COMPLETED_OPPORTUNITY_SCORE =
             ScoreDelta.createScoreDelta(0, 0, 5);
+    private static final ScoreDelta NORMAL_PARTIAL_SELL_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 0);
+    private static final ScoreDelta NORMAL_PLANNED_PROFIT_SELL_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 5);
+    private static final ScoreDelta NORMAL_RISK_REDUCTION_SELL_SCORE =
+            ScoreDelta.createScoreDelta(-5, 5, 0);
     private static final int CANDIDATE_RULE_P95 = 4;
     private static final int CRASH_HOLDING_P95 = 4;
     private static final int NORMAL_PLANNED_BUY_P95 = 9;
@@ -527,6 +533,27 @@ public class GameBehaviorSimulator {
                                 analysisResults
                         )
                         : 0;
+        int normalPartialSellCount = ruleEvaluationCondition.appliesNormalPartialSellRule()
+                ? calculateNormalPartialSellCount(
+                        behaviorContexts,
+                        analysisResults,
+                        ruleEvaluationCondition.requiresNormalPartialSellStockLimit(),
+                        ruleEvaluationCondition.requiresNormalPartialSellCashBand(),
+                        ruleEvaluationCondition.requiresNormalPartialSellCashRetention()
+                )
+                : 0;
+        if (ruleEvaluationCondition.excludesNormalPartialSellForHllNoChase()
+                && hllCappedNoChaseCount > 0) {
+            normalPartialSellCount = 0;
+        }
+        int normalPlannedProfitSellCount =
+                ruleEvaluationCondition.appliesNormalPlannedProfitSellRule()
+                        ? calculateNormalPlannedProfitSellCount(behaviorContexts)
+                        : 0;
+        int normalRiskReductionSellCount =
+                ruleEvaluationCondition.appliesNormalRiskReductionSellRule()
+                        ? calculateNormalRiskReductionSellCount(behaviorContexts)
+                        : 0;
         List<ScoreDelta> scoreDeltas;
         if (ruleEvaluationCondition.appliesLogDiminishingRuleGroupScore()) {
             scoreDeltas = calculateLogDiminishingRuleGroupScores(
@@ -647,6 +674,27 @@ public class GameBehaviorSimulator {
             scoreDeltas.add(calculateLogDiminishingCandidateScore(
                     LHH_COMPLETED_OPPORTUNITY_SCORE,
                     lhhCompletedOpportunityCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalPartialSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_PARTIAL_SELL_SCORE,
+                    normalPartialSellCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalPlannedProfitSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_PLANNED_PROFIT_SELL_SCORE,
+                    normalPlannedProfitSellCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalRiskReductionSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_RISK_REDUCTION_SELL_SCORE,
+                    normalRiskReductionSellCount,
                     1
             ));
         }
@@ -1487,6 +1535,193 @@ public class GameBehaviorSimulator {
             }
         }
         return appliedTicks.size();
+    }
+
+    int calculateNormalPartialSellCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        return calculateNormalPartialSellCount(
+                behaviorContexts,
+                analysisResults,
+                false,
+                false,
+                false
+        );
+    }
+
+    int calculateNormalPartialSellCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults,
+            boolean requirePreSellStockLimit,
+            boolean requirePostSellCashBand,
+            boolean requireCashRetention) {
+        validateAlignedBehaviorData(behaviorContexts, analysisResults);
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorContext context = behaviorContexts.get(index);
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || containsRule(analysisResults.get(index), BehaviorRuleCode.LOSS_CUT_SELL)
+                    || event.getCurrentSecurityQuantity() == null
+                    || event.getCurrentSecurityQuantity() <= 0) {
+                continue;
+            }
+            BigDecimal sellRatio = calculateSecuritySellRatio(event);
+            if (sellRatio.compareTo(BigDecimal.valueOf(20)) < 0
+                    || sellRatio.compareTo(BigDecimal.valueOf(50)) >= 0) {
+                continue;
+            }
+            if (requirePreSellStockLimit
+                    && calculatePreSellStockRatio(event)
+                    .compareTo(BigDecimal.valueOf(70)) >= 0) {
+                continue;
+            }
+            BigDecimal postSellCashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (requirePostSellCashBand
+                    && (postSellCashRatio.compareTo(BigDecimal.valueOf(25)) < 0
+                    || postSellCashRatio.compareTo(BigDecimal.valueOf(50)) >= 0)) {
+                continue;
+            }
+            if (requireCashRetention
+                    && !retainsPostSellCash(behaviorContexts, index, event)) {
+                continue;
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+    int calculateNormalPlannedProfitSellCount(List<BehaviorContext> behaviorContexts) {
+        for (BehaviorContext context : behaviorContexts) {
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || event.getRealizedReturnRate() == null
+                    || event.getRealizedReturnRate().signum() <= 0) {
+                continue;
+            }
+            BigDecimal sellRatio = calculateSecuritySellRatio(event);
+            BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (sellRatio.compareTo(BigDecimal.valueOf(20)) >= 0
+                    && sellRatio.compareTo(BigDecimal.valueOf(50)) < 0
+                    && cashRatio.compareTo(BigDecimal.valueOf(25)) >= 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    int calculateNormalRiskReductionSellCount(List<BehaviorContext> behaviorContexts) {
+        for (BehaviorContext context : behaviorContexts) {
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || event.getCurrentSecurityQuantity() == null
+                    || event.getCurrentSecurityQuantity() <= 0
+                    || calculateSecuritySellRatio(event)
+                    .compareTo(BigDecimal.valueOf(20)) < 0) {
+                continue;
+            }
+            BigDecimal preSellStockRatio = calculatePreSellStockRatio(event);
+            BigDecimal postSellCashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (preSellStockRatio.compareTo(BigDecimal.valueOf(70)) >= 0
+                    && postSellCashRatio.compareTo(BigDecimal.valueOf(20)) >= 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    private BigDecimal calculatePreSellStockRatio(BehaviorEvent event) {
+        long preSellCash = event.getCurrentCash() - event.getActionAmount();
+        if (preSellCash < 0
+                || event.getCurrentSecurityQuantity() == null
+                || event.getCurrentSecurityQuantity() <= 0) {
+            return BigDecimal.valueOf(100);
+        }
+        long remainingQuantity = event.getCurrentSecurityQuantity();
+        long soldQuantity = event.getQuantity();
+        long soldPrincipal = BigDecimal.valueOf(event.getCurrentStockPrincipal())
+                .multiply(BigDecimal.valueOf(soldQuantity))
+                .divide(BigDecimal.valueOf(remainingQuantity), 0, RoundingMode.HALF_UP)
+                .longValueExact();
+        long preSellStockPrincipal = Math.addExact(
+                event.getCurrentStockPrincipal(),
+                soldPrincipal
+        );
+        return calculateAssetRatio(
+                preSellStockPrincipal,
+                preSellCash,
+                preSellStockPrincipal,
+                event.getCurrentDeposit()
+        );
+    }
+
+    private boolean retainsPostSellCash(
+            List<BehaviorContext> behaviorContexts,
+            int sellIndex,
+            BehaviorEvent sellEvent) {
+        long cashAfterSell = sellEvent.getCurrentCash();
+        if (cashAfterSell <= 0) {
+            return false;
+        }
+        long minimumCash = cashAfterSell;
+        int lastTick = sellEvent.getGameTick() + 2;
+        for (int index = sellIndex + 1; index < behaviorContexts.size(); index++) {
+            BehaviorEvent event = behaviorContexts.get(index).getCurrentEvent();
+            if (event == null || event.getGameTick() == null) {
+                continue;
+            }
+            if (event.getGameTick() > lastTick) {
+                break;
+            }
+            minimumCash = Math.min(minimumCash, event.getCurrentCash());
+        }
+        return BigDecimal.valueOf(minimumCash)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(cashAfterSell), 4, RoundingMode.HALF_UP)
+                .compareTo(BigDecimal.valueOf(80)) >= 0;
+    }
+
+    private boolean isNormalSecuritySell(BehaviorContext context, BehaviorEvent event) {
+        return event != null
+                && event.getGameTick() != null
+                && event.getActionType() == BehaviorActionType.SELL
+                && event.getAssetType() == BehaviorAssetType.SECURITY
+                && event.getQuantity() != null
+                && event.getActionAmount() != null
+                && context.getMarketState() == MarketState.NORMAL;
+    }
+
+    private BigDecimal calculateSecuritySellRatio(BehaviorEvent event) {
+        long soldQuantity = event.getQuantity();
+        long preSellQuantity = Math.addExact(
+                soldQuantity,
+                event.getCurrentSecurityQuantity()
+        );
+        if (preSellQuantity <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(soldQuantity)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(preSellQuantity), 4, RoundingMode.HALF_UP);
+    }
+
+    private void validateAlignedBehaviorData(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
     }
 
     private boolean containsRule(

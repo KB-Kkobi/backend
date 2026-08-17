@@ -289,6 +289,69 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.UNLIMITED,
             GameRuleEvaluationCondition.BALANCED_CAP_WITH_ALL_TARGETED_RULES,
             ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL(
+            "표적 규칙·정상장 의미있는 부분 매도",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL(
+            "표적 규칙·정상장 계획 익절",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL(
+            "표적 규칙·정상장 위험 축소 매도",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES(
+            "표적 규칙·정상장 매도 후보 전체",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT(
+            "표적 규칙·부분 매도·매도 전 주식 70% 미만",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE(
+            "표적 규칙·부분 매도·주식 제한·HLL 비추격 상호 배타",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND(
+            "표적 규칙·부분 매도·주식 제한·현금 25~50%",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION(
+            "표적 규칙·부분 매도·주식 제한·현금 2 Tick 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE(
+            "표적 규칙·부분 매도 정제·HLL 비추격 상호 배타",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE,
+            ConsecutiveActionMultiplierCondition.DISABLED
     );
 
     private final String description;
