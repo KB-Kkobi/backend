@@ -209,6 +209,150 @@ public enum GameRuleEvaluationCondition {
             true,
             true,
             true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE(
+            "균형 상한·위험 예산 유지",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_PASSIVE_HIGH_RISK_HOLDING(
+            "균형 상한·고위험 수동 보유",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_LIQUIDITY_PRESERVING_OPPORTUNITY(
+            "균형 상한·유동성 보존 기회 실행",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY(
+            "균형 상한·위험 예산 유지·유동성 보존 기회 실행",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK(
+            "균형 상한·무거래 위험 예산 유지·고주식 저현금 급락 무거래",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE(
+            "균형 상한·무거래 위험 예산 유지·위험 노출 기회 비추격",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY(
+            "균형 상한·무거래 위험 예산 유지·고주식 저현금 5 Tick 무거래",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY(
+            "균형 상한·위험 예산·기회 비추격·고주식 저현금 무거래",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_ALL_NEW_RULES(
+            "균형 상한·세 신규 규칙",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE(
+            "균형 상한·위험 예산·정제된 기회 비추격",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY(
+            "균형 상한·위험 예산·정제 비추격·LHH 유동성 기회 실행",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE(
+            "균형 상한·위험 예산·정제 비추격·LHH 기회 실행 상호 배타",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_HHL_COMPOSITE(
+            "균형 상한·위험 예산·HHL 복합 규칙",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE(
+            "균형 상한·위험 예산·HLL 정제 비추격 최대 1회",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY(
+            "균형 상한·위험 예산·LHH 완결형 기회 실행 최대 1회",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
+    ),
+    BALANCED_CAP_WITH_ALL_TARGETED_RULES(
+            "균형 상한·위험 예산·HHL·HLL·LHH 표적 규칙",
+            true,
+            false,
+            false,
+            true,
+            true,
+            true
     );
 
     private static final BigDecimal BUY_SMALL_RATIO = BigDecimal.valueOf(10);
@@ -847,7 +991,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     private boolean isSizeSeparatedBullBuyCondition() {
@@ -863,7 +1007,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     public boolean appliesNormalPlannedBuyRule() {
@@ -874,7 +1018,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     public boolean appliesCashBufferMaintenanceRule() {
@@ -885,7 +1029,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     public boolean appliesCashBufferMaintenancePerEpisodeRule() {
@@ -896,7 +1040,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     private boolean appliesCrashPartialSellAxisSeparation() {
@@ -909,7 +1053,7 @@ public enum GameRuleEvaluationCondition {
                 || this == LOG_DIMINISHING_CANDIDATE_RULES
                 || this == LOG_DIMINISHING_ALL_REPEATED_RULES
                 || this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     public boolean appliesOpportunityWeightedRepeatedScore() {
@@ -927,11 +1071,109 @@ public enum GameRuleEvaluationCondition {
 
     public boolean appliesLogDiminishingRuleGroupScore() {
         return this == LOG_DIMINISHING_RULE_GROUPS
-                || this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+                || isBalancedCapFamily();
     }
 
     public boolean appliesBalancedRuleGroupMaximum() {
-        return this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP;
+        return isBalancedCapFamily();
+    }
+
+    private boolean isBalancedCapFamily() {
+        return this == LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE
+                || this == BALANCED_CAP_WITH_PASSIVE_HIGH_RISK_HOLDING
+                || this == BALANCED_CAP_WITH_LIQUIDITY_PRESERVING_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY
+                || this
+                == BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY
+                || this == BALANCED_CAP_WITH_ALL_NEW_RULES
+                || this == BALANCED_CAP_WITH_REFINED_NO_CHASE
+                || this == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY
+                || this
+                == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE
+                || this == BALANCED_CAP_WITH_HHL_COMPOSITE
+                || this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
+                || this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+    }
+
+    public boolean appliesRiskBudgetMaintenanceRule() {
+        return this == BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY
+                || this
+                == BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY
+                || this == BALANCED_CAP_WITH_ALL_NEW_RULES
+                || this == BALANCED_CAP_WITH_REFINED_NO_CHASE
+                || this == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY
+                || this
+                == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE
+                || this == BALANCED_CAP_WITH_HHL_COMPOSITE
+                || this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
+                || this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+    }
+
+    public boolean appliesPassiveHighRiskHoldingRule() {
+        return this == BALANCED_CAP_WITH_PASSIVE_HIGH_RISK_HOLDING
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK
+                || this == BALANCED_CAP_WITH_ALL_NEW_RULES;
+    }
+
+    public boolean appliesLiquidityPreservingOpportunityRule() {
+        return this == BALANCED_CAP_WITH_LIQUIDITY_PRESERVING_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_ALL_NEW_RULES;
+    }
+
+    public boolean appliesRiskExposureNoChaseRule() {
+        return this == BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE
+                || this
+                == BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY;
+    }
+
+    public boolean appliesHighStockLowCashInactivityRule() {
+        return this == BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY
+                || this
+                == BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY;
+    }
+
+    public boolean appliesRefinedRiskExposureNoChaseRule() {
+        return this == BALANCED_CAP_WITH_REFINED_NO_CHASE
+                || this == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY
+                || this
+                == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE;
+    }
+
+    public boolean appliesLhhLiquidityOpportunityRule() {
+        return this == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY
+                || this
+                == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE;
+    }
+
+    public boolean appliesMutuallyExclusiveCandidateRules() {
+        return this
+                == BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE;
+    }
+
+    public boolean appliesHhlCompositeRule() {
+        return this == BALANCED_CAP_WITH_HHL_COMPOSITE
+                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+    }
+
+    public boolean appliesHllCappedNoChaseRule() {
+        return this == BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE
+                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
+    }
+
+    public boolean appliesLhhCompletedOpportunityRule() {
+        return this == BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY
+                || this == BALANCED_CAP_WITH_ALL_TARGETED_RULES;
     }
 
     public BigDecimal getBuyGroupMaximumMultiplier() {
