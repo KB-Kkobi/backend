@@ -46,6 +46,7 @@ import javax.sql.DataSource;
         "org.kkobi.leaderboard.service",
         "org.kkobi.quiz.service",
         "org.kkobi.notification.service",
+        "org.kkobi.notification.listener"
 })
 @MapperScan(basePackages = {
         "org.kkobi.assessment.mapper",

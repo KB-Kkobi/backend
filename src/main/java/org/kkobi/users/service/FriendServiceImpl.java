@@ -7,8 +7,11 @@ import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
+import org.kkobi.users.event.FriendRequestAcceptedEvent;
+import org.kkobi.users.event.FriendRequestSentEvent;
 import org.kkobi.users.mapper.FriendMapper;
 import org.kkobi.users.mapper.UserMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ public class FriendServiceImpl implements FriendService{
 
     private final FriendMapper friendMapper;
     private final UserMapper userMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 닉네임으로 친구 요청을 전송
 
@@ -50,6 +54,28 @@ public class FriendServiceImpl implements FriendService{
         if(insertRows != 1){
             throw new IllegalArgumentException("친구 요청 저장에 실패했습니다.");
         }
+
+        Long friendshipId = friendMapper.findPendingFriendshipId(
+                userId,
+                targetUser.getUserId()
+        );
+
+        if(friendshipId == null){
+            throw new IllegalArgumentException(
+                    "생성된 친구 요청을 찾을 수 없습니다."
+            );
+        }
+
+        UserVO requester = userMapper.findById(userId);
+
+        eventPublisher.publishEvent(
+                new FriendRequestSentEvent(
+                        friendshipId,
+                        userId,
+                        requester.getNickname(),
+                        targetUser.getUserId()
+                )
+        );
     }
 
     // 받은 친구 요청 목록을 조회
@@ -64,6 +90,15 @@ public class FriendServiceImpl implements FriendService{
     @Transactional
     public void acceptFriendRequest(Long userId, Long friendshipId) {
 
+        Long requesterId = friendMapper.findRequesterIdByFriendshipId(
+                friendshipId,
+                userId
+        );
+
+        if(requesterId == null){
+            throw new IllegalArgumentException("처리할 수 없는 친구 요청입니다.");
+        }
+
         int updateRows = friendMapper.acceptFriendRequest(
                 friendshipId,
                 userId
@@ -72,6 +107,18 @@ public class FriendServiceImpl implements FriendService{
         if (updateRows != 1) {
             throw new IllegalArgumentException("처리할 수 없는 친구 요청입니다.");
         }
+
+        UserVO receiver = userMapper.findById(userId);
+
+        eventPublisher.publishEvent(
+                new FriendRequestAcceptedEvent(
+                        friendshipId,
+                        requesterId,
+                        userId,
+                        receiver.getNickname()
+                )
+        );
+
     }
 
     // 받은 친구 요청을 거절
