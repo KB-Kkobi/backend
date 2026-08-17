@@ -259,6 +259,12 @@ class SecurityOrderAssessmentListenerTest {
             account.setCashBalance(cashBalance);
             return account;
         }
+
+        @Override
+        public TradeAccountDto findByAccountId(Long accountId) {
+            return null;
+        }
+
         @Override public TradeAccountDto findByAccountIdForUpdate(Long accountId) { return null; }
         @Override public int decreaseCashBalance(Long accountId, Long amount) { return 0; }
         @Override public int increaseCashBalance(Long accountId, Long amount) { return 0; }

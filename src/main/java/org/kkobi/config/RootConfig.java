@@ -59,7 +59,6 @@ import javax.sql.DataSource;
         "org.kkobi.leaderboard.mapper",
         "org.kkobi.quiz.mapper",
         "org.kkobi.notification.mapper",
-        "org.kkobi.notification.mapper"
 })
 @Import(RedisConfig.class)
 public class RootConfig {
