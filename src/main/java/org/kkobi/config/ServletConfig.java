@@ -34,6 +34,7 @@ import java.util.List;
         "org.kkobi.controller",
         "org.kkobi.exception",
         "org.kkobi.users.controller",
+        "org.kkobi.product.controller",
         "org.kkobi.product.deposit.controller",
         "org.kkobi.product.saving.controller",
         "org.kkobi.product.holding.controller",
