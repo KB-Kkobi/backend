@@ -8,6 +8,7 @@ import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
 import org.kkobi.users.event.FriendRequestAcceptedEvent;
+import org.kkobi.users.event.FriendRequestCancelledEvent;
 import org.kkobi.users.event.FriendRequestSentEvent;
 import org.kkobi.users.mapper.FriendMapper;
 import org.kkobi.users.mapper.UserMapper;
@@ -168,14 +169,43 @@ public class FriendServiceImpl implements FriendService{
     // 내가 보낸 대기 중인 친구 요청을 취소
     @Override
     @Transactional
-    public void cancelSentFriendRequest(Long userId, Long friendshipId) {
+    public void cancelSentFriendRequest(
+            Long userId,
+            Long friendshipId
+    ) {
 
-        int deletedRows = friendMapper.cancelSentFriendRequest(friendshipId, userId);
+        // 친구 요청을 삭제하기 전에
+        // 해당 요청을 받은 사용자 ID를 조회
+        Long receiverId =
+                friendMapper.findReceiverIdByPendingFriendRequest(
+                        friendshipId,
+                        userId
+                );
 
-        if(deletedRows != 1){
+        if (receiverId == null) {
             throw new IllegalArgumentException(
                     "취소할 수 없는 친구 요청입니다."
             );
         }
+
+        int deletedRows =
+                friendMapper.cancelSentFriendRequest(
+                        friendshipId,
+                        userId
+                );
+
+        if (deletedRows != 1) {
+            throw new IllegalArgumentException(
+                    "취소할 수 없는 친구 요청입니다."
+            );
+        }
+
+        eventPublisher.publishEvent(
+                new FriendRequestCancelledEvent(
+                        friendshipId,
+                        userId,
+                        receiverId
+                )
+        );
     }
 }
