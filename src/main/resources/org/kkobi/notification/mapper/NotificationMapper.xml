@@ -104,4 +104,10 @@
                )
     </insert>
 
+    <!-- 현재 사용자의 모든 알림 삭제 -->
+    <delete id="deleteAllNotifications">
+        DELETE FROM notifications
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

@@ -130,4 +130,12 @@ public class NotificationServiceImpl implements NotificationService{
                 return false;
         }
     }
+
+    // 현재 사용쟈의 모든 알림 삭제
+    @Override
+    @Transactional
+    public void deleteAllNotifications(Long userId) {
+
+        notificationMapper.deleteAllNotifications(userId);
+    }
 }

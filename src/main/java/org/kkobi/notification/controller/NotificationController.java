@@ -138,4 +138,22 @@ public class NotificationController {
 
         return ResponseEntity.noContent().build();
     }
+
+    // 로그인 사용자의 모든 알림 삭제
+    @Operation(
+            summary = "전체 알림 삭제",
+            description = "로그인 사용자의 모든 알림을 삭제합니다."
+    )
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllNotifications(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser
+    ){
+
+        Long userId = authenticatedUser.getUserId();;
+
+        notificationService.deleteAllNotifications(userId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

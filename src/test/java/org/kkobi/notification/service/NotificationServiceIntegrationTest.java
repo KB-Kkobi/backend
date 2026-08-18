@@ -390,4 +390,126 @@ class NotificationServiceIntegrationTest {
             );
         }
     }
+
+    // 현재 사용자의 모든 알림 삭제
+    @Test
+    @DisplayName("모든 알림을 삭제한다")
+    void deleteAllNotifications_deletesEveryNotification() {
+
+        Long userId =
+                createUser();
+
+
+        // 거래 알림 생성
+        notificationService.createNotification(
+                userId,
+                NotificationType.TRADE_BUY_FILLED,
+                "매수 체결",
+                "삼성전자 매수가 체결됐어요.",
+                1L
+        );
+
+
+        // 친구 알림 생성
+        notificationService.createNotification(
+                userId,
+                NotificationType.FRIEND_REQUEST_RECEIVED,
+                "친구 신청",
+                "친구 신청이 도착했어요.",
+                2L
+        );
+
+
+        // 삭제 전 알림 2건 확인
+        assertEquals(
+                2,
+                notificationService
+                        .getNotifications(userId)
+                        .size()
+        );
+
+        // 삭제 전 unread 2건 확인
+        assertEquals(
+                2,
+                notificationService.getUnreadCount(userId)
+        );
+
+
+        // 전체 알림 삭제
+        notificationService.deleteAllNotifications(userId);
+
+
+        // 모든 알림이 삭제되었는지 확인
+        assertTrue(
+                notificationService
+                        .getNotifications(userId)
+                        .isEmpty()
+        );
+
+        // 삭제 후 unread 개수도 0인지 확인
+        assertEquals(
+                0,
+                notificationService.getUnreadCount(userId)
+        );
+    }
+
+    // 전체 알림 삭제 시 다른 사용자의 알림은 유지
+    @Test
+    @DisplayName("전체 알림 삭제 시 다른 사용자의 알림은 삭제하지 않는다")
+    void deleteAllNotifications_doesNotDeleteOtherUsersNotifications() {
+
+        Long userId =
+                createUser();
+
+        Long otherUserId =
+                createUser();
+
+
+        // 첫 번째 사용자 알림 생성
+        notificationService.createNotification(
+                userId,
+                NotificationType.FRIEND_REQUEST_RECEIVED,
+                "친구 신청",
+                "첫 번째 사용자 알림입니다.",
+                1L
+        );
+
+
+        // 다른 사용자 알림 생성
+        notificationService.createNotification(
+                otherUserId,
+                NotificationType.FRIEND_REQUEST_RECEIVED,
+                "친구 신청",
+                "다른 사용자 알림입니다.",
+                2L
+        );
+
+
+        // 첫 번째 사용자의 알림만 전체 삭제
+        notificationService.deleteAllNotifications(userId);
+
+
+        // 첫 번째 사용자의 알림은 삭제되어야 함
+        assertTrue(
+                notificationService
+                        .getNotifications(userId)
+                        .isEmpty()
+        );
+
+
+        // 다른 사용자의 알림은 그대로 유지되어야 함
+        List<NotificationResponseDto> otherNotifications =
+                notificationService
+                        .getNotifications(otherUserId);
+
+        assertEquals(
+                1,
+                otherNotifications.size()
+        );
+
+        assertEquals(
+                "다른 사용자 알림입니다.",
+                otherNotifications.get(0).getMessage()
+        );
+    }
 }

@@ -38,4 +38,7 @@ public interface NotificationService {
             String message,
             Long referenceId
     );
+
+    // 현재 사용자의 모든 알림 삭제
+    void deleteAllNotifications(Long userId);
 }

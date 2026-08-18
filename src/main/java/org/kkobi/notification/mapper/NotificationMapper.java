@@ -50,4 +50,9 @@ public interface NotificationMapper {
             @Param("message") String message,
             @Param("referenceId") Long referenceId
     );
+
+    // 현재 사용자의 모든 알림 삭제
+    int deleteAllNotifications(
+            @Param("userId") Long userId
+    );
 }
