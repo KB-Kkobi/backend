@@ -108,6 +108,8 @@ class VirtualInvestmentPeriodAssessmentServiceIntegrationTest {
         assertEquals("SELL", behaviors.get(0).getActionType());
         assertEquals(new BigDecimal("10100.00"), behaviors.get(0).getCurrentClosePrice());
         assertEquals(new BigDecimal("10000.00"), behaviors.get(0).getPreviousClosePrice());
+        assertEquals(List.of(ASSESSMENT_DATE), assessmentService
+                .getUnsettledDailyAssessmentDates(ASSESSMENT_DATE, ASSESSMENT_DATE));
 
         int firstAssessmentCount = assessmentService.calculateDailyAssessments(ASSESSMENT_DATE);
         int secondAssessmentCount = assessmentService.calculateDailyAssessments(ASSESSMENT_DATE);
@@ -116,7 +118,6 @@ class VirtualInvestmentPeriodAssessmentServiceIntegrationTest {
         assertEquals(0, secondAssessmentCount);
         assertEquals(1L, countResults());
         assertLatestScore("50.00", "51.67", "50.00");
-
         String settlementType = jdbcTemplate.queryForObject(
                 "SELECT assessment_period_type FROM assessment_settlements "
                         + "WHERE account_id = ? AND period_date = ?",
@@ -139,6 +140,8 @@ class VirtualInvestmentPeriodAssessmentServiceIntegrationTest {
                 Long.class,
                 accountId
         ));
+        assertEquals(List.of(), assessmentService
+                .getUnsettledDailyAssessmentDates(ASSESSMENT_DATE, ASSESSMENT_DATE));
     }
 
     @Test

@@ -36,6 +36,12 @@ public class VirtualInvestmentPeriodAssessmentService {
     private final AssessmentSettlementService assessmentSettlementService;
     private final VirtualInvestmentPeriodResultService virtualInvestmentPeriodResultService;
 
+    public List<LocalDate> getUnsettledDailyAssessmentDates(
+            LocalDate startDate,
+            LocalDate endDate) {
+        return accountDailySnapshotMapper.getUnsettledDailyAssessmentDates(startDate, endDate);
+    }
+
     @Transactional
     public int calculateDailyAssessments(LocalDate assessmentDate) {
         return accountDailySnapshotMapper.getAccountSnapshotTargets(assessmentDate)

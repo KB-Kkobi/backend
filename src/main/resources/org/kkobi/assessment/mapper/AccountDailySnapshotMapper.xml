@@ -67,6 +67,26 @@
         ORDER BY account_record.account_id
     </select>
 
+    <select id="getUnsettledDailyAssessmentDates" resultType="java.time.LocalDate">
+        SELECT DISTINCT snapshot.snapshot_date
+        FROM account_daily_snapshots snapshot
+        WHERE snapshot.snapshot_date BETWEEN #{startDate} AND #{endDate}
+          AND EXISTS (
+              SELECT 1
+              FROM accounts account_record
+              WHERE account_record.account_id = snapshot.account_id
+          )
+          AND NOT EXISTS (
+              SELECT 1
+              FROM assessment_settlements settlement
+              WHERE settlement.account_id = snapshot.account_id
+                AND settlement.assessment_period_type = 'DAILY_ASSESSMENT_BATCH'
+                AND settlement.period_date = snapshot.snapshot_date
+                AND settlement.status = 'COMPLETED'
+          )
+        ORDER BY snapshot.snapshot_date
+    </select>
+
     <insert id="saveAccountDailySnapshot"
             useGeneratedKeys="true"
             keyProperty="accountDailySnapshotId">

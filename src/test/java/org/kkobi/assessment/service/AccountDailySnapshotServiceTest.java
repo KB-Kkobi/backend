@@ -57,6 +57,13 @@ class AccountDailySnapshotServiceTest {
         }
 
         @Override
+        public List<LocalDate> getUnsettledDailyAssessmentDates(
+                LocalDate startDate,
+                LocalDate endDate) {
+            return List.of();
+        }
+
+        @Override
         public int saveAccountDailySnapshot(AccountDailySnapshotDto accountDailySnapshot) {
             savedSnapshots.add(accountDailySnapshot);
             return 1;

@@ -373,6 +373,18 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
         }
 
         @Override
+        public List<LocalDate> getUnsettledDailyAssessmentDates(
+                LocalDate startDate,
+                LocalDate endDate) {
+            return snapshots.stream()
+                    .map(AccountDailySnapshotDto::getSnapshotDate)
+                    .filter(date -> !date.isBefore(startDate))
+                    .filter(date -> !date.isAfter(endDate))
+                    .distinct()
+                    .toList();
+        }
+
+        @Override
         public int saveAccountDailySnapshot(AccountDailySnapshotDto accountDailySnapshot) {
             return 1;
         }

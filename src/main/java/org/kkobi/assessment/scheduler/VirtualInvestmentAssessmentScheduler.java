@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -15,6 +16,7 @@ public class VirtualInvestmentAssessmentScheduler {
 
     private static final String ASIA_SEOUL = "Asia/Seoul";
     private static final ZoneId ASIA_SEOUL_ZONE = ZoneId.of(ASIA_SEOUL);
+    private static final int DAILY_CATCH_UP_DAYS = 14;
 
     private final AccountDailySnapshotService accountDailySnapshotService;
     private final VirtualInvestmentPeriodAssessmentService virtualInvestmentPeriodAssessmentService;
@@ -23,7 +25,14 @@ public class VirtualInvestmentAssessmentScheduler {
     public void calculateDailyVirtualInvestmentAssessment() {
         LocalDate assessmentDate = LocalDate.now(ASIA_SEOUL_ZONE).minusDays(1);
         accountDailySnapshotService.saveAccountDailySnapshots(assessmentDate);
-        virtualInvestmentPeriodAssessmentService.calculateDailyAssessments(assessmentDate);
+        List<LocalDate> unsettledDates = virtualInvestmentPeriodAssessmentService
+                .getUnsettledDailyAssessmentDates(
+                        assessmentDate.minusDays(DAILY_CATCH_UP_DAYS - 1L),
+                        assessmentDate
+                );
+        unsettledDates.forEach(
+                virtualInvestmentPeriodAssessmentService::calculateDailyAssessments
+        );
     }
 
     @Scheduled(cron = "0 10 0 * * SUN", zone = ASIA_SEOUL)

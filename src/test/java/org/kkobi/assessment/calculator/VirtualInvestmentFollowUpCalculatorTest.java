@@ -96,6 +96,45 @@ class VirtualInvestmentFollowUpCalculatorTest {
         assertTrue(context.isCompletedLiquidityOpportunity());
     }
 
+    @Test
+    @DisplayName("LHH 수익 매도는 개별 매수가가 아닌 보유 평균 매입단가로 판정한다.")
+    void calculateLiquidityOpportunityUsingAveragePurchasePrice() {
+        VirtualInvestmentBehaviorDto firstBuy = behavior(
+                "BUY", 1L, 10, "2026-08-05T10:00:00"
+        );
+        firstBuy.setExecutionPrice(100L);
+        VirtualInvestmentBehaviorDto secondBuy = behavior(
+                "BUY", 1L, 10, "2026-08-06T10:00:00"
+        );
+        secondBuy.setExecutionPrice(200L);
+        VirtualInvestmentBehaviorDto breakEvenSell = behavior(
+                "SELL", 1L, 10, "2026-08-12T10:00:00"
+        );
+        breakEvenSell.setExecutionPrice(150L);
+        VirtualInvestmentBehaviorDto profitSell = behavior(
+                "SELL", 1L, 10, "2026-08-12T10:00:00"
+        );
+        profitSell.setExecutionPrice(160L);
+        List<AccountDailySnapshotDto> snapshots = List.of(
+                snapshot("2026-08-05", 30L, "30"),
+                snapshot("2026-08-06", 30L, "30")
+        );
+
+        BehaviorContext breakEvenContext = calculator.calculateFollowUpContext(
+                List.of(firstBuy, secondBuy, breakEvenSell),
+                snapshots,
+                ASSESSMENT_DATE
+        );
+        BehaviorContext profitContext = calculator.calculateFollowUpContext(
+                List.of(firstBuy, secondBuy, profitSell),
+                snapshots,
+                ASSESSMENT_DATE
+        );
+
+        assertFalse(breakEvenContext.isCompletedLiquidityOpportunity());
+        assertTrue(profitContext.isCompletedLiquidityOpportunity());
+    }
+
     private VirtualInvestmentBehaviorDto behavior(
             String actionType,
             Long securityId,
