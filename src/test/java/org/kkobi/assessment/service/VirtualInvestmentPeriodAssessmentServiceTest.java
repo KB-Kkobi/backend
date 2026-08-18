@@ -6,6 +6,8 @@ import org.kkobi.assessment.calculator.AssetRatioCalculator;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.PersonaClassifier;
 import org.kkobi.assessment.calculator.VirtualInvestmentPeriodCalculator;
+import org.kkobi.assessment.calculator.VirtualInvestmentFollowUpCalculator;
+import org.kkobi.assessment.calculator.MarketStateCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
 import org.kkobi.assessment.domain.AssessmentScore;
 import org.kkobi.assessment.domain.BehaviorAnalysisResult;
@@ -14,6 +16,7 @@ import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.enums.AssessmentPeriodType;
 import org.kkobi.assessment.mapper.AccountDailySnapshotMapper;
 import org.kkobi.assessment.mapper.AssessmentMapper;
+import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,6 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class VirtualInvestmentPeriodAssessmentServiceTest {
 
@@ -150,6 +156,36 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
     }
 
     @Test
+    @DisplayName("5일 무거래 위험 예산을 주간 EMA에 반영한다.")
+    void calculateWeeklyBalanceAssessment() {
+        LocalDate periodStartDate = LocalDate.of(2026, 8, 3);
+        InMemoryAccountDailySnapshotMapper snapshotMapper =
+                new InMemoryAccountDailySnapshotMapper(
+                        LocalDate.of(2026, 7, 1),
+                        createSnapshots(periodStartDate, 5, 30L, 60L, 10L),
+                        0
+                );
+        InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
+        VirtualInvestmentPeriodAssessmentService assessmentService = createAssessmentService(
+                snapshotMapper,
+                assessmentMapper
+        );
+
+        int firstCount = assessmentService.calculateWeeklyBalanceAssessments(
+                LocalDate.of(2026, 8, 9)
+        );
+        int secondCount = assessmentService.calculateWeeklyBalanceAssessments(
+                LocalDate.of(2026, 8, 9)
+        );
+
+        assertEquals(1, firstCount);
+        assertEquals(0, secondCount);
+        assertScoreEquals("51.67", assessmentMapper.getLatestScore().getRtScore());
+        assertScoreEquals("51.67", assessmentMapper.getLatestScore().getLhScore());
+        assertScoreEquals("48.34", assessmentMapper.getLatestScore().getRpScore());
+    }
+
+    @Test
     @DisplayName("매도하지 않은 증권의 평균 보유 기간이 30일 이상이면 EMA에 한 번 반영한다.")
     void calculateLongSecurityHoldingOnce() {
         LocalDate firstTradeDate = LocalDate.of(2026, 8, 1);
@@ -238,9 +274,14 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
             AccountDailySnapshotMapper snapshotMapper,
             AssessmentSettlementService assessmentSettlementService,
             VirtualInvestmentPeriodResultService virtualInvestmentPeriodResultService) {
+        VirtualInvestmentBehaviorMapper behaviorMapper = mock(VirtualInvestmentBehaviorMapper.class);
+        when(behaviorMapper.getPreviousVirtualInvestmentBehaviors(any(), any()))
+                .thenReturn(List.of());
         return new VirtualInvestmentPeriodAssessmentService(
                 snapshotMapper,
+                behaviorMapper,
                 new VirtualInvestmentPeriodCalculator(new AssetRatioCalculator()),
+                new VirtualInvestmentFollowUpCalculator(new MarketStateCalculator()),
                 new BehaviorRuleEngine(),
                 assessmentSettlementService,
                 virtualInvestmentPeriodResultService
@@ -338,6 +379,14 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
 
         @Override
         public int getCompletedSecurityOrderCount(Long accountId, LocalDate assessmentDate) {
+            return completedTradeCount;
+        }
+
+        @Override
+        public int getCompletedSecurityOrderCountBetween(
+                Long accountId,
+                LocalDate startDate,
+                LocalDate endDate) {
             return completedTradeCount;
         }
 

@@ -18,6 +18,9 @@ public class VirtualInvestmentPeriodCalculator {
     private static final BigDecimal VERY_LOW_CASH_RATIO = BigDecimal.valueOf(5);
     private static final BigDecimal MEDIUM_CASH_RATIO = BigDecimal.valueOf(25);
     private static final BigDecimal HIGH_CASH_RATIO = BigDecimal.valueOf(50);
+    private static final BigDecimal RISK_BUDGET_MINIMUM_STOCK_RATIO = BigDecimal.valueOf(50);
+    private static final BigDecimal RISK_BUDGET_MAXIMUM_STOCK_RATIO = BigDecimal.valueOf(70);
+    private static final BigDecimal RISK_BUDGET_MAXIMUM_CASH_RATIO = BigDecimal.valueOf(40);
     private static final int RATIO_SCALE = 2;
     private static final int TRADE_COUNT_SCALE = 4;
 
@@ -64,6 +67,25 @@ public class VirtualInvestmentPeriodCalculator {
                 .divide(BigDecimal.valueOf(elapsedDays), TRADE_COUNT_SCALE, RoundingMode.HALF_UP);
     }
 
+    public boolean isRiskBudgetMaintained(List<AccountDailySnapshotDto> snapshots) {
+        return !snapshots.isEmpty() && snapshots.stream().allMatch(snapshot -> {
+            BigDecimal stockRatio = assetRatioCalculator.calculateStockRatio(
+                    snapshot.getCurrentCash(),
+                    snapshot.getCurrentStockPrincipal(),
+                    snapshot.getCurrentDeposit()
+            );
+            return isRatioBetween(
+                    stockRatio,
+                    RISK_BUDGET_MINIMUM_STOCK_RATIO,
+                    RISK_BUDGET_MAXIMUM_STOCK_RATIO
+            ) && isRatioBetween(
+                    snapshot.getCashRatio(),
+                    MEDIUM_CASH_RATIO,
+                    RISK_BUDGET_MAXIMUM_CASH_RATIO
+            );
+        });
+    }
+
     private BigDecimal calculateAverageRatio(
             List<AccountDailySnapshotDto> snapshots,
             Function<AccountDailySnapshotDto, BigDecimal> ratioProvider) {
@@ -101,5 +123,14 @@ public class VirtualInvestmentPeriodCalculator {
     private boolean hasHighCashRatio(AccountDailySnapshotDto snapshot) {
         return snapshot.getCashRatio() != null
                 && snapshot.getCashRatio().compareTo(HIGH_CASH_RATIO) >= 0;
+    }
+
+    private boolean isRatioBetween(
+            BigDecimal ratio,
+            BigDecimal minimum,
+            BigDecimal maximum) {
+        return ratio != null
+                && ratio.compareTo(minimum) >= 0
+                && ratio.compareTo(maximum) < 0;
     }
 }

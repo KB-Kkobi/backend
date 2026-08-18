@@ -57,7 +57,7 @@ public class BehaviorRuleEngine {
         List<RuleResult> appliedRules = new ArrayList<>();
 
         calculateVirtualInvestmentMarketActionRules(behaviorContext, appliedRules);
-        calculateDepositRules(behaviorContext, appliedRules);
+        calculateDepositMaturityRule(behaviorContext, appliedRules);
         calculateHoldingPeriodRules(behaviorContext, appliedRules);
         calculateStockRotationRule(behaviorContext, appliedRules);
 
@@ -74,6 +74,7 @@ public class BehaviorRuleEngine {
             calculateMaintainedCashRules(behaviorContext, periodRules);
             calculateTradeFrequencyRules(behaviorContext, periodRules);
             calculateLongHoldingPeriodRule(behaviorContext, periodRules);
+            calculateFollowUpBehaviorRules(behaviorContext, periodRules);
             periodRules.forEach(ruleResult -> appliedRuleByCode.putIfAbsent(
                     ruleResult.getRuleCode(),
                     ruleResult
@@ -321,6 +322,40 @@ public class BehaviorRuleEngine {
         }
     }
 
+    private void calculateDepositMaturityRule(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        if (context.isDepositMatured()) {
+            addRule(appliedRules, BehaviorRuleCode.DEPOSIT_MATURITY, -5, -10, -5,
+                    "예금을 만기까지 유지했습니다.");
+        }
+    }
+
+    private void calculateFollowUpBehaviorRules(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        if (context.isDepositCancelledBeforeSecurityBuy()) {
+            addRule(appliedRules, BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY, 5, -10, 10,
+                    "예금 해지 후 2일 이내에 증권을 매수했습니다.");
+        }
+        if (context.isDepositCancelCashRetention()) {
+            addRule(appliedRules, BehaviorRuleCode.DEPOSIT_CANCEL_CASH_RETENTION, -5, 10, -5,
+                    "예금 해지 후 2일 동안 현금의 80% 이상을 유지했습니다.");
+        }
+        if (context.isNormalPartialSellCashRetention()) {
+            addRule(appliedRules, BehaviorRuleCode.NORMAL_PARTIAL_SELL, 0, 5, 5,
+                    "정상장 부분 매도 후 현금 비중 25~50%를 2일 유지했습니다.");
+        }
+        if (context.isCompletedLiquidityOpportunity()) {
+            addRule(appliedRules, BehaviorRuleCode.LHH_COMPLETED_OPPORTUNITY, 0, 0, 5,
+                    "유동성을 보존하며 매수 후 10일 이내 수익 매도를 완료했습니다.");
+        }
+        if (context.isRiskBudgetMaintenance()) {
+            addRule(appliedRules, BehaviorRuleCode.RISK_BUDGET_MAINTENANCE, 5, 5, -5,
+                    "주식 50~70%와 현금 25~40%를 무거래 5일 유지했습니다.");
+        }
+    }
+
     private void calculateHoldingPeriodRules(
             BehaviorContext context,
             List<RuleResult> appliedRules) {
@@ -387,7 +422,7 @@ public class BehaviorRuleEngine {
                     "현금 비중 5% 미만을 5일 이상 유지했습니다.");
         } else if (context.getCashRatio().compareTo(MEDIUM_CASH_RATIO) >= 0
                 && context.getCashRatio().compareTo(HIGH_CASH_RATIO) < 0) {
-            addRule(appliedRules, BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE, 0, 5, 0,
+            addRule(appliedRules, BehaviorRuleCode.CASH_BUFFER_MAINTENANCE, 0, 5, 0,
                     "현금 비중 25% 이상 50% 미만을 5일 이상 유지했습니다.");
         } else if (context.getCashRatio().compareTo(HIGH_CASH_RATIO) >= 0) {
             addRule(appliedRules, BehaviorRuleCode.HIGH_CASH_MAINTENANCE, -10, 15, -5,

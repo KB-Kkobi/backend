@@ -132,4 +132,14 @@
           AND executed_at &lt; DATE_ADD(#{assessmentDate}, INTERVAL 1 DAY)
     </select>
 
+    <select id="getCompletedSecurityOrderCountBetween" resultType="int">
+        SELECT COUNT(*)
+        FROM security_orders
+        WHERE account_id = #{accountId}
+          AND status = 'FILLED'
+          AND executed_at IS NOT NULL
+          AND executed_at &gt;= #{startDate}
+          AND executed_at &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+    </select>
+
 </mapper>

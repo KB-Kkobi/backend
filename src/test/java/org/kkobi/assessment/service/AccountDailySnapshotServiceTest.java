@@ -80,6 +80,14 @@ class AccountDailySnapshotServiceTest {
             return 0;
         }
 
+        @Override
+        public int getCompletedSecurityOrderCountBetween(
+                Long accountId,
+                LocalDate startDate,
+                LocalDate endDate) {
+            return 0;
+        }
+
         private List<AccountDailySnapshotDto> getSavedSnapshots() {
             return savedSnapshots;
         }

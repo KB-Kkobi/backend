@@ -96,7 +96,7 @@ class BehaviorRuleEngineCoverageTest {
                 createRuleCase(
                         "예금 해지 후 증권 매수",
                         createDepositCancelAndSecurityBuyContext(),
-                        false,
+                        true,
                         BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
                         "5", "-10", "10"
                 ),
@@ -153,7 +153,7 @@ class BehaviorRuleEngineCoverageTest {
                         "현금 비중 25% 이상 50% 미만 유지",
                         createCashMaintenanceContext("25", 5),
                         true,
-                        BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                        BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                         "0", "5", "0"
                 ),
                 createRuleCase(
@@ -331,7 +331,7 @@ class BehaviorRuleEngineCoverageTest {
         assertRulePresence(
                 createCashMaintenanceContext("25", 4),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 false
         );
         assertRulePresence(
@@ -345,13 +345,13 @@ class BehaviorRuleEngineCoverageTest {
         assertRulePresence(
                 createCashMaintenanceContext("25", 5),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 true
         );
         assertRulePresence(
                 createCashMaintenanceContext("49.99", 5),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 true
         );
         assertRulePresence(
@@ -470,7 +470,7 @@ class BehaviorRuleEngineCoverageTest {
         boolean applied = result.getAppliedRules().stream()
                 .map(rule -> rule.getRuleCode())
                 .anyMatch(ruleCode -> ruleCode == BehaviorRuleCode.VERY_LOW_CASH_MAINTENANCE
-                        || ruleCode == BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE
+                        || ruleCode == BehaviorRuleCode.CASH_BUFFER_MAINTENANCE
                         || ruleCode == BehaviorRuleCode.HIGH_CASH_MAINTENANCE);
         assertEquals(false, applied);
     }

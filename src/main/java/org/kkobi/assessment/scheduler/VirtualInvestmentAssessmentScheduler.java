@@ -33,5 +33,6 @@ public class VirtualInvestmentAssessmentScheduler {
         virtualInvestmentPeriodAssessmentService.calculateWeeklyTradeFrequencyAssessments(
                 assessmentDate
         );
+        virtualInvestmentPeriodAssessmentService.calculateWeeklyBalanceAssessments(assessmentDate);
     }
 }

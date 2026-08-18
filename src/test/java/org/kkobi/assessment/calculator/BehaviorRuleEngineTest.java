@@ -97,6 +97,27 @@ class BehaviorRuleEngineTest {
     }
 
     @Test
+    @DisplayName("후속 데이터 기반 여섯 규칙을 주기 분석에서 계산한다.")
+    void calculateFollowUpPeriodRules() {
+        BehaviorContext context = new BehaviorContext();
+        context.setDepositCancelledBeforeSecurityBuy(true);
+        context.setDepositCancelCashRetention(true);
+        context.setNormalPartialSellCashRetention(true);
+        context.setCompletedLiquidityOpportunity(true);
+        context.setCashRatio(BigDecimal.valueOf(30));
+        context.setMaintainedCashRatioDays(5);
+        context.setRiskBudgetMaintenance(true);
+
+        BehaviorAnalysisResult result = behaviorRuleEngine
+                .calculateVirtualInvestmentPeriodAnalysis(List.of(context));
+
+        assertEquals(6, result.getAppliedRules().size());
+        assertScoreEquals("5", result.getTotalScoreDelta().getRtDelta());
+        assertScoreEquals("15", result.getTotalScoreDelta().getLhDelta());
+        assertScoreEquals("10", result.getTotalScoreDelta().getRpDelta());
+    }
+
+    @Test
     @DisplayName("증권 보유 기간 규칙은 가상투자에만 적용한다.")
     void calculateHoldingRulesOnlyForVirtualInvestment() {
         BehaviorEvent gameSellEvent = new BehaviorEvent();

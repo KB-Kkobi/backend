@@ -27,4 +27,10 @@ public interface AccountDailySnapshotMapper {
             @Param("assessmentDate") LocalDate assessmentDate
     );
 
+    int getCompletedSecurityOrderCountBetween(
+            @Param("accountId") Long accountId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
 }
