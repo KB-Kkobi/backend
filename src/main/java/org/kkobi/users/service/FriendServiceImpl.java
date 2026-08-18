@@ -164,4 +164,18 @@ public class FriendServiceImpl implements FriendService{
     public List<SentFriendRequestResponseDto> getSentFriendRequests(Long userId) {
         return friendMapper.findSentFriendRequests(userId);
     }
+
+    // 내가 보낸 대기 중인 친구 요청을 취소
+    @Override
+    @Transactional
+    public void cancelSentFriendRequest(Long userId, Long friendshipId) {
+
+        int deletedRows = friendMapper.cancelSentFriendRequest(friendshipId, userId);
+
+        if(deletedRows != 1){
+            throw new IllegalArgumentException(
+                    "취소할 수 없는 친구 요청입니다."
+            );
+        }
+    }
 }

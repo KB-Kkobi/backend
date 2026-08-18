@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.kkobi.notification.enums.NotificationType;
 import org.kkobi.notification.service.NotificationService;
 import org.kkobi.users.event.FriendRequestAcceptedEvent;
+import org.kkobi.users.event.FriendRequestCancelledEvent;
 import org.kkobi.users.event.FriendRequestSentEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -71,6 +72,27 @@ public class FriendNotificationListener {
                     event.friendshipId(),
                     event.requesterId(),
                     e.getMessage()
+            );
+        }
+    }
+
+    // 친구 요청 취소 후 기존 친구 신청 알림 삭제
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleFriendRequestCancelled(FriendRequestCancelledEvent event){
+
+        try{
+            notificationService.deleteNotificationByReference(
+                    event.receiverId(),
+                    NotificationType.FRIEND_REQUEST_RECEIVED,
+                    event.friendshipId()
+            );
+        } catch (Exception e){
+            log.warn(
+                    "친구 요청 취소 알림 삭제 실패. friendshipId={}, receiverId={}",
+                    event.friendshipId(),
+                    event.receiverId(),
+                    e
             );
         }
     }

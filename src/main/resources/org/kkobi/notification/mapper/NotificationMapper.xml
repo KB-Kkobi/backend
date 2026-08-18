@@ -110,4 +110,12 @@
         WHERE user_id = #{userId}
     </delete>
 
+    <!-- 특정 참조 데이터와 연결된 사용자 알림 삭제 -->
+    <delete id="deleteNotificationByReference">
+        DELETE FROM notifications
+        WHERE user_id = #{userId}
+          AND type = #{type}
+          AND reference_id = #{referenceId}
+    </delete>
+
 </mapper>

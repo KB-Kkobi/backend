@@ -41,4 +41,11 @@ public interface NotificationService {
 
     // 현재 사용자의 모든 알림 삭제
     void deleteAllNotifications(Long userId);
+
+    // 특정 참조 데이터와 연결된 알림 삭제
+    void deleteNotificationByReference(
+            Long userId,
+            NotificationType type,
+            Long referenceId
+    );
 }

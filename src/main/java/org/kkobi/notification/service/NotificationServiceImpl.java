@@ -44,11 +44,17 @@ public class NotificationServiceImpl implements NotificationService{
 
         NotificationSettingsResponseDto currentSettings = getSettings(userId);
 
-        boolean tradeEnabled = request.getTradeEnabled() != null ? request.getTradeEnabled() : currentSettings.isTradeEnabled();
+        // 요청에 거래 알림 설정이 있으면 변경하고, 없으면 기존 값을 유지
+        boolean tradeEnabled = request.getTradeEnabled() != null
+                ? request.getTradeEnabled()
+                : currentSettings.isTradeEnabled();
 
-        boolean friendEnabled = request.getFriendEnabled() != null ? request.getTradeEnabled() : currentSettings.isTradeEnabled();
+        // 요청에 친구 알림 설정이 있으면 변경하고, 없으면 기존 값을 유지
+        boolean friendEnabled = request.getFriendEnabled() != null
+                ? request.getFriendEnabled()
+                : currentSettings.isFriendEnabled();
 
-        int updatedRows = notificationMapper.upsertSettings(
+        notificationMapper.upsertSettings(
                 userId,
                 tradeEnabled,
                 friendEnabled
@@ -137,5 +143,17 @@ public class NotificationServiceImpl implements NotificationService{
     public void deleteAllNotifications(Long userId) {
 
         notificationMapper.deleteAllNotifications(userId);
+    }
+
+    // 특정 참조 데이터와 연결된 알림 삭제
+    @Override
+    @Transactional
+    public void deleteNotificationByReference(Long userId, NotificationType type, Long referenceId) {
+
+        notificationMapper.deleteNotificationByReference(
+                userId,
+                type,
+                referenceId
+        );
     }
 }

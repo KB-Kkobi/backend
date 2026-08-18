@@ -1,12 +1,10 @@
 package org.kkobi.users.mapper;
 
-import io.swagger.v3.oas.annotations.Parameter;
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
-import org.springframework.security.core.parameters.P;
 
 import java.util.List;
 
@@ -68,5 +66,17 @@ public interface FriendMapper {
     Long findRequesterIdByFriendshipId(
             @Param("friendshipId") Long friendshipId,
             @Param("receiverId") Long receiverId
+    );
+
+    // 내가 보낸 대기 중인 친구 요청을 취소
+    int cancelSentFriendRequest(
+            @Param("friendshipId") Long friendshipId,
+            @Param("requesterId") Long requesterId
+    );
+
+    // 내가 보낸 PENDING 친구 요청의 수신자 ID 조회
+    Long findReceiverIdByPendingFriendRequest(
+            @Param("friendshipId") Long friendshipId,
+            @Param("requesterId") Long requesterId
     );
 }

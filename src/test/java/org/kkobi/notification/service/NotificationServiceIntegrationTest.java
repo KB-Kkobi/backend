@@ -512,4 +512,54 @@ class NotificationServiceIntegrationTest {
                 otherNotifications.get(0).getMessage()
         );
     }
+
+    // 친구 알림만 변경해도 거래 알림 설정은 유지되는지 확인
+    @Test
+    @DisplayName("친구 알림 설정만 변경하면 거래 알림 설정은 유지된다")
+    void updateSettings_onlyFriendEnabled() {
+
+        Long userId = createUser();
+
+        NotificationSettingsUpdateRequestDto request =
+                new NotificationSettingsUpdateRequestDto();
+
+        // 친구 알림만 비활성화
+        request.setFriendEnabled(false);
+
+        notificationService.updateSettings(userId, request);
+
+        NotificationSettingsResponseDto settings =
+                notificationService.getSettings(userId);
+
+        // 거래 알림은 기존 기본값 true 유지
+        assertTrue(settings.isTradeEnabled());
+
+        // 친구 알림만 false로 변경
+        assertFalse(settings.isFriendEnabled());
+    }
+
+    // 거래 알림만 변경해도 친구 알림 설정은 유지되는지 확인
+    @Test
+    @DisplayName("거래 알림 설정만 변경하면 친구 알림 설정은 유지된다")
+    void updateSettings_onlyTradeEnabled() {
+
+        Long userId = createUser();
+
+        NotificationSettingsUpdateRequestDto request =
+                new NotificationSettingsUpdateRequestDto();
+
+        // 거래 알림만 비활성화
+        request.setTradeEnabled(false);
+
+        notificationService.updateSettings(userId, request);
+
+        NotificationSettingsResponseDto settings =
+                notificationService.getSettings(userId);
+
+        // 거래 알림만 false
+        assertFalse(settings.isTradeEnabled());
+
+        // 친구 알림은 기존 기본값 true 유지
+        assertTrue(settings.isFriendEnabled());
+    }
 }

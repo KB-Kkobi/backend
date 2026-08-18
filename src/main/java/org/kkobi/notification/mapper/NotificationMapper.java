@@ -55,4 +55,11 @@ public interface NotificationMapper {
     int deleteAllNotifications(
             @Param("userId") Long userId
     );
+
+    // 특정 참조 데이터와 연결된 사용자 알림 삭제
+    int deleteNotificationByReference(
+            @Param("userId") Long userId,
+            @Param("type") NotificationType type,
+            @Param("referenceId") Long referenceId
+    );
 }
