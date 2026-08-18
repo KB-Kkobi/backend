@@ -11,6 +11,18 @@
         WHERE user_id = #{userId}
     </select>
 
+    <select id="findByAccountId"
+            resultType="org.kkobi.trade.dto.TradeAccountDto">
+        SELECT
+            account_id,
+            user_id,
+            cash_balance,
+            locked_cash,
+            seed_money
+        FROM accounts
+        WHERE account_id = #{accountId}
+    </select>
+
     <select id="findByAccountIdForUpdate" resultType="org.kkobi.trade.dto.TradeAccountDto">
         SELECT account_id, user_id, cash_balance, locked_cash, seed_money
         FROM accounts

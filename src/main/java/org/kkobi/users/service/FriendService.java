@@ -29,4 +29,10 @@ public interface FriendService {
 
     // 친구 관계를 삭제
     void deleteFriend(Long userId, Long friendUserId);
+
+    // 내가 보낸 친구 요청을 취소
+    void cancelSentFriendRequest(
+            Long userId,
+            Long friendshipId
+    );
 }

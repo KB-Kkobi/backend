@@ -47,7 +47,8 @@ import java.util.List;
         "org.kkobi.securities.controller",
         "org.kkobi.trade.controller",
         "org.kkobi.leaderboard.controller",
-        "org.kkobi.quiz.controller"
+        "org.kkobi.quiz.controller",
+        "org.kkobi.notification.controller"
 })
 @Import({
         SpringDocConfigProperties.class,

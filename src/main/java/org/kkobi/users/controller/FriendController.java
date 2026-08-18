@@ -159,4 +159,24 @@ public class FriendController {
                 new MessageResponse("친구를 삭제했습니다.")
         );
     }
+
+    // 내가 보낸 친구 요청을 취소
+    @Operation(
+            summary = "보낸 친구 요청 취소",
+            description = "로그인한 사용자가 보낸 대기 중인 친구 요청을 취소합니다."
+    )
+    @DeleteMapping("/requests/{friendshipId}")
+    public ResponseEntity<MessageResponse> cancelSentFriendRequest(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails authenticatedUser,
+            @PathVariable("friendshipId") Long friendshipId
+    ){
+        friendService.cancelSentFriendRequest(
+                authenticatedUser.getUserId(),
+                friendshipId
+        );
+
+        return ResponseEntity.ok(new MessageResponse("친구 요청을 취소했습니다."));
+
+    }
 }

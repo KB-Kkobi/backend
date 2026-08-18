@@ -4,11 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.kkobi.trade.dto.HoldingDto;
 import org.kkobi.trade.dto.OrderDto;
 import org.kkobi.trade.enums.OrderType;
+import org.kkobi.trade.event.TradeOrderFilledEvent;
 import org.kkobi.trade.exception.TradeErrorCode;
 import org.kkobi.trade.exception.TradeException;
 import org.kkobi.trade.mapper.HoldingMapper;
 import org.kkobi.trade.mapper.OrderMapper;
 import org.kkobi.trade.mapper.TradeAccountMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ public class OrderExecutionService {
     private final HoldingMapper holdingMapper;
     private final OrderMapper orderMapper;
     private final HoldingService holdingService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 주문을 체결 처리한다. 호출 전 계좌에 이미 FOR UPDATE 락이 걸려 있어야 한다.
@@ -61,5 +64,17 @@ public class OrderExecutionService {
         }
 
         orderMapper.updateFilled(order.getSecurityOrderId(), executedPrice, LocalDateTime.now(KST));
+
+        // 실제 추문 체결 완료 후 이벤트 발행
+        eventPublisher.publishEvent(
+                new TradeOrderFilledEvent(
+                        accountId,
+                        order.getSecurityOrderId(),
+                        securityId,
+                        order.getOrderType(),
+                        qty,
+                        executedPrice
+                )
+        );
     }
 }

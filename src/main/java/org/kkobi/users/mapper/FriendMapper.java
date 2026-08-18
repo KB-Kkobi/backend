@@ -5,7 +5,6 @@ import org.kkobi.users.dto.response.FriendRequestResponseDto;
 import org.kkobi.users.dto.response.FriendResponseDto;
 import org.kkobi.users.dto.response.SentFriendRequestResponseDto;
 import org.kkobi.users.enums.FriendshipStatus;
-import org.springframework.security.core.parameters.P;
 
 import java.util.List;
 
@@ -55,5 +54,29 @@ public interface FriendMapper {
     int deleteFriend(
             @Param("userId") Long userId,
             @Param("friendUserId") Long friendUserId
+    );
+
+    // 방금 생성된 대기 중 친구 요청 ID를 조회
+    Long findPendingFriendshipId(
+            @Param("requesterId") Long requesterId,
+            @Param("receiverId") Long receiverId
+    );
+
+    // 친구 요청 수락 전 신청자 ID를 조회
+    Long findRequesterIdByFriendshipId(
+            @Param("friendshipId") Long friendshipId,
+            @Param("receiverId") Long receiverId
+    );
+
+    // 내가 보낸 대기 중인 친구 요청을 취소
+    int cancelSentFriendRequest(
+            @Param("friendshipId") Long friendshipId,
+            @Param("requesterId") Long requesterId
+    );
+
+    // 내가 보낸 PENDING 친구 요청의 수신자 ID 조회
+    Long findReceiverIdByPendingFriendRequest(
+            @Param("friendshipId") Long friendshipId,
+            @Param("requesterId") Long requesterId
     );
 }
