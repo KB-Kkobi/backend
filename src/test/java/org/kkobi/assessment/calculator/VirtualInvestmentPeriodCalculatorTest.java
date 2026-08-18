@@ -11,6 +11,8 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VirtualInvestmentPeriodCalculatorTest {
 
@@ -55,6 +57,16 @@ class VirtualInvestmentPeriodCalculatorTest {
         );
 
         assertEquals(0, new BigDecimal("0.2000").compareTo(averageDailyTradeCount));
+    }
+
+    @Test
+    @DisplayName("현금 완충과 위험 예산을 5일 유지했는지 계산한다.")
+    void calculateMaintainedBalance() {
+        List<AccountDailySnapshotDto> maintained = createSnapshots(5, 30L, 60L, 10L);
+        List<AccountDailySnapshotDto> highStock = createSnapshots(5, 20L, 75L, 5L);
+
+        assertTrue(calculator.isRiskBudgetMaintained(maintained));
+        assertFalse(calculator.isRiskBudgetMaintained(highStock));
     }
 
     private List<AccountDailySnapshotDto> createSnapshots(

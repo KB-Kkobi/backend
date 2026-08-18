@@ -57,6 +57,13 @@ class AccountDailySnapshotServiceTest {
         }
 
         @Override
+        public List<AccountDailySnapshotDto> getUnsettledDailyAssessmentTargets(
+                LocalDate startDate,
+                LocalDate endDate) {
+            return List.of();
+        }
+
+        @Override
         public int saveAccountDailySnapshot(AccountDailySnapshotDto accountDailySnapshot) {
             savedSnapshots.add(accountDailySnapshot);
             return 1;
@@ -77,6 +84,14 @@ class AccountDailySnapshotServiceTest {
 
         @Override
         public int getCompletedSecurityOrderCount(Long accountId, LocalDate assessmentDate) {
+            return 0;
+        }
+
+        @Override
+        public int getCompletedSecurityOrderCountBetween(
+                Long accountId,
+                LocalDate startDate,
+                LocalDate endDate) {
             return 0;
         }
 
