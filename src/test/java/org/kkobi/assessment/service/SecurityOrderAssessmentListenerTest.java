@@ -55,7 +55,7 @@ class SecurityOrderAssessmentListenerTest {
         assertEquals(1, assessmentMapper.getSavedResultCount());
         assertScoreEquals("53.33", assessmentMapper.getSavedAssessmentScore().getRtScore());
         assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getLhScore());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getRpScore());
+        assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
 
     @Test
@@ -69,7 +69,7 @@ class SecurityOrderAssessmentListenerTest {
         listener.onSecurityOrderFilled(createBuyEvent(new BigDecimal("3.50"), 2, 200L));
 
         assertEquals(1, assessmentMapper.getSavedResultCount());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getRtScore());
+        assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRtScore());
         assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getLhScore());
         assertScoreEquals("53.33", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
@@ -87,8 +87,8 @@ class SecurityOrderAssessmentListenerTest {
 
         assertEquals(1, assessmentMapper.getSavedResultCount());
         assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRtScore());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getLhScore());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getRpScore());
+        assertScoreEquals("53.33", assessmentMapper.getSavedAssessmentScore().getLhScore());
+        assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
 
     @Test
@@ -103,8 +103,8 @@ class SecurityOrderAssessmentListenerTest {
         listener.onSecurityOrderFilled(createSellEvent(BigDecimal.ZERO, 5, 440L));
 
         assertEquals(1, assessmentMapper.getSavedResultCount());
-        assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getRtScore());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getLhScore());
+        assertScoreEquals("46.67", assessmentMapper.getSavedAssessmentScore().getRtScore());
+        assertScoreEquals("53.33", assessmentMapper.getSavedAssessmentScore().getLhScore());
         assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
 
@@ -120,14 +120,14 @@ class SecurityOrderAssessmentListenerTest {
         listener.onSecurityOrderFilled(createBuyEvent(BigDecimal.ZERO, 5, 400L));
 
         assertEquals(1, assessmentMapper.getSavedResultCount());
-        assertScoreEquals("55.00", assessmentMapper.getSavedAssessmentScore().getRtScore());
+        assertScoreEquals("53.33", assessmentMapper.getSavedAssessmentScore().getRtScore());
         assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getLhScore());
-        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getRpScore());
+        assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
 
     @Test
-    @DisplayName("규칙이 없는 일반 매수는 점수를 저장하지 않는다.")
-    void normalBuyDoesNotSaveScore() {
+    @DisplayName("정상장 10~30% 매수는 계획 매수 규칙으로 점수를 저장한다.")
+    void normalBuyAppliesPlannedBuyRule() {
         InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
         SecurityOrderAssessmentListener listener = createListener(
                 800L, 200L, 0L, List.of(), assessmentMapper
@@ -135,7 +135,10 @@ class SecurityOrderAssessmentListenerTest {
 
         listener.onSecurityOrderFilled(createBuyEvent(BigDecimal.ZERO, 2, 200L));
 
-        assertEquals(0, assessmentMapper.getSavedResultCount());
+        assertEquals(1, assessmentMapper.getSavedResultCount());
+        assertScoreEquals("50.00", assessmentMapper.getSavedAssessmentScore().getRtScore());
+        assertScoreEquals("48.34", assessmentMapper.getSavedAssessmentScore().getLhScore());
+        assertScoreEquals("51.67", assessmentMapper.getSavedAssessmentScore().getRpScore());
     }
 
     @Test

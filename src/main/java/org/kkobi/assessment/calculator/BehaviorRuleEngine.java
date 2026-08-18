@@ -12,6 +12,7 @@ import org.kkobi.assessment.enums.MarketState;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +27,11 @@ public class BehaviorRuleEngine {
     private static final BigDecimal VOLATILE_RATE_THRESHOLD = BigDecimal.valueOf(5);
     private static final BigDecimal LOSS_AVERAGING_RATE = BigDecimal.valueOf(-15);
     private static final BigDecimal LOSS_CUT_RATE = BigDecimal.valueOf(-10);
+    private static final BigDecimal TEN = BigDecimal.valueOf(10);
+    private static final BigDecimal TWENTY = BigDecimal.valueOf(20);
+    private static final BigDecimal THIRTY = BigDecimal.valueOf(30);
+    private static final BigDecimal FIFTY = BigDecimal.valueOf(50);
+    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final BigDecimal SHORT_HOLDING_DAYS = BigDecimal.valueOf(3);
     private static final BigDecimal LONG_HOLDING_DAYS = BigDecimal.valueOf(30);
     private static final BigDecimal VERY_LOW_CASH_RATIO = BigDecimal.valueOf(5);
@@ -50,10 +56,9 @@ public class BehaviorRuleEngine {
             BehaviorContext behaviorContext) {
         List<RuleResult> appliedRules = new ArrayList<>();
 
-        calculateMarketActionRules(behaviorContext, appliedRules, true);
+        calculateVirtualInvestmentMarketActionRules(behaviorContext, appliedRules);
         calculateDepositRules(behaviorContext, appliedRules);
         calculateHoldingPeriodRules(behaviorContext, appliedRules);
-        calculateReturnResponseRules(behaviorContext, appliedRules);
         calculateStockRotationRule(behaviorContext, appliedRules);
 
         return new BehaviorAnalysisResult(applyConsecutiveActionMultiplier(behaviorContext, appliedRules));
@@ -147,6 +152,156 @@ public class BehaviorRuleEngine {
             addRule(appliedRules, BehaviorRuleCode.VOLATILE_DAY_TRADE, 5, 5, 10,
                     "변동폭 5% 이상인 날에 당일 매매했습니다.");
         }
+    }
+
+    private void calculateVirtualInvestmentMarketActionRules(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        BehaviorEvent event = context.getCurrentEvent();
+        if (event == null || event.getAssetType() != BehaviorAssetType.SECURITY) {
+            return;
+        }
+
+        if (event.getActionType() == BehaviorActionType.BUY) {
+            calculateVirtualInvestmentBuyRule(context, appliedRules);
+        } else if (event.getActionType() == BehaviorActionType.SELL) {
+            calculateVirtualInvestmentSellRule(context, appliedRules);
+        }
+    }
+
+    private void calculateVirtualInvestmentBuyRule(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        BehaviorEvent event = context.getCurrentEvent();
+        BigDecimal buyRatio = calculateActionAmountRatio(event);
+        if (buyRatio.compareTo(TEN) < 0) {
+            return;
+        }
+
+        if (isLessThanOrEqual(event.getPositionReturnRate(), LOSS_AVERAGING_RATE)) {
+            if (buyRatio.compareTo(THIRTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.LOSS_AVERAGING_BUY, 15, -10, 0,
+                        "손실률 -15% 이하에서 자산의 30% 이상을 추가 매수했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.LOSS_AVERAGING_BUY, 10, -5, 0,
+                        "손실률 -15% 이하에서 자산의 10~30%를 추가 매수했습니다.");
+            }
+            return;
+        }
+
+        if (context.getMarketState() == MarketState.CRASH) {
+            if (buyRatio.compareTo(THIRTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.CRASH_BUY, 15, -10, 0,
+                        "급락장에서 자산의 30% 이상을 매수했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.CRASH_BUY, 10, -5, 0,
+                        "급락장에서 자산의 10~30%를 매수했습니다.");
+            }
+            return;
+        }
+
+        if (context.getMarketState() == MarketState.BULL) {
+            if (buyRatio.compareTo(THIRTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.BULL_BUY, 10, -10, 5,
+                        "급등장에서 자산의 30% 이상을 추세 매수했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.BULL_BUY, 0, -5, 10,
+                        "급등장에서 자산의 10~30%를 추세 매수했습니다.");
+            }
+            return;
+        }
+
+        if (context.getMarketState() == MarketState.NORMAL
+                && buyRatio.compareTo(THIRTY) < 0) {
+            addRule(appliedRules, BehaviorRuleCode.NORMAL_PLANNED_BUY, 0, -5, 5,
+                    "정상장에서 자산의 10~30%를 계획 매수했습니다.");
+        }
+    }
+
+    private void calculateVirtualInvestmentSellRule(
+            BehaviorContext context,
+            List<RuleResult> appliedRules) {
+        BehaviorEvent event = context.getCurrentEvent();
+        BigDecimal sellRatio = calculateSecuritySellRatio(event);
+        if (sellRatio.compareTo(TWENTY) < 0) {
+            return;
+        }
+
+        if (context.getMarketState() == MarketState.CRASH) {
+            if (context.isFullSecuritySell()) {
+                addRule(appliedRules, BehaviorRuleCode.CRASH_FULL_SELL, -15, 10, -5,
+                        "급락장에서 보유 증권을 전량 매도했습니다.");
+            } else if (sellRatio.compareTo(FIFTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.CRASH_FULL_SELL, -10, 5, -5,
+                        "급락장에서 보유 증권의 50% 이상을 매도했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.CRASH_FULL_SELL, 0, 5, -5,
+                        "급락장에서 보유 증권의 20~50%를 매도했습니다.");
+            }
+            return;
+        }
+
+        if (isLessThanOrEqual(event.getRealizedReturnRate(), LOSS_CUT_RATE)) {
+            if (context.isFullSecuritySell()) {
+                addRule(appliedRules, BehaviorRuleCode.LOSS_CUT_SELL, -15, 10, -10,
+                        "손실률 -10% 이하에서 보유 증권을 전량 손절했습니다.");
+            } else if (sellRatio.compareTo(FIFTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.LOSS_CUT_SELL, -10, 10, -5,
+                        "손실률 -10% 이하에서 보유 증권의 50% 이상을 손절했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.LOSS_CUT_SELL, -5, 5, -5,
+                        "손실률 -10% 이하에서 보유 증권의 20~50%를 손절했습니다.");
+            }
+            return;
+        }
+
+        if (context.getMarketState() == MarketState.BULL
+                && isGreaterThan(event.getRealizedReturnRate(), BigDecimal.ZERO)) {
+            if (sellRatio.compareTo(FIFTY) >= 0) {
+                addRule(appliedRules, BehaviorRuleCode.BULL_PROFIT_SELL, 0, 10, 0,
+                        "급등장에서 보유 증권의 50% 이상을 수익 실현했습니다.");
+            } else {
+                addRule(appliedRules, BehaviorRuleCode.BULL_PROFIT_SELL, 0, 5, 5,
+                        "급등장에서 보유 증권의 20~50%를 수익 실현했습니다.");
+            }
+        }
+
+        if (context.isSameDayTrade()
+                && isGreaterThanOrEqual(event.getDailyPriceRangeRate(), VOLATILE_RATE_THRESHOLD)) {
+            addRule(appliedRules, BehaviorRuleCode.VOLATILE_DAY_TRADE, 5, 5, 10,
+                    "변동폭 5% 이상인 날에 당일 매매했습니다.");
+        }
+    }
+
+    private BigDecimal calculateActionAmountRatio(BehaviorEvent event) {
+        if (event.getActionAmount() == null
+                || event.getCurrentCash() == null
+                || event.getCurrentStockPrincipal() == null
+                || event.getCurrentDeposit() == null) {
+            return BigDecimal.ZERO;
+        }
+        long totalAssets = Math.addExact(
+                Math.addExact(event.getCurrentCash(), event.getCurrentStockPrincipal()),
+                event.getCurrentDeposit()
+        );
+        return calculateRatio(event.getActionAmount(), totalAssets);
+    }
+
+    private BigDecimal calculateSecuritySellRatio(BehaviorEvent event) {
+        if (event.getQuantity() == null || event.getCurrentSecurityQuantity() == null) {
+            return BigDecimal.ZERO;
+        }
+        long quantityBeforeSell = (long) event.getCurrentSecurityQuantity() + event.getQuantity();
+        return calculateRatio(event.getQuantity(), quantityBeforeSell);
+    }
+
+    private BigDecimal calculateRatio(long amount, long total) {
+        if (amount <= 0L || total <= 0L) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(amount)
+                .multiply(ONE_HUNDRED)
+                .divide(BigDecimal.valueOf(total), 4, RoundingMode.HALF_UP);
     }
 
     private void calculateDepositRules(

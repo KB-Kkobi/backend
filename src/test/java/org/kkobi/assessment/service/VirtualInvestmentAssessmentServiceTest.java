@@ -71,7 +71,7 @@ class VirtualInvestmentAssessmentServiceTest {
                 .anyMatch(rule -> rule.getRuleCode() == BehaviorRuleCode.CRASH_BUY));
         assertScoreEquals("53.33", result.getAssessmentScore().getRtScore());
         assertScoreEquals("48.34", result.getAssessmentScore().getLhScore());
-        assertScoreEquals("51.67", result.getAssessmentScore().getRpScore());
+        assertScoreEquals("50.00", result.getAssessmentScore().getRpScore());
         assertEquals(1, assessmentMapper.getSavedResultCount());
         assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
     }
