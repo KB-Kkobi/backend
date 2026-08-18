@@ -11,6 +11,7 @@ import org.kkobi.assessment.enums.AssessmentPeriodType;
 import org.kkobi.assessment.mapper.AccountDailySnapshotMapper;
 import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -35,6 +36,7 @@ public class VirtualInvestmentPeriodAssessmentService {
     private final AssessmentSettlementService assessmentSettlementService;
     private final VirtualInvestmentPeriodResultService virtualInvestmentPeriodResultService;
 
+    @Transactional
     public int calculateDailyAssessments(LocalDate assessmentDate) {
         return accountDailySnapshotMapper.getAccountSnapshotTargets(assessmentDate)
                 .stream()
@@ -74,13 +76,14 @@ public class VirtualInvestmentPeriodAssessmentService {
         return assessmentCount;
     }
 
+    @Transactional
     public int calculateWeeklyCashAssessments(LocalDate assessmentDate) {
         LocalDate periodEndDate = calculateWeeklyPeriodEndDate(assessmentDate);
         LocalDate periodStartDate = periodEndDate.minusDays(CASH_MAINTENANCE_DAYS - 1L);
 
         return accountDailySnapshotMapper.getAccountSnapshotTargets(periodEndDate)
                 .stream()
-                .mapToInt(account -> calculateMaintainedCashRatio(
+                .mapToInt(account -> calculateWeeklyCashAndBalance(
                         account,
                         periodStartDate,
                         periodEndDate
@@ -88,24 +91,12 @@ public class VirtualInvestmentPeriodAssessmentService {
                 .sum();
     }
 
+    @Transactional
     public int calculateWeeklyTradeFrequencyAssessments(LocalDate assessmentDate) {
         LocalDate periodEndDate = calculateWeeklyPeriodEndDate(assessmentDate);
         return accountDailySnapshotMapper.getAccountSnapshotTargets(periodEndDate)
                 .stream()
                 .mapToInt(account -> calculateTradeFrequency(account, periodEndDate))
-                .sum();
-    }
-
-    public int calculateWeeklyBalanceAssessments(LocalDate assessmentDate) {
-        LocalDate periodEndDate = calculateWeeklyPeriodEndDate(assessmentDate);
-        LocalDate periodStartDate = periodEndDate.minusDays(CASH_MAINTENANCE_DAYS - 1L);
-        return accountDailySnapshotMapper.getAccountSnapshotTargets(periodEndDate)
-                .stream()
-                .mapToInt(account -> calculateMaintainedBalance(
-                        account,
-                        periodStartDate,
-                        periodEndDate
-                ))
                 .sum();
     }
 
@@ -126,38 +117,16 @@ public class VirtualInvestmentPeriodAssessmentService {
                 snapshots,
                 assessmentDate
         );
-        return savePeriodAssessment(
-                account,
-                AssessmentPeriodType.FOLLOW_UP_BEHAVIOR,
-                assessmentDate,
-                behaviorRuleEngine.calculateVirtualInvestmentPeriodAnalysis(List.of(context))
-        );
-    }
-
-    private int calculateMaintainedBalance(
-            AccountDailySnapshotDto account,
-            LocalDate periodStartDate,
-            LocalDate periodEndDate) {
-        List<AccountDailySnapshotDto> snapshots = accountDailySnapshotMapper
-                .getAccountDailySnapshots(account.getAccountId(), periodStartDate, periodEndDate);
-        if (!hasConsecutiveDates(snapshots, periodStartDate, CASH_MAINTENANCE_DAYS)) {
+        BehaviorAnalysisResult analysisResult = behaviorRuleEngine
+                .calculateVirtualInvestmentPeriodAnalysis(List.of(context));
+        if (!analysisResult.existsAppliedRule()) {
             return 0;
         }
-
-        BehaviorContext context = new BehaviorContext();
-        context.setRiskBudgetMaintenance(
-                accountDailySnapshotMapper.getCompletedSecurityOrderCountBetween(
-                        account.getAccountId(),
-                        periodStartDate,
-                        periodEndDate
-                ) == 0 && virtualInvestmentPeriodCalculator.isRiskBudgetMaintained(snapshots)
+        virtualInvestmentPeriodResultService.saveVirtualInvestmentPeriodResult(
+                account.getUserId(),
+                analysisResult
         );
-        return savePeriodAssessment(
-                account,
-                AssessmentPeriodType.WEEKLY_BALANCE_MAINTENANCE,
-                periodEndDate,
-                behaviorRuleEngine.calculateVirtualInvestmentPeriodAnalysis(List.of(context))
-        );
+        return 1;
     }
 
     private int calculateSevenDayAllocation(
@@ -244,7 +213,7 @@ public class VirtualInvestmentPeriodAssessmentService {
         );
     }
 
-    private int calculateMaintainedCashRatio(
+    private int calculateWeeklyCashAndBalance(
             AccountDailySnapshotDto account,
             LocalDate periodStartDate,
             LocalDate periodEndDate) {
@@ -269,6 +238,13 @@ public class VirtualInvestmentPeriodAssessmentService {
         BehaviorContext context = new BehaviorContext();
         context.setCashRatio(maintainedCashRatio);
         context.setMaintainedCashRatioDays(CASH_MAINTENANCE_DAYS);
+        context.setRiskBudgetMaintenance(
+                accountDailySnapshotMapper.getCompletedSecurityOrderCountBetween(
+                        account.getAccountId(),
+                        periodStartDate,
+                        periodEndDate
+                ) == 0 && virtualInvestmentPeriodCalculator.isRiskBudgetMaintained(snapshots)
+        );
         return savePeriodAssessment(
                 account,
                 AssessmentPeriodType.WEEKLY_CASH_RATIO,

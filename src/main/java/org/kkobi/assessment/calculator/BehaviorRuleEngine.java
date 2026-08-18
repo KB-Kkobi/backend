@@ -343,7 +343,7 @@ public class BehaviorRuleEngine {
                     "예금 해지 후 2일 동안 현금의 80% 이상을 유지했습니다.");
         }
         if (context.isNormalPartialSellCashRetention()) {
-            addRule(appliedRules, BehaviorRuleCode.NORMAL_PARTIAL_SELL, 0, 5, 5,
+            addRule(appliedRules, BehaviorRuleCode.NORMAL_PARTIAL_SELL, 0, 5, 0,
                     "정상장 부분 매도 후 현금 비중 25~50%를 2일 유지했습니다.");
         }
         if (context.isCompletedLiquidityOpportunity()) {

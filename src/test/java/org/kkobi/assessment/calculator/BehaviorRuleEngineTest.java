@@ -114,7 +114,7 @@ class BehaviorRuleEngineTest {
         assertEquals(6, result.getAppliedRules().size());
         assertScoreEquals("5", result.getTotalScoreDelta().getRtDelta());
         assertScoreEquals("15", result.getTotalScoreDelta().getLhDelta());
-        assertScoreEquals("10", result.getTotalScoreDelta().getRpDelta());
+        assertScoreEquals("5", result.getTotalScoreDelta().getRpDelta());
     }
 
     @Test

@@ -19,6 +19,7 @@ import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.springframework.transaction.annotation.Transactional;
 
 class VirtualInvestmentPeriodAssessmentServiceTest {
 
@@ -156,8 +158,8 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
     }
 
     @Test
-    @DisplayName("5일 무거래 위험 예산을 주간 EMA에 반영한다.")
-    void calculateWeeklyBalanceAssessment() {
+    @DisplayName("기존 주간 현금 정산에서 현금 완충과 무거래 위험 예산을 함께 반영한다.")
+    void calculateWeeklyCashAndRiskBudgetAssessment() {
         LocalDate periodStartDate = LocalDate.of(2026, 8, 3);
         InMemoryAccountDailySnapshotMapper snapshotMapper =
                 new InMemoryAccountDailySnapshotMapper(
@@ -171,18 +173,26 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
                 assessmentMapper
         );
 
-        int firstCount = assessmentService.calculateWeeklyBalanceAssessments(
+        int firstCount = assessmentService.calculateWeeklyCashAssessments(
                 LocalDate.of(2026, 8, 9)
         );
-        int secondCount = assessmentService.calculateWeeklyBalanceAssessments(
+        int secondCount = assessmentService.calculateWeeklyCashAssessments(
                 LocalDate.of(2026, 8, 9)
         );
 
         assertEquals(1, firstCount);
         assertEquals(0, secondCount);
         assertScoreEquals("51.67", assessmentMapper.getLatestScore().getRtScore());
-        assertScoreEquals("51.67", assessmentMapper.getLatestScore().getLhScore());
+        assertScoreEquals("53.33", assessmentMapper.getLatestScore().getLhScore());
         assertScoreEquals("48.34", assessmentMapper.getLatestScore().getRpScore());
+    }
+
+    @Test
+    @DisplayName("일일·주간 정산 진입점은 결과 저장과 정산 완료를 같은 트랜잭션으로 처리한다.")
+    void periodAssessmentEntryPointsAreTransactional() throws Exception {
+        assertTransactional("calculateDailyAssessments");
+        assertTransactional("calculateWeeklyCashAssessments");
+        assertTransactional("calculateWeeklyTradeFrequencyAssessments");
     }
 
     @Test
@@ -325,6 +335,12 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
 
     private void assertScoreEquals(String expected, BigDecimal actual) {
         assertEquals(0, new BigDecimal(expected).compareTo(actual));
+    }
+
+    private void assertTransactional(String methodName) throws Exception {
+        Method method = VirtualInvestmentPeriodAssessmentService.class
+                .getMethod(methodName, LocalDate.class);
+        assertTrue(method.isAnnotationPresent(Transactional.class), methodName);
     }
 
     private static class InMemoryAccountDailySnapshotMapper
