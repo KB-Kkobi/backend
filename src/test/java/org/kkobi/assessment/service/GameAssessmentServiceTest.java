@@ -2,9 +2,12 @@ package org.kkobi.assessment.service;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.kkobi.assessment.calculator.BehaviorRuleEngine;
+import org.kkobi.assessment.calculator.AssetRatioCalculator;
+import org.kkobi.assessment.calculator.GameBehaviorAssessmentCalculator;
 import org.kkobi.assessment.calculator.GameScoreCalculator;
+import org.kkobi.assessment.calculator.MarketStateCalculator;
 import org.kkobi.assessment.calculator.PersonaClassifier;
+import org.kkobi.assessment.calculator.SecurityPriceRateCalculator;
 import org.kkobi.assessment.domain.AssessmentResult;
 import org.kkobi.assessment.domain.AssessmentResultDetails;
 import org.kkobi.assessment.domain.AssessmentScore;
@@ -13,8 +16,13 @@ import org.kkobi.assessment.enums.BehaviorRuleCode;
 import org.kkobi.assessment.mapper.AssessmentMapper;
 import org.kkobi.game.dto.ActionLogDto;
 import org.kkobi.game.dto.GameCompletionResponse;
+import org.kkobi.game.dto.ScenarioDto;
+import org.kkobi.game.dto.ScenarioTickDto;
+import org.kkobi.game.calculator.GamePriceRateCalculator;
+import org.kkobi.game.calculator.GameSecurityReturnCalculator;
 import org.kkobi.game.mapper.ActionLogMapper;
 import org.kkobi.game.service.ActionLogService;
+import org.kkobi.game.service.ScenarioService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -158,10 +166,37 @@ class GameAssessmentServiceTest {
         );
         return new GameAssessmentService(
                 actionLogService,
-                new BehaviorRuleEngine(),
+                createScenarioService(),
+                createGameBehaviorAssessmentCalculator(),
                 new GameScoreCalculator(),
                 assessmentResultService
         );
+    }
+
+    private GameBehaviorAssessmentCalculator createGameBehaviorAssessmentCalculator() {
+        return new GameBehaviorAssessmentCalculator(
+                new AssetRatioCalculator(),
+                new MarketStateCalculator(),
+                new GamePriceRateCalculator(new SecurityPriceRateCalculator()),
+                new GameSecurityReturnCalculator()
+        );
+    }
+
+    private ScenarioService createScenarioService() {
+        return new ScenarioService() {
+            @Override
+            public ScenarioDto getScenario(String scenarioId) {
+                ScenarioDto scenario = new ScenarioDto();
+                scenario.setScenarioId(scenarioId);
+                scenario.setTotalTicks(1);
+                ScenarioTickDto tick = new ScenarioTickDto();
+                tick.setTick(0);
+                tick.setPrice(100L);
+                tick.setChangeRate(0.0);
+                scenario.setTicks(List.of(tick));
+                return scenario;
+            }
+        };
     }
 
     private AssessmentMapper createAssessmentMapper(AssessmentScore latestAssessmentScore) {
@@ -245,7 +280,12 @@ class GameAssessmentServiceTest {
 
     private ActionLogDto createActionLog(String actionType, Long currentDeposit) {
         ActionLogDto actionLog = new ActionLogDto();
+        actionLog.setGameTick(0);
         actionLog.setActionType(actionType);
+        actionLog.setAssetType("ALL");
+        actionLog.setActionAmount(0L);
+        actionLog.setCurrentCash(currentDeposit > 0L ? 200_000L : 0L);
+        actionLog.setCurrentStock(currentDeposit > 0L ? 400_000L : 0L);
         actionLog.setCurrentDeposit(currentDeposit);
         actionLog.setRtScoreDelta(BigDecimal.ZERO);
         actionLog.setLhScoreDelta(BigDecimal.ZERO);

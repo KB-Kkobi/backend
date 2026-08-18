@@ -401,6 +401,15 @@ public class GameBehaviorSimulationCsvExporter {
             case HIGH_CASH_MAINTENANCE -> "현금 비중 50% 이상 유지";
             case HIGH_TRADE_FREQUENCY -> "일평균 거래 횟수 5회 이상";
             case LOW_TRADE_FREQUENCY -> "일평균 거래 횟수 0.2회 이하";
+            case CRASH_HOLDING -> "급락장 보유 유지";
+            case NORMAL_PLANNED_BUY -> "정상장 계획 매수";
+            case CASH_BUFFER_MAINTENANCE -> "현금 완충 유지";
+            case RISK_BUDGET_MAINTENANCE -> "위험 예산 유지";
+            case HHL_COMPOSITE -> "HHL 복합 비추격";
+            case HLL_NO_CHASE -> "HLL 고위험 노출 비추격";
+            case LHH_COMPLETED_OPPORTUNITY -> "LHH 완결형 기회 실행";
+            case NORMAL_PARTIAL_SELL -> "정상장 부분 매도·유동성 확보";
+            case DEPOSIT_CANCEL_CASH_RETENTION -> "예금 해지 후 현금 유지";
         };
     }
 

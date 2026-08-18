@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.kkobi.assessment.calculator.AssetRatioCalculator;
 import org.kkobi.assessment.calculator.BehaviorContextFactory;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
+import org.kkobi.assessment.calculator.GameBehaviorAssessmentCalculator;
 import org.kkobi.assessment.calculator.GameScoreCalculator;
 import org.kkobi.assessment.calculator.MarketStateCalculator;
 import org.kkobi.assessment.calculator.PersonaClassifier;
@@ -46,7 +47,13 @@ class GameAssessmentFlowTest {
         InMemoryAssessmentMapper assessmentMapper = new InMemoryAssessmentMapper();
         GameAssessmentService gameAssessmentService = new GameAssessmentService(
                 actionLogService,
-                behaviorRuleEngine,
+                createScenarioService(),
+                new GameBehaviorAssessmentCalculator(
+                        new AssetRatioCalculator(),
+                        new MarketStateCalculator(),
+                        new GamePriceRateCalculator(new SecurityPriceRateCalculator()),
+                        new GameSecurityReturnCalculator()
+                ),
                 new GameScoreCalculator(),
                 new AssessmentResultService(
                         assessmentMapper,
@@ -76,10 +83,10 @@ class GameAssessmentFlowTest {
                 1,
                 "BUY",
                 "STOCK",
-                400_000L,
-                600_000L,
+                100_000L,
+                900_000L,
                 0L,
-                100_000L
+                400_000L
         ));
 
         AssessmentResult result = gameAssessmentService.calculateGameAssessment(1L);
@@ -94,7 +101,7 @@ class GameAssessmentFlowTest {
         assertScoreEquals("10", actionLogs.get(2).getRpScoreDelta());
         assertScoreEquals("45.00", result.getAssessmentScore().getRtScore());
         assertScoreEquals("35.00", result.getAssessmentScore().getLhScore());
-        assertScoreEquals("55.00", result.getAssessmentScore().getRpScore());
+        assertScoreEquals("50.00", result.getAssessmentScore().getRpScore());
         assertEquals(PersonaType.LLH, result.getPersonaType());
         assertEquals(1, assessmentMapper.getSavedResultCount());
         assertEquals(result.getAssessmentScore(), assessmentMapper.getSavedAssessmentScore());
