@@ -12,7 +12,7 @@ public interface AccountDailySnapshotMapper {
             @Param("snapshotDate") LocalDate snapshotDate
     );
 
-    List<LocalDate> getUnsettledDailyAssessmentDates(
+    List<AccountDailySnapshotDto> getUnsettledDailyAssessmentTargets(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );

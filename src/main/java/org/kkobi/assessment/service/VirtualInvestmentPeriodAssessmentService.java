@@ -36,10 +36,10 @@ public class VirtualInvestmentPeriodAssessmentService {
     private final AssessmentSettlementService assessmentSettlementService;
     private final VirtualInvestmentPeriodResultService virtualInvestmentPeriodResultService;
 
-    public List<LocalDate> getUnsettledDailyAssessmentDates(
+    public List<AccountDailySnapshotDto> getUnsettledDailyAssessmentTargets(
             LocalDate startDate,
             LocalDate endDate) {
-        return accountDailySnapshotMapper.getUnsettledDailyAssessmentDates(startDate, endDate);
+        return accountDailySnapshotMapper.getUnsettledDailyAssessmentTargets(startDate, endDate);
     }
 
     @Transactional
@@ -48,6 +48,14 @@ public class VirtualInvestmentPeriodAssessmentService {
                 .stream()
                 .mapToInt(account -> calculateDailyAccountAssessments(account, assessmentDate))
                 .sum();
+    }
+
+    @Transactional
+    public int calculateDailyAssessment(AccountDailySnapshotDto account) {
+        if (account.getSnapshotDate() == null) {
+            throw new IllegalArgumentException("일일 성향 정산 날짜가 필요합니다.");
+        }
+        return calculateDailyAccountAssessments(account, account.getSnapshotDate());
     }
 
     private int calculateDailyAccountAssessments(

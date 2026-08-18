@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.kkobi.assessment.calculator.AssetRatioCalculator;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.PersonaClassifier;
+import org.kkobi.assessment.calculator.SecurityPositionCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentPeriodCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentFollowUpCalculator;
 import org.kkobi.assessment.calculator.MarketStateCalculator;
@@ -291,7 +292,10 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
                 snapshotMapper,
                 behaviorMapper,
                 new VirtualInvestmentPeriodCalculator(new AssetRatioCalculator()),
-                new VirtualInvestmentFollowUpCalculator(new MarketStateCalculator()),
+                new VirtualInvestmentFollowUpCalculator(
+                        new MarketStateCalculator(),
+                        new SecurityPositionCalculator()
+                ),
                 new BehaviorRuleEngine(),
                 assessmentSettlementService,
                 virtualInvestmentPeriodResultService
@@ -373,14 +377,12 @@ class VirtualInvestmentPeriodAssessmentServiceTest {
         }
 
         @Override
-        public List<LocalDate> getUnsettledDailyAssessmentDates(
+        public List<AccountDailySnapshotDto> getUnsettledDailyAssessmentTargets(
                 LocalDate startDate,
                 LocalDate endDate) {
             return snapshots.stream()
-                    .map(AccountDailySnapshotDto::getSnapshotDate)
-                    .filter(date -> !date.isBefore(startDate))
-                    .filter(date -> !date.isAfter(endDate))
-                    .distinct()
+                    .filter(snapshot -> !snapshot.getSnapshotDate().isBefore(startDate))
+                    .filter(snapshot -> !snapshot.getSnapshotDate().isAfter(endDate))
                     .toList();
         }
 

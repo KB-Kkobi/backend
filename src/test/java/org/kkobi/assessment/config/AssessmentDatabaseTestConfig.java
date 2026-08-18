@@ -7,6 +7,7 @@ import org.kkobi.assessment.calculator.AssetRatioCalculator;
 import org.kkobi.assessment.calculator.BehaviorRuleEngine;
 import org.kkobi.assessment.calculator.MarketStateCalculator;
 import org.kkobi.assessment.calculator.PersonaClassifier;
+import org.kkobi.assessment.calculator.SecurityPositionCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentFollowUpCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentPeriodCalculator;
 import org.kkobi.assessment.calculator.VirtualInvestmentScoreCalculator;
@@ -37,6 +38,7 @@ import javax.sql.DataSource;
         BehaviorRuleEngine.class,
         MarketStateCalculator.class,
         PersonaClassifier.class,
+        SecurityPositionCalculator.class,
         VirtualInvestmentFollowUpCalculator.class,
         VirtualInvestmentPeriodCalculator.class,
         VirtualInvestmentScoreCalculator.class,

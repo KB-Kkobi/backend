@@ -31,6 +31,7 @@ public class VirtualInvestmentFollowUpCalculator {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
     private final MarketStateCalculator marketStateCalculator;
+    private final SecurityPositionCalculator securityPositionCalculator;
 
     public BehaviorContext calculateFollowUpContext(
             List<VirtualInvestmentBehaviorDto> behaviors,
@@ -135,7 +136,8 @@ public class VirtualInvestmentFollowUpCalculator {
             List<VirtualInvestmentBehaviorDto> behaviors,
             Map<LocalDate, AccountDailySnapshotDto> snapshotByDate,
             LocalDate assessmentDate) {
-        Map<Long, PositionState> positions = new HashMap<>();
+        Map<Long, SecurityPositionCalculator.SecurityPosition> positions = new HashMap<>();
+        Map<Long, LocalDate> latestLiquidityBuyDates = new HashMap<>();
         for (VirtualInvestmentBehaviorDto behavior : behaviors) {
             if (behavior.getSecurityId() == null
                     || behavior.getQuantity() == null
@@ -143,20 +145,22 @@ public class VirtualInvestmentFollowUpCalculator {
                     || behavior.getExecutionPrice() == null) {
                 continue;
             }
-            PositionState position = positions.computeIfAbsent(
+            SecurityPositionCalculator.SecurityPosition position = positions.computeIfAbsent(
                     behavior.getSecurityId(),
-                    ignored -> new PositionState()
+                    ignored -> securityPositionCalculator.createSecurityPosition()
             );
             if (actionType(behavior) == BehaviorActionType.BUY) {
-                position.buy(
-                        behavior.getQuantity(),
-                        behavior.getExecutionPrice(),
-                        isCashRatioBetween(
-                                snapshotByDate.get(tradeDate(behavior)),
-                                TWENTY_FIVE,
-                                FIFTY
-                        ) ? tradeDate(behavior) : null
-                );
+                position.buy(behavior.getQuantity(), behavior.getExecutionPrice());
+                if (isCashRatioBetween(
+                        snapshotByDate.get(tradeDate(behavior)),
+                        TWENTY_FIVE,
+                        FIFTY
+                )) {
+                    latestLiquidityBuyDates.put(
+                            behavior.getSecurityId(),
+                            tradeDate(behavior)
+                    );
+                }
                 continue;
             }
             if (actionType(behavior) != BehaviorActionType.SELL) {
@@ -164,11 +168,15 @@ public class VirtualInvestmentFollowUpCalculator {
             }
             boolean completed = assessmentDate.equals(tradeDate(behavior))
                     && position.isProfitable(behavior.getExecutionPrice())
-                    && position.hasRecentLiquidityBuy(
+                    && hasRecentLiquidityBuy(
+                            latestLiquidityBuyDates.get(behavior.getSecurityId()),
                             assessmentDate,
                             OPPORTUNITY_COMPLETION_DAYS
                     );
             position.sell(behavior.getQuantity());
+            if (position.getQuantity() == 0) {
+                latestLiquidityBuyDates.remove(behavior.getSecurityId());
+            }
             if (completed) {
                 return true;
             }
@@ -176,41 +184,13 @@ public class VirtualInvestmentFollowUpCalculator {
         return false;
     }
 
-    private static class PositionState {
-
-        private long quantity;
-        private BigDecimal averagePrice = BigDecimal.ZERO;
-        private LocalDate latestLiquidityBuyDate;
-
-        void buy(int buyQuantity, long executionPrice, LocalDate liquidityBuyDate) {
-            BigDecimal existingPrincipal = averagePrice.multiply(BigDecimal.valueOf(quantity));
-            BigDecimal buyPrincipal = BigDecimal.valueOf(executionPrice)
-                    .multiply(BigDecimal.valueOf(buyQuantity));
-            quantity += buyQuantity;
-            averagePrice = existingPrincipal.add(buyPrincipal)
-                    .divide(BigDecimal.valueOf(quantity), 4, RoundingMode.HALF_UP);
-            if (liquidityBuyDate != null) {
-                latestLiquidityBuyDate = liquidityBuyDate;
-            }
-        }
-
-        boolean isProfitable(long executionPrice) {
-            return quantity > 0 && BigDecimal.valueOf(executionPrice).compareTo(averagePrice) > 0;
-        }
-
-        boolean hasRecentLiquidityBuy(LocalDate sellDate, int maximumDays) {
-            return latestLiquidityBuyDate != null
-                    && !latestLiquidityBuyDate.isAfter(sellDate)
-                    && !latestLiquidityBuyDate.isBefore(sellDate.minusDays(maximumDays));
-        }
-
-        void sell(int sellQuantity) {
-            quantity = Math.max(0, quantity - sellQuantity);
-            if (quantity == 0) {
-                averagePrice = BigDecimal.ZERO;
-                latestLiquidityBuyDate = null;
-            }
-        }
+    private boolean hasRecentLiquidityBuy(
+            LocalDate latestLiquidityBuyDate,
+            LocalDate sellDate,
+            int maximumDays) {
+        return latestLiquidityBuyDate != null
+                && !latestLiquidityBuyDate.isAfter(sellDate)
+                && !latestLiquidityBuyDate.isBefore(sellDate.minusDays(maximumDays));
     }
 
     private boolean maintainsCashRatio(

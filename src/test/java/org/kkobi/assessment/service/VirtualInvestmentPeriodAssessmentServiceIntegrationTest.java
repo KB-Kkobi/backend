@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kkobi.assessment.config.AssessmentDatabaseTestConfig;
+import org.kkobi.assessment.dto.AccountDailySnapshotDto;
 import org.kkobi.assessment.dto.VirtualInvestmentBehaviorDto;
 import org.kkobi.assessment.enums.AssessmentPeriodType;
 import org.kkobi.assessment.mapper.VirtualInvestmentBehaviorMapper;
@@ -108,8 +109,11 @@ class VirtualInvestmentPeriodAssessmentServiceIntegrationTest {
         assertEquals("SELL", behaviors.get(0).getActionType());
         assertEquals(new BigDecimal("10100.00"), behaviors.get(0).getCurrentClosePrice());
         assertEquals(new BigDecimal("10000.00"), behaviors.get(0).getPreviousClosePrice());
-        assertEquals(List.of(ASSESSMENT_DATE), assessmentService
-                .getUnsettledDailyAssessmentDates(ASSESSMENT_DATE, ASSESSMENT_DATE));
+        List<AccountDailySnapshotDto> unsettledTargets = assessmentService
+                .getUnsettledDailyAssessmentTargets(ASSESSMENT_DATE, ASSESSMENT_DATE);
+        assertEquals(1, unsettledTargets.size());
+        assertEquals(accountId, unsettledTargets.get(0).getAccountId());
+        assertEquals(ASSESSMENT_DATE, unsettledTargets.get(0).getSnapshotDate());
 
         int firstAssessmentCount = assessmentService.calculateDailyAssessments(ASSESSMENT_DATE);
         int secondAssessmentCount = assessmentService.calculateDailyAssessments(ASSESSMENT_DATE);
@@ -141,7 +145,7 @@ class VirtualInvestmentPeriodAssessmentServiceIntegrationTest {
                 accountId
         ));
         assertEquals(List.of(), assessmentService
-                .getUnsettledDailyAssessmentDates(ASSESSMENT_DATE, ASSESSMENT_DATE));
+                .getUnsettledDailyAssessmentTargets(ASSESSMENT_DATE, ASSESSMENT_DATE));
     }
 
     @Test

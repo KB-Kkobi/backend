@@ -20,7 +20,10 @@ class VirtualInvestmentFollowUpCalculatorTest {
     private static final LocalDate ASSESSMENT_DATE = LocalDate.of(2026, 8, 12);
 
     private final VirtualInvestmentFollowUpCalculator calculator =
-            new VirtualInvestmentFollowUpCalculator(new MarketStateCalculator());
+            new VirtualInvestmentFollowUpCalculator(
+                    new MarketStateCalculator(),
+                    new SecurityPositionCalculator()
+            );
 
     @Test
     @DisplayName("예금 해지 후 48시간 내 매수와 2일 현금 유지를 구분한다.")

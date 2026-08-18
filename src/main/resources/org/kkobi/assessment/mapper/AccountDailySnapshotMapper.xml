@@ -67,15 +67,40 @@
         ORDER BY account_record.account_id
     </select>
 
-    <select id="getUnsettledDailyAssessmentDates" resultType="java.time.LocalDate">
-        SELECT DISTINCT snapshot.snapshot_date
+    <select id="getUnsettledDailyAssessmentTargets"
+            resultType="org.kkobi.assessment.dto.AccountDailySnapshotDto">
+        SELECT
+            snapshot.account_daily_snapshot_id,
+            snapshot.account_id,
+            account_record.user_id,
+            DATE(account_record.created_at) AS virtual_investment_started_date,
+            snapshot.snapshot_date,
+            snapshot.current_cash,
+            snapshot.current_stock_principal,
+            snapshot.current_deposit,
+            snapshot.total_invested_principal,
+            snapshot.cash_ratio,
+            (
+                SELECT MIN(DATE(holding_security.created_at))
+                FROM holding_securities holding_security
+                WHERE holding_security.account_id = snapshot.account_id
+                  AND holding_security.created_at
+                    &lt; DATE_ADD(snapshot.snapshot_date, INTERVAL 1 DAY)
+            ) AS security_holding_started_date,
+            (
+                SELECT AVG(DATEDIFF(
+                    snapshot.snapshot_date,
+                    DATE(holding_security.created_at)
+                ))
+                FROM holding_securities holding_security
+                WHERE holding_security.account_id = snapshot.account_id
+                  AND holding_security.created_at
+                    &lt; DATE_ADD(snapshot.snapshot_date, INTERVAL 1 DAY)
+            ) AS average_security_holding_days
         FROM account_daily_snapshots snapshot
+        JOIN accounts account_record
+          ON account_record.account_id = snapshot.account_id
         WHERE snapshot.snapshot_date BETWEEN #{startDate} AND #{endDate}
-          AND EXISTS (
-              SELECT 1
-              FROM accounts account_record
-              WHERE account_record.account_id = snapshot.account_id
-          )
           AND NOT EXISTS (
               SELECT 1
               FROM assessment_settlements settlement
@@ -84,7 +109,7 @@
                 AND settlement.period_date = snapshot.snapshot_date
                 AND settlement.status = 'COMPLETED'
           )
-        ORDER BY snapshot.snapshot_date
+        ORDER BY snapshot.snapshot_date, snapshot.account_id
     </select>
 
     <insert id="saveAccountDailySnapshot"
