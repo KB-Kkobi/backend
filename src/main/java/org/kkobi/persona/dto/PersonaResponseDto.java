@@ -20,8 +20,6 @@ public class PersonaResponseDto {
     private String reasonHighlight;
     private String reasonSuffix;
     private String reasonSummary;
-    private String portfolioReasonFirst;
-    private String portfolioReasonSecond;
     private String portfolioStockReason;
     private String portfolioBondReason;
     private String portfolioDepositReason;

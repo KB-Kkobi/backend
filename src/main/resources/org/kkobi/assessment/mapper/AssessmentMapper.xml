@@ -63,8 +63,6 @@
             <result property="reasonHighlight" column="reason_highlight" />
             <result property="reasonSuffix" column="reason_suffix" />
             <result property="reasonSummary" column="reason_summary" />
-            <result property="portfolioReasonFirst" column="portfolio_reason_first" />
-            <result property="portfolioReasonSecond" column="portfolio_reason_second" />
             <result property="portfolioStockReason" column="portfolio_stock_reason" />
             <result property="portfolioBondReason" column="portfolio_bond_reason" />
             <result property="portfolioDepositReason" column="portfolio_deposit_reason" />
@@ -94,8 +92,6 @@
             p.reason_highlight,
             p.reason_suffix,
             p.reason_summary,
-            p.portfolio_reason_first,
-            p.portfolio_reason_second,
             p.portfolio_stock_reason,
             p.portfolio_bond_reason,
             p.portfolio_deposit_reason,
