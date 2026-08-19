@@ -15,6 +15,13 @@ public class PersonaResponseDto {
     private String feature;
     private String strength;
     private String caution;
+    private String reasonTitle;
+    private String reasonPrefix;
+    private String reasonHighlight;
+    private String reasonSuffix;
+    private String reasonSummary;
+    private String portfolioReasonFirst;
+    private String portfolioReasonSecond;
     private BigDecimal stockRatio;
     private BigDecimal bondRatio;
     private BigDecimal depositRatio;

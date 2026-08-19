@@ -7,9 +7,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.kkobi.assessment.domain.AssessmentResultDetails;
+import org.kkobi.assessment.dto.AssessmentResultResponseDto;
 import org.kkobi.assessment.service.AssessmentResultService;
 import org.kkobi.exception.CommonExceptionAdvice;
 import org.kkobi.security.principal.CustomUserDetails;
+import org.kkobi.persona.dto.PersonaResponseDto;
 import org.kkobi.users.domain.UserVO;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -94,6 +96,44 @@ class AssessmentControllerTest {
         mvc.perform(get("/api/assessments/me/latest"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("성향 진단 이력이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("진단 결과에 성향별 포트폴리오 배분 이유를 반환한다.")
+    void returnsPortfolioReasonsForPersona() throws Exception {
+        PersonaResponseDto persona = new PersonaResponseDto();
+        persona.setPersonaName("불꽃 추격자");
+        persona.setAxisCode("HHH");
+        persona.setPortfolioReasonFirst(
+                "가격이 크게 움직여도 수익 기회를 적극적으로 잡는 편이라 "
+                        + "주식 비중을 80%로 높게 배분했어요."
+        );
+        persona.setPortfolioReasonSecond(
+                "다만 필요할 때 자금을 움직일 수 있는 것도 중요하게 생각해, "
+                        + "나머지 자산은 채권보다 예·적금 비중을 조금 더 높였어요."
+        );
+        persona.setStockRatio(new BigDecimal("80.00"));
+        persona.setBondRatio(new BigDecimal("5.00"));
+        persona.setDepositRatio(new BigDecimal("15.00"));
+
+        AssessmentResultResponseDto result = new AssessmentResultResponseDto();
+        result.setResultId(42L);
+        result.setUserId(USER_ID);
+        result.setPersona(persona);
+
+        when(assessmentResultService.getLatestAssessmentResult(USER_ID))
+                .thenReturn(result);
+
+        mvc.perform(get("/api/assessments/me/result"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.persona.axisCode").value("HHH"))
+                .andExpect(jsonPath("$.persona.portfolioReasonFirst")
+                        .value(persona.getPortfolioReasonFirst()))
+                .andExpect(jsonPath("$.persona.portfolioReasonSecond")
+                        .value(persona.getPortfolioReasonSecond()))
+                .andExpect(jsonPath("$.persona.stockRatio").value(80.00))
+                .andExpect(jsonPath("$.persona.bondRatio").value(5.00))
+                .andExpect(jsonPath("$.persona.depositRatio").value(15.00));
     }
 
     private AssessmentResultDetails sampleDetails() {

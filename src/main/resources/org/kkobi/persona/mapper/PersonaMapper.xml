@@ -16,6 +16,11 @@
             feature,
             strength,
             caution,
+            reason_title,
+            reason_prefix,
+            reason_highlight,
+            reason_suffix,
+            reason_summary,
             stock_ratio,
             bond_ratio,
             deposit_ratio
