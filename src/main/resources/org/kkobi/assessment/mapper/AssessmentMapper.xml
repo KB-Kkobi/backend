@@ -65,6 +65,9 @@
             <result property="reasonSummary" column="reason_summary" />
             <result property="portfolioReasonFirst" column="portfolio_reason_first" />
             <result property="portfolioReasonSecond" column="portfolio_reason_second" />
+            <result property="portfolioStockReason" column="portfolio_stock_reason" />
+            <result property="portfolioBondReason" column="portfolio_bond_reason" />
+            <result property="portfolioDepositReason" column="portfolio_deposit_reason" />
             <result property="stockRatio" column="stock_ratio" />
             <result property="bondRatio" column="bond_ratio" />
             <result property="depositRatio" column="deposit_ratio" />
@@ -93,6 +96,9 @@
             p.reason_summary,
             p.portfolio_reason_first,
             p.portfolio_reason_second,
+            p.portfolio_stock_reason,
+            p.portfolio_bond_reason,
+            p.portfolio_deposit_reason,
             p.stock_ratio,
             p.bond_ratio,
             p.deposit_ratio

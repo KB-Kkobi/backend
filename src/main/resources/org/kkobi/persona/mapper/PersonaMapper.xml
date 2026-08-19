@@ -21,6 +21,9 @@
             reason_highlight,
             reason_suffix,
             reason_summary,
+            portfolio_stock_reason,
+            portfolio_bond_reason,
+            portfolio_deposit_reason,
             stock_ratio,
             bond_ratio,
             deposit_ratio

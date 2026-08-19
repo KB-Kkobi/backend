@@ -22,6 +22,9 @@ public class PersonaResponseDto {
     private String reasonSummary;
     private String portfolioReasonFirst;
     private String portfolioReasonSecond;
+    private String portfolioStockReason;
+    private String portfolioBondReason;
+    private String portfolioDepositReason;
     private BigDecimal stockRatio;
     private BigDecimal bondRatio;
     private BigDecimal depositRatio;
