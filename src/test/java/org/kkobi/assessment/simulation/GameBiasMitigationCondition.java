@@ -172,6 +172,186 @@ public enum GameBiasMitigationCondition {
             RuleAccumulationCondition.UNLIMITED,
             GameRuleEvaluationCondition.LOG_DIMINISHING_RULE_GROUPS_BALANCED_CAP,
             ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE(
+            "균형 상한·위험 예산 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_RISK_BUDGET_MAINTENANCE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_PASSIVE_HIGH_RISK_HOLDING(
+            "균형 상한·고위험 수동 보유",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_PASSIVE_HIGH_RISK_HOLDING,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_LIQUIDITY_PRESERVING_OPPORTUNITY(
+            "균형 상한·유동성 보존 기회 실행",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_LIQUIDITY_PRESERVING_OPPORTUNITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY(
+            "균형 상한·위험 예산 유지·유동성 보존 기회 실행",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition
+                    .BALANCED_CAP_WITH_RISK_BUDGET_AND_LIQUIDITY_OPPORTUNITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK(
+            "균형 상한·무거래 위험 예산 유지·고주식 저현금 급락 무거래",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_RISK_BUDGET_AND_PASSIVE_HIGH_RISK,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE(
+            "균형 상한·무거래 위험 예산 유지·위험 노출 기회 비추격",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_RISK_BUDGET_AND_NO_CHASE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY(
+            "균형 상한·무거래 위험 예산 유지·고주식 저현금 5 Tick 무거래",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition
+                    .BALANCED_CAP_WITH_RISK_BUDGET_AND_HIGH_STOCK_INACTIVITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY(
+            "균형 상한·위험 예산·기회 비추격·고주식 저현금 무거래",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition
+                    .BALANCED_CAP_WITH_RISK_BUDGET_NO_CHASE_AND_HIGH_STOCK_INACTIVITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_ALL_NEW_RULES(
+            "균형 상한·세 신규 규칙",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_ALL_NEW_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE(
+            "균형 상한·위험 예산·정제된 기회 비추격",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_REFINED_NO_CHASE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY(
+            "균형 상한·위험 예산·정제 비추격·LHH 유동성 기회 실행",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition
+                    .BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE(
+            "균형 상한·위험 예산·정제 비추격·LHH 기회 실행 상호 배타",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition
+                    .BALANCED_CAP_WITH_REFINED_NO_CHASE_AND_LHH_OPPORTUNITY_EXCLUSIVE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_HHL_COMPOSITE(
+            "균형 상한·위험 예산·HHL 복합 규칙",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_HHL_COMPOSITE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE(
+            "균형 상한·위험 예산·HLL 정제 비추격 최대 1회",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_HLL_CAPPED_NO_CHASE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY(
+            "균형 상한·위험 예산·LHH 완결형 기회 실행 최대 1회",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_LHH_COMPLETED_OPPORTUNITY,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    BALANCED_CAP_WITH_ALL_TARGETED_RULES(
+            "균형 상한·위험 예산·HHL·HLL·LHH 표적 규칙",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.BALANCED_CAP_WITH_ALL_TARGETED_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL(
+            "표적 규칙·정상장 의미있는 부분 매도",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_PARTIAL_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL(
+            "표적 규칙·정상장 계획 익절",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_PLANNED_PROFIT_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL(
+            "표적 규칙·정상장 위험 축소 매도",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_NORMAL_RISK_REDUCTION_SELL,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES(
+            "표적 규칙·정상장 매도 후보 전체",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_ALL_NORMAL_SELL_RULES,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT(
+            "표적 규칙·부분 매도·매도 전 주식 70% 미만",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE(
+            "표적 규칙·부분 매도·주식 제한·HLL 비추격 상호 배타",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_STOCK_LIMIT_EXCLUSIVE,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND(
+            "표적 규칙·부분 매도·주식 제한·현금 25~50%",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_CASH_BAND,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION(
+            "표적 규칙·부분 매도·주식 제한·현금 2 Tick 유지",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_CASH_RETENTION,
+            ConsecutiveActionMultiplierCondition.DISABLED
+    ),
+    ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE(
+            "표적 규칙·부분 매도 정제·HLL 비추격 상호 배타",
+            SameTickRuleApplicationCondition.ONCE_PER_TICK,
+            RuleAccumulationCondition.UNLIMITED,
+            GameRuleEvaluationCondition.ALL_TARGETED_WITH_PARTIAL_SELL_EXCLUSIVE,
+            ConsecutiveActionMultiplierCondition.DISABLED
     );
 
     private final String description;

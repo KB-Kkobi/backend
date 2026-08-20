@@ -50,7 +50,9 @@ public class QuizService {
                 hasQuizToday ? quiz.getQuestion() : null,
                 hasQuizToday,
                 hasParticipatedToday,
-                canParticipate
+                canParticipate,
+                hasParticipatedToday ? quiz.getAnswer() : null,
+                hasParticipatedToday ? quiz.getExplanation() : null
         );
     }
 

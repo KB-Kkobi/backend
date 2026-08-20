@@ -33,14 +33,13 @@ public class SecurityPositionCalculator {
                 currentEvent.getSecurityId(),
                 previousEvents
         );
-        if (securityPosition.quantity() == 0 || securityPosition.averagePrice().signum() == 0) {
+        if (securityPosition.getQuantity() == 0
+                || securityPosition.getAveragePrice().signum() == 0) {
             return null;
         }
 
         BigDecimal currentPrice = calculateTradePrice(currentEvent);
-        return currentPrice.subtract(securityPosition.averagePrice())
-                .multiply(PERCENTAGE)
-                .divide(securityPosition.averagePrice(), RATE_SCALE, RoundingMode.HALF_UP);
+        return securityPosition.calculateReturnRate(currentPrice);
     }
 
     public int calculateCurrentSecurityQuantity(
@@ -51,26 +50,29 @@ public class SecurityPositionCalculator {
                 previousEvents
         );
         if (currentEvent.getQuantity() == null) {
-            return previousPosition.quantity();
+            return previousPosition.getQuantity();
         }
         if (currentEvent.getActionType() == BehaviorActionType.BUY) {
-            return previousPosition.quantity() + currentEvent.getQuantity();
+            return previousPosition.getQuantity() + currentEvent.getQuantity();
         }
         if (currentEvent.getActionType() == BehaviorActionType.SELL) {
-            return Math.max(0, previousPosition.quantity() - currentEvent.getQuantity());
+            return Math.max(0, previousPosition.getQuantity() - currentEvent.getQuantity());
         }
-        return previousPosition.quantity();
+        return previousPosition.getQuantity();
+    }
+
+    public SecurityPosition createSecurityPosition() {
+        return new SecurityPosition();
     }
 
     private SecurityPosition calculatePreviousSecurityPosition(
             Long securityId,
             List<BehaviorEvent> previousEvents) {
         if (securityId == null) {
-            return new SecurityPosition(0, BigDecimal.ZERO);
+            return createSecurityPosition();
         }
 
-        int quantity = 0;
-        BigDecimal averagePrice = BigDecimal.ZERO;
+        SecurityPosition securityPosition = createSecurityPosition();
         List<BehaviorEvent> securityEvents = previousEvents.stream()
                 .filter(event -> event.getAssetType() == BehaviorAssetType.SECURITY)
                 .filter(event -> securityId.equals(event.getSecurityId()))
@@ -81,21 +83,16 @@ public class SecurityPositionCalculator {
 
         for (BehaviorEvent securityEvent : securityEvents) {
             if (securityEvent.getActionType() == BehaviorActionType.BUY) {
-                BigDecimal previousPrincipal = averagePrice.multiply(BigDecimal.valueOf(quantity));
-                BigDecimal tradePrincipal = calculateTradePrice(securityEvent)
-                        .multiply(BigDecimal.valueOf(securityEvent.getQuantity()));
-                quantity += securityEvent.getQuantity();
-                averagePrice = previousPrincipal.add(tradePrincipal)
-                        .divide(BigDecimal.valueOf(quantity), PRICE_SCALE, RoundingMode.HALF_UP);
+                securityPosition.buy(
+                        securityEvent.getQuantity(),
+                        calculateTradePrice(securityEvent)
+                );
             } else if (securityEvent.getActionType() == BehaviorActionType.SELL) {
-                quantity = Math.max(0, quantity - securityEvent.getQuantity());
-                if (quantity == 0) {
-                    averagePrice = BigDecimal.ZERO;
-                }
+                securityPosition.sell(securityEvent.getQuantity());
             }
         }
 
-        return new SecurityPosition(quantity, averagePrice);
+        return securityPosition;
     }
 
     private boolean existsTradePrice(BehaviorEvent event) {
@@ -116,6 +113,50 @@ public class SecurityPositionCalculator {
                 .divide(BigDecimal.valueOf(event.getQuantity()), PRICE_SCALE, RoundingMode.HALF_UP);
     }
 
-    private record SecurityPosition(int quantity, BigDecimal averagePrice) {
+    public static final class SecurityPosition {
+
+        private int quantity;
+        private BigDecimal averagePrice = BigDecimal.ZERO;
+
+        public void buy(int buyQuantity, long executionPrice) {
+            buy(buyQuantity, BigDecimal.valueOf(executionPrice));
+        }
+
+        public void buy(int buyQuantity, BigDecimal executionPrice) {
+            BigDecimal previousPrincipal = averagePrice.multiply(BigDecimal.valueOf(quantity));
+            BigDecimal tradePrincipal = executionPrice.multiply(BigDecimal.valueOf(buyQuantity));
+            quantity += buyQuantity;
+            averagePrice = previousPrincipal.add(tradePrincipal)
+                    .divide(BigDecimal.valueOf(quantity), PRICE_SCALE, RoundingMode.HALF_UP);
+        }
+
+        public void sell(int sellQuantity) {
+            quantity = Math.max(0, quantity - sellQuantity);
+            if (quantity == 0) {
+                averagePrice = BigDecimal.ZERO;
+            }
+        }
+
+        public boolean isProfitable(long executionPrice) {
+            return quantity > 0
+                    && BigDecimal.valueOf(executionPrice).compareTo(averagePrice) > 0;
+        }
+
+        public BigDecimal calculateReturnRate(BigDecimal currentPrice) {
+            if (quantity == 0 || averagePrice.signum() == 0) {
+                return null;
+            }
+            return currentPrice.subtract(averagePrice)
+                    .multiply(PERCENTAGE)
+                    .divide(averagePrice, RATE_SCALE, RoundingMode.HALF_UP);
+        }
+
+        public int getQuantity() {
+            return quantity;
+        }
+
+        public BigDecimal getAveragePrice() {
+            return averagePrice;
+        }
     }
 }

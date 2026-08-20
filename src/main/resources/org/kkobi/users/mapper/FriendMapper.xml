@@ -109,4 +109,41 @@
                 AND receiver_id = #{userId})
             )
     </delete>
+
+    <!-- 요청자와 수신자의 대기 중 친구 요청 ID 조회 -->
+    <select id="findPendingFriendshipId" resultType="long">
+        SELECT friendship_id
+        FROM friendships
+        WHERE requester_id = #{requesterId}
+          AND receiver_id = #{receiverId}
+          AND status = 'PENDING'
+        LIMIT 1
+    </select>
+
+    <!-- 친구 요청을 수락하기 전 신청자 ID 조회 -->
+    <select id="findRequesterIdByFriendshipId" resultType="long">
+        SELECT requester_id
+        FROM friendships
+        WHERE friendship_id = #{friendshipId}
+          AND receiver_id = #{receiverId}
+          AND status = 'PENDING'
+    </select>
+
+    <!-- 내가 보낸 대기 중인 친구 요청을 취소 -->
+    <delete id="cancelSentFriendRequest">
+        DELETE FROM friendships
+        WHERE friendship_id = #{friendshipId}
+          AND requester_id = #{requesterId}
+          AND status = 'PENDING'
+    </delete>
+
+    <!-- 내가 보낸 PENDING 친구 요청의 수신자 ID 조회 -->
+    <select id="findReceiverIdByPendingFriendRequest"
+            resultType="long">
+        SELECT receiver_id
+        FROM friendships
+        WHERE friendship_id = #{friendshipId}
+          AND requester_id = #{requesterId}
+          AND status = 'PENDING'
+    </select>
 </mapper>

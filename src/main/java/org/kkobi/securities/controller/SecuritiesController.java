@@ -32,7 +32,7 @@ public class SecuritiesController {
                 securityService.getSecurityList(request, authenticatedUser.getUserId()));
     }
 
-    // 홈 화면 추천 종목 조회 (주식 1 + 주식형 ETF 1 + 채권형 ETF 1, 성향 매칭 순)
+    // 홈 화면 추천 종목 조회 (주식·주식형 ETF 통합 1 + 채권형 ETF 1, 성향 매칭 순)
     @GetMapping("/recommendations")
     public ResponseEntity<SecurityRecommendationResponse> getRecommendedSecurities(
             @AuthenticationPrincipal CustomUserDetails authenticatedUser) {

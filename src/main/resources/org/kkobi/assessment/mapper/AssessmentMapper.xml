@@ -58,6 +58,14 @@
             <result property="feature" column="feature" />
             <result property="strength" column="strength" />
             <result property="caution" column="caution" />
+            <result property="reasonTitle" column="reason_title" />
+            <result property="reasonPrefix" column="reason_prefix" />
+            <result property="reasonHighlight" column="reason_highlight" />
+            <result property="reasonSuffix" column="reason_suffix" />
+            <result property="reasonSummary" column="reason_summary" />
+            <result property="portfolioStockReason" column="portfolio_stock_reason" />
+            <result property="portfolioBondReason" column="portfolio_bond_reason" />
+            <result property="portfolioDepositReason" column="portfolio_deposit_reason" />
             <result property="stockRatio" column="stock_ratio" />
             <result property="bondRatio" column="bond_ratio" />
             <result property="depositRatio" column="deposit_ratio" />
@@ -79,6 +87,14 @@
             p.feature,
             p.strength,
             p.caution,
+            p.reason_title,
+            p.reason_prefix,
+            p.reason_highlight,
+            p.reason_suffix,
+            p.reason_summary,
+            p.portfolio_stock_reason,
+            p.portfolio_bond_reason,
+            p.portfolio_deposit_reason,
             p.stock_ratio,
             p.bond_ratio,
             p.deposit_ratio

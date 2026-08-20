@@ -9,6 +9,8 @@ public interface TradeAccountMapper {
 
     TradeAccountDto findByUserId(@Param("userId") Long userId);
 
+    TradeAccountDto findByAccountId(@Param("accountId") Long accountId);
+
     TradeAccountDto findByAccountIdForUpdate(@Param("accountId") Long accountId);
 
     int decreaseCashBalance(@Param("accountId") Long accountId, @Param("amount") Long amount);
@@ -18,4 +20,6 @@ public interface TradeAccountMapper {
     int increaseLocked(@Param("accountId") Long accountId, @Param("amount") Long amount);
 
     int decreaseLocked(@Param("accountId") Long accountId, @Param("amount") Long amount);
+
+
 }

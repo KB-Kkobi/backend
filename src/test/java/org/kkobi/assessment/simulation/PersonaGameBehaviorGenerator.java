@@ -1,6 +1,7 @@
 package org.kkobi.assessment.simulation;
 
 import org.kkobi.assessment.enums.MarketState;
+import org.kkobi.assessment.enums.PersonaType;
 import org.kkobi.game.dto.ScenarioDto;
 import org.kkobi.game.dto.ScenarioTickDto;
 
@@ -44,6 +45,7 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         }
 
         List<SimulatedGameAction> actions = new ArrayList<>();
+        TargetedOpportunity lhhOpportunity = createLhhOpportunity(decisionTicks);
         Integer depositCancelTick = createDepositCancelTick(decisionTicks, portfolio, random);
         boolean retainCashAfterDepositCancel = depositCancelTick != null
                 && canApply(random, profile.depositCashRetentionProbability());
@@ -54,10 +56,37 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         Integer depositCashRetentionEndTick = null;
         int cashBufferMaintenanceTicksRemaining = 0;
         boolean cashBufferMaintenanceCompleted = false;
+        boolean hhlNoChaseStarted = false;
+        boolean hhlNoChaseCompleted = false;
         int noActionTickCount = 0;
 
         for (ScenarioTickDto tick : decisionTicks) {
             boolean acted = false;
+            MarketState marketState = calculateMarketState(tick.getChangeRate());
+            if (lhhOpportunity != null
+                    && lhhOpportunity.buyTicks().contains(tick.getTick())) {
+                SimulatedGameAction plannedBuy = createTargetedLhhBuy(tick, portfolio);
+                if (plannedBuy != null) {
+                    actions.add(plannedBuy);
+                    acted = true;
+                }
+                if (!acted) {
+                    noActionTickCount++;
+                }
+                continue;
+            }
+            if (lhhOpportunity != null
+                    && lhhOpportunity.sellTicks().contains(tick.getTick())) {
+                SimulatedGameAction profitSell = createTargetedLhhProfitSell(tick, portfolio);
+                if (profitSell != null) {
+                    actions.add(profitSell);
+                    acted = true;
+                }
+                if (!acted) {
+                    noActionTickCount++;
+                }
+                continue;
+            }
             if (depositCancelTick != null && depositCancelTick == tick.getTick()) {
                 actions.add(portfolio.cancelDeposit(tick.getTick()));
                 acted = true;
@@ -87,6 +116,26 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
                     continue;
                 }
             }
+            if (profile.targetPersona() == PersonaType.HHL
+                    && cashBufferMaintenanceCompleted
+                    && !hhlNoChaseCompleted) {
+                if (marketState == MarketState.BULL) {
+                    hhlNoChaseStarted = true;
+                    noActionTickCount++;
+                    continue;
+                }
+                if (hhlNoChaseStarted) {
+                    hhlNoChaseCompleted = true;
+                } else {
+                    noActionTickCount++;
+                    continue;
+                }
+            }
+            if (profile.targetPersona() == PersonaType.HLL
+                    && marketState == MarketState.BULL) {
+                noActionTickCount++;
+                continue;
+            }
             if (canApply(random, profile.actionProbability())) {
                 SimulatedGameAction trade = createTrade(tick, portfolio, random);
                 if (trade != null) {
@@ -103,6 +152,68 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
             actions.add(portfolio.matureDeposit(scenario.getTotalTicks(), 0L));
         }
         return new GameBehaviorGenerationResult(actions, decisionTicks.size(), noActionTickCount);
+    }
+
+    private TargetedOpportunity createLhhOpportunity(List<ScenarioTickDto> ticks) {
+        if (profile.targetPersona() != PersonaType.LHH) {
+            return null;
+        }
+        List<Integer> buyTicks = new ArrayList<>();
+        List<Integer> sellTicks = new ArrayList<>();
+        int lastSellTick = -1;
+        for (int buyIndex = 0; buyIndex < ticks.size(); buyIndex++) {
+            ScenarioTickDto buyTick = ticks.get(buyIndex);
+            if (buyTick.getTick() <= lastSellTick
+                    || calculateMarketState(buyTick.getChangeRate()) != MarketState.NORMAL) {
+                continue;
+            }
+            for (int sellIndex = buyIndex + 1; sellIndex < ticks.size(); sellIndex++) {
+                ScenarioTickDto sellTick = ticks.get(sellIndex);
+                if (sellTick.getTick() > buyTick.getTick() + 10) {
+                    break;
+                }
+                if (sellTick.getPrice() > buyTick.getPrice()) {
+                    buyTicks.add(buyTick.getTick());
+                    sellTicks.add(sellTick.getTick());
+                    lastSellTick = sellTick.getTick();
+                    break;
+                }
+            }
+            if (buyTicks.size() >= 3) {
+                break;
+            }
+        }
+        return buyTicks.isEmpty() ? null : new TargetedOpportunity(buyTicks, sellTicks);
+    }
+
+    private SimulatedGameAction createTargetedLhhBuy(
+            ScenarioTickDto tick,
+            SimulatedGamePortfolio portfolio) {
+        if (!portfolio.canBuyStock(tick.getPrice())) {
+            return null;
+        }
+        long targetAmount = portfolio.getCurrentTotalAssetPrincipal() / 10;
+        long targetQuantity = Math.max(
+                1,
+                (targetAmount + tick.getPrice() - 1) / tick.getPrice()
+        );
+        int quantity = (int) Math.min(
+                targetQuantity,
+                portfolio.getMaximumBuyQuantity(tick.getPrice())
+        );
+        return quantity > 0
+                ? portfolio.buyStock(tick.getTick(), quantity, tick.getPrice())
+                : null;
+    }
+
+    private SimulatedGameAction createTargetedLhhProfitSell(
+            ScenarioTickDto tick,
+            SimulatedGamePortfolio portfolio) {
+        if (!portfolio.canSellStock()) {
+            return null;
+        }
+        int quantity = Math.max(1, portfolio.getCurrentStockQuantity() / 2);
+        return portfolio.sellStock(tick.getTick(), quantity, tick.getPrice());
     }
 
     private Integer createDepositCancelTick(
@@ -256,5 +367,10 @@ public class PersonaGameBehaviorGenerator implements GameBehaviorGenerator {
         if (tradeQuantityCondition == null) {
             throw new IllegalArgumentException("거래 수량 생성 조건은 필수입니다.");
         }
+    }
+
+    private record TargetedOpportunity(
+            List<Integer> buyTicks,
+            List<Integer> sellTicks) {
     }
 }

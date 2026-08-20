@@ -18,6 +18,10 @@ public class BehaviorContext {
     private boolean depositCancelledBeforeSecurityBuy;
     private boolean stockRotation;
     private boolean depositMatured;
+    private boolean depositCancelCashRetention;
+    private boolean normalPartialSellCashRetention;
+    private boolean completedLiquidityOpportunity;
+    private boolean riskBudgetMaintenance;
     private BigDecimal stockRatio;
     private BigDecimal cashRatio;
     private BigDecimal depositRatio;

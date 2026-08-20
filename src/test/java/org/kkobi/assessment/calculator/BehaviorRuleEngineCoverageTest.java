@@ -63,7 +63,7 @@ class BehaviorRuleEngineCoverageTest {
                         createMarketActionContext(MarketState.CRASH, BehaviorActionType.BUY),
                         false,
                         BehaviorRuleCode.CRASH_BUY,
-                        "10", "-5", "5"
+                        "10", "-5", "0"
                 ),
                 createRuleCase(
                         "급락장 전량 매도",
@@ -77,7 +77,7 @@ class BehaviorRuleEngineCoverageTest {
                         createMarketActionContext(MarketState.BULL, BehaviorActionType.BUY),
                         false,
                         BehaviorRuleCode.BULL_BUY,
-                        "5", "-5", "10"
+                        "0", "-5", "10"
                 ),
                 createRuleCase(
                         "급등장 차익 실현",
@@ -96,7 +96,7 @@ class BehaviorRuleEngineCoverageTest {
                 createRuleCase(
                         "예금 해지 후 증권 매수",
                         createDepositCancelAndSecurityBuyContext(),
-                        false,
+                        true,
                         BehaviorRuleCode.DEPOSIT_CANCEL_AND_SECURITY_BUY,
                         "5", "-10", "10"
                 ),
@@ -126,7 +126,7 @@ class BehaviorRuleEngineCoverageTest {
                         createLossAveragingContext("-15"),
                         false,
                         BehaviorRuleCode.LOSS_AVERAGING_BUY,
-                        "15", "-5", "5"
+                        "10", "-5", "0"
                 ),
                 createRuleCase(
                         "손절매",
@@ -153,7 +153,7 @@ class BehaviorRuleEngineCoverageTest {
                         "현금 비중 25% 이상 50% 미만 유지",
                         createCashMaintenanceContext("25", 5),
                         true,
-                        BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                        BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                         "0", "5", "0"
                 ),
                 createRuleCase(
@@ -331,7 +331,7 @@ class BehaviorRuleEngineCoverageTest {
         assertRulePresence(
                 createCashMaintenanceContext("25", 4),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 false
         );
         assertRulePresence(
@@ -345,13 +345,13 @@ class BehaviorRuleEngineCoverageTest {
         assertRulePresence(
                 createCashMaintenanceContext("25", 5),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 true
         );
         assertRulePresence(
                 createCashMaintenanceContext("49.99", 5),
                 true,
-                BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE,
+                BehaviorRuleCode.CASH_BUFFER_MAINTENANCE,
                 true
         );
         assertRulePresence(
@@ -470,7 +470,7 @@ class BehaviorRuleEngineCoverageTest {
         boolean applied = result.getAppliedRules().stream()
                 .map(rule -> rule.getRuleCode())
                 .anyMatch(ruleCode -> ruleCode == BehaviorRuleCode.VERY_LOW_CASH_MAINTENANCE
-                        || ruleCode == BehaviorRuleCode.MEDIUM_CASH_MAINTENANCE
+                        || ruleCode == BehaviorRuleCode.CASH_BUFFER_MAINTENANCE
                         || ruleCode == BehaviorRuleCode.HIGH_CASH_MAINTENANCE);
         assertEquals(false, applied);
     }
@@ -538,6 +538,8 @@ class BehaviorRuleEngineCoverageTest {
                 BehaviorActionType.SELL
         );
         context.setFullSecuritySell(true);
+        context.getCurrentEvent().setQuantity(10);
+        context.getCurrentEvent().setCurrentSecurityQuantity(0);
         return context;
     }
 
@@ -567,6 +569,7 @@ class BehaviorRuleEngineCoverageTest {
     private BehaviorContext createDepositCancelAndSecurityBuyContext() {
         BehaviorContext context = createSecurityActionContext(BehaviorActionType.BUY);
         context.setMarketState(MarketState.NORMAL);
+        context.getCurrentEvent().setActionAmount(90L);
         context.setDepositCancelledBeforeSecurityBuy(true);
         return context;
     }
@@ -630,7 +633,16 @@ class BehaviorRuleEngineCoverageTest {
 
     private BehaviorContext createSecurityActionContext(BehaviorActionType actionType) {
         BehaviorContext context = new BehaviorContext();
-        context.setCurrentEvent(createEvent(actionType, BehaviorAssetType.SECURITY));
+        BehaviorEvent event = createEvent(actionType, BehaviorAssetType.SECURITY);
+        event.setActionAmount(200L);
+        event.setCurrentCash(500L);
+        event.setCurrentStockPrincipal(400L);
+        event.setCurrentDeposit(100L);
+        event.setQuantity(2);
+        if (actionType == BehaviorActionType.SELL) {
+            event.setCurrentSecurityQuantity(8);
+        }
+        context.setCurrentEvent(event);
         return context;
     }
 

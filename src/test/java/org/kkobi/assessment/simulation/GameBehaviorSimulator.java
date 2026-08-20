@@ -48,6 +48,58 @@ public class GameBehaviorSimulator {
     private static final int CASH_BUFFER_MAINTENANCE_TICKS = 3;
     private static final ScoreDelta CASH_BUFFER_MAINTENANCE_SCORE =
             ScoreDelta.createScoreDelta(0, 5, 0);
+    private static final BigDecimal RISK_BUDGET_STOCK_MINIMUM_RATIO =
+            BigDecimal.valueOf(50);
+    private static final BigDecimal RISK_BUDGET_STOCK_MAXIMUM_RATIO =
+            BigDecimal.valueOf(70);
+    private static final BigDecimal RISK_BUDGET_CASH_MAXIMUM_RATIO =
+            BigDecimal.valueOf(40);
+    private static final BigDecimal PASSIVE_HIGH_RISK_STOCK_MINIMUM_RATIO =
+            BigDecimal.valueOf(70);
+    private static final BigDecimal PASSIVE_HIGH_RISK_CASH_MAXIMUM_RATIO =
+            BigDecimal.valueOf(20);
+    private static final int CANDIDATE_MAINTENANCE_TICKS = 3;
+    private static final int HIGH_STOCK_INACTIVITY_TICKS = 5;
+    private static final BigDecimal BULL_EXPOSURE_RETENTION_RATIO =
+            BigDecimal.valueOf(80);
+    private static final BigDecimal REFINED_NO_CHASE_STOCK_MINIMUM_RATIO =
+            BigDecimal.valueOf(60);
+    private static final BigDecimal REFINED_NO_CHASE_LIQUID_ASSET_MAXIMUM_RATIO =
+            BigDecimal.valueOf(20);
+    private static final BigDecimal LHH_LIQUID_ASSET_MINIMUM_RATIO =
+            BigDecimal.valueOf(60);
+    private static final BigDecimal LHH_STOCK_MAXIMUM_RATIO =
+            BigDecimal.valueOf(40);
+    private static final BigDecimal TARGETED_LHH_LIQUID_ASSET_MINIMUM_RATIO =
+            BigDecimal.valueOf(70);
+    private static final BigDecimal TARGETED_LHH_STOCK_MAXIMUM_RATIO =
+            BigDecimal.valueOf(30);
+    private static final int OPPORTUNITY_REALIZATION_TICKS = 10;
+    private static final ScoreDelta RISK_BUDGET_MAINTENANCE_SCORE =
+            ScoreDelta.createScoreDelta(5, 5, -5);
+    private static final ScoreDelta PASSIVE_HIGH_RISK_HOLDING_SCORE =
+            ScoreDelta.createScoreDelta(5, -5, -5);
+    private static final ScoreDelta LIQUIDITY_PRESERVING_OPPORTUNITY_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 5);
+    private static final ScoreDelta RISK_EXPOSURE_NO_CHASE_SCORE =
+            ScoreDelta.createScoreDelta(5, 0, -5);
+    private static final ScoreDelta HIGH_STOCK_LOW_CASH_INACTIVITY_SCORE =
+            ScoreDelta.createScoreDelta(5, -5, -5);
+    private static final ScoreDelta LHH_LIQUIDITY_OPPORTUNITY_SCORE =
+            ScoreDelta.createScoreDelta(-5, 5, 5);
+    private static final ScoreDelta HHL_COMPOSITE_SCORE =
+            ScoreDelta.createScoreDelta(5, 5, -5);
+    private static final ScoreDelta HLL_CAPPED_NO_CHASE_SCORE =
+            ScoreDelta.createScoreDelta(5, -5, -5);
+    private static final ScoreDelta LHH_COMPLETED_OPPORTUNITY_SCORE =
+            ScoreDelta.createScoreDelta(0, 0, 5);
+    private static final ScoreDelta NORMAL_PARTIAL_SELL_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 0);
+    private static final ScoreDelta NORMAL_PLANNED_PROFIT_SELL_SCORE =
+            ScoreDelta.createScoreDelta(0, 5, 5);
+    private static final ScoreDelta NORMAL_RISK_REDUCTION_SELL_SCORE =
+            ScoreDelta.createScoreDelta(-5, 5, 0);
+    private static final int CANDIDATE_RULE_P95 = 4;
     private static final int CRASH_HOLDING_P95 = 4;
     private static final int NORMAL_PLANNED_BUY_P95 = 9;
     private static final int CASH_BUFFER_MAINTENANCE_P95 = 4;
@@ -382,6 +434,126 @@ public class GameBehaviorSimulator {
                                 generationResult.getActions()
                         )
                         : 0;
+        int riskBudgetMaintenanceCount =
+                ruleEvaluationCondition.appliesRiskBudgetMaintenanceRule()
+                        ? calculateRiskBudgetMaintenanceEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                generationResult.getActions()
+                        )
+                        : 0;
+        int passiveHighRiskHoldingCount =
+                ruleEvaluationCondition.appliesPassiveHighRiskHoldingRule()
+                        ? calculatePassiveHighRiskHoldingEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                generationResult.getActions()
+                        )
+                        : 0;
+        int liquidityPreservingOpportunityCount =
+                ruleEvaluationCondition.appliesLiquidityPreservingOpportunityRule()
+                        ? calculateLiquidityPreservingOpportunityCount(
+                                behaviorContexts,
+                                analysisResults
+                        )
+                        : 0;
+        int riskExposureNoChaseCount =
+                ruleEvaluationCondition.appliesRiskExposureNoChaseRule()
+                        ? calculateRiskExposureNoChaseEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                initialStockQuantity,
+                                generationResult.getActions()
+                        )
+                        : 0;
+        int highStockLowCashInactivityCount =
+                ruleEvaluationCondition.appliesHighStockLowCashInactivityRule()
+                        ? calculateHighStockLowCashInactivityEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                generationResult.getActions()
+                        )
+                        : 0;
+        Set<Integer> lhhLiquidityOpportunityTicks =
+                ruleEvaluationCondition.appliesLhhLiquidityOpportunityRule()
+                        ? calculateLhhLiquidityOpportunityTicks(
+                                behaviorContexts,
+                                analysisResults
+                        )
+                        : Set.of();
+        int refinedRiskExposureNoChaseCount =
+                ruleEvaluationCondition.appliesRefinedRiskExposureNoChaseRule()
+                        ? calculateRiskExposureNoChaseEpisodeCount(
+                                scenario,
+                                initialCash,
+                                initialStockPrincipal,
+                                initialDeposit,
+                                initialStockQuantity,
+                                generationResult.getActions(),
+                                true,
+                                ruleEvaluationCondition.appliesMutuallyExclusiveCandidateRules()
+                                        ? lhhLiquidityOpportunityTicks
+                                        : Set.of()
+                        )
+                        : 0;
+        int hhlCompositeCount = ruleEvaluationCondition.appliesHhlCompositeRule()
+                ? calculateHhlCompositeEpisodeCount(
+                        scenario,
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit,
+                        initialStockQuantity,
+                        generationResult.getActions()
+                )
+                : 0;
+        int hllCappedNoChaseCount = ruleEvaluationCondition.appliesHllCappedNoChaseRule()
+                ? Math.min(1, calculateRiskExposureNoChaseEpisodeCount(
+                        scenario,
+                        initialCash,
+                        initialStockPrincipal,
+                        initialDeposit,
+                        initialStockQuantity,
+                        generationResult.getActions(),
+                        true,
+                        Set.of()
+                ))
+                : 0;
+        int lhhCompletedOpportunityCount =
+                ruleEvaluationCondition.appliesLhhCompletedOpportunityRule()
+                        ? calculateLhhCompletedOpportunityCount(
+                                behaviorContexts,
+                                analysisResults
+                        )
+                        : 0;
+        int normalPartialSellCount = ruleEvaluationCondition.appliesNormalPartialSellRule()
+                ? calculateNormalPartialSellCount(
+                        behaviorContexts,
+                        analysisResults,
+                        ruleEvaluationCondition.requiresNormalPartialSellStockLimit(),
+                        ruleEvaluationCondition.requiresNormalPartialSellCashBand(),
+                        ruleEvaluationCondition.requiresNormalPartialSellCashRetention()
+                )
+                : 0;
+        if (ruleEvaluationCondition.excludesNormalPartialSellForHllNoChase()
+                && hllCappedNoChaseCount > 0) {
+            normalPartialSellCount = 0;
+        }
+        int normalPlannedProfitSellCount =
+                ruleEvaluationCondition.appliesNormalPlannedProfitSellRule()
+                        ? calculateNormalPlannedProfitSellCount(behaviorContexts)
+                        : 0;
+        int normalRiskReductionSellCount =
+                ruleEvaluationCondition.appliesNormalRiskReductionSellRule()
+                        ? calculateNormalRiskReductionSellCount(behaviorContexts)
+                        : 0;
         List<ScoreDelta> scoreDeltas;
         if (ruleEvaluationCondition.appliesLogDiminishingRuleGroupScore()) {
             scoreDeltas = calculateLogDiminishingRuleGroupScores(
@@ -434,6 +606,97 @@ public class GameBehaviorSimulator {
                         cashBufferMaintenanceCount
                 );
             }
+        }
+        if (ruleEvaluationCondition.appliesRiskBudgetMaintenanceRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    RISK_BUDGET_MAINTENANCE_SCORE,
+                    riskBudgetMaintenanceCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesPassiveHighRiskHoldingRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    PASSIVE_HIGH_RISK_HOLDING_SCORE,
+                    passiveHighRiskHoldingCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesLiquidityPreservingOpportunityRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    LIQUIDITY_PRESERVING_OPPORTUNITY_SCORE,
+                    liquidityPreservingOpportunityCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesRiskExposureNoChaseRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    RISK_EXPOSURE_NO_CHASE_SCORE,
+                    riskExposureNoChaseCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesHighStockLowCashInactivityRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    HIGH_STOCK_LOW_CASH_INACTIVITY_SCORE,
+                    highStockLowCashInactivityCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesRefinedRiskExposureNoChaseRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    RISK_EXPOSURE_NO_CHASE_SCORE,
+                    refinedRiskExposureNoChaseCount,
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesLhhLiquidityOpportunityRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    LHH_LIQUIDITY_OPPORTUNITY_SCORE,
+                    lhhLiquidityOpportunityTicks.size(),
+                    CANDIDATE_RULE_P95
+            ));
+        }
+        if (ruleEvaluationCondition.appliesHhlCompositeRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    HHL_COMPOSITE_SCORE,
+                    hhlCompositeCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesHllCappedNoChaseRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    HLL_CAPPED_NO_CHASE_SCORE,
+                    hllCappedNoChaseCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesLhhCompletedOpportunityRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    LHH_COMPLETED_OPPORTUNITY_SCORE,
+                    lhhCompletedOpportunityCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalPartialSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_PARTIAL_SELL_SCORE,
+                    normalPartialSellCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalPlannedProfitSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_PLANNED_PROFIT_SELL_SCORE,
+                    normalPlannedProfitSellCount,
+                    1
+            ));
+        }
+        if (ruleEvaluationCondition.appliesNormalRiskReductionSellRule()) {
+            scoreDeltas.add(calculateLogDiminishingCandidateScore(
+                    NORMAL_RISK_REDUCTION_SELL_SCORE,
+                    normalRiskReductionSellCount,
+                    1
+            ));
         }
         AssessmentScore assessmentScore = gameScoreCalculator.calculateGameScore(scoreDeltas);
         Map<BehaviorRuleCode, Integer> ruleApplicationCounts = calculateRuleApplicationCounts(
@@ -1274,6 +1537,193 @@ public class GameBehaviorSimulator {
         return appliedTicks.size();
     }
 
+    int calculateNormalPartialSellCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        return calculateNormalPartialSellCount(
+                behaviorContexts,
+                analysisResults,
+                false,
+                false,
+                false
+        );
+    }
+
+    int calculateNormalPartialSellCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults,
+            boolean requirePreSellStockLimit,
+            boolean requirePostSellCashBand,
+            boolean requireCashRetention) {
+        validateAlignedBehaviorData(behaviorContexts, analysisResults);
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorContext context = behaviorContexts.get(index);
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || containsRule(analysisResults.get(index), BehaviorRuleCode.LOSS_CUT_SELL)
+                    || event.getCurrentSecurityQuantity() == null
+                    || event.getCurrentSecurityQuantity() <= 0) {
+                continue;
+            }
+            BigDecimal sellRatio = calculateSecuritySellRatio(event);
+            if (sellRatio.compareTo(BigDecimal.valueOf(20)) < 0
+                    || sellRatio.compareTo(BigDecimal.valueOf(50)) >= 0) {
+                continue;
+            }
+            if (requirePreSellStockLimit
+                    && calculatePreSellStockRatio(event)
+                    .compareTo(BigDecimal.valueOf(70)) >= 0) {
+                continue;
+            }
+            BigDecimal postSellCashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (requirePostSellCashBand
+                    && (postSellCashRatio.compareTo(BigDecimal.valueOf(25)) < 0
+                    || postSellCashRatio.compareTo(BigDecimal.valueOf(50)) >= 0)) {
+                continue;
+            }
+            if (requireCashRetention
+                    && !retainsPostSellCash(behaviorContexts, index, event)) {
+                continue;
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+    int calculateNormalPlannedProfitSellCount(List<BehaviorContext> behaviorContexts) {
+        for (BehaviorContext context : behaviorContexts) {
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || event.getRealizedReturnRate() == null
+                    || event.getRealizedReturnRate().signum() <= 0) {
+                continue;
+            }
+            BigDecimal sellRatio = calculateSecuritySellRatio(event);
+            BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (sellRatio.compareTo(BigDecimal.valueOf(20)) >= 0
+                    && sellRatio.compareTo(BigDecimal.valueOf(50)) < 0
+                    && cashRatio.compareTo(BigDecimal.valueOf(25)) >= 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    int calculateNormalRiskReductionSellCount(List<BehaviorContext> behaviorContexts) {
+        for (BehaviorContext context : behaviorContexts) {
+            BehaviorEvent event = context.getCurrentEvent();
+            if (!isNormalSecuritySell(context, event)
+                    || event.getCurrentSecurityQuantity() == null
+                    || event.getCurrentSecurityQuantity() <= 0
+                    || calculateSecuritySellRatio(event)
+                    .compareTo(BigDecimal.valueOf(20)) < 0) {
+                continue;
+            }
+            BigDecimal preSellStockRatio = calculatePreSellStockRatio(event);
+            BigDecimal postSellCashRatio = assetRatioCalculator.calculateCashRatio(
+                    event.getCurrentCash(),
+                    event.getCurrentStockPrincipal(),
+                    event.getCurrentDeposit()
+            );
+            if (preSellStockRatio.compareTo(BigDecimal.valueOf(70)) >= 0
+                    && postSellCashRatio.compareTo(BigDecimal.valueOf(20)) >= 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    private BigDecimal calculatePreSellStockRatio(BehaviorEvent event) {
+        long preSellCash = event.getCurrentCash() - event.getActionAmount();
+        if (preSellCash < 0
+                || event.getCurrentSecurityQuantity() == null
+                || event.getCurrentSecurityQuantity() <= 0) {
+            return BigDecimal.valueOf(100);
+        }
+        long remainingQuantity = event.getCurrentSecurityQuantity();
+        long soldQuantity = event.getQuantity();
+        long soldPrincipal = BigDecimal.valueOf(event.getCurrentStockPrincipal())
+                .multiply(BigDecimal.valueOf(soldQuantity))
+                .divide(BigDecimal.valueOf(remainingQuantity), 0, RoundingMode.HALF_UP)
+                .longValueExact();
+        long preSellStockPrincipal = Math.addExact(
+                event.getCurrentStockPrincipal(),
+                soldPrincipal
+        );
+        return calculateAssetRatio(
+                preSellStockPrincipal,
+                preSellCash,
+                preSellStockPrincipal,
+                event.getCurrentDeposit()
+        );
+    }
+
+    private boolean retainsPostSellCash(
+            List<BehaviorContext> behaviorContexts,
+            int sellIndex,
+            BehaviorEvent sellEvent) {
+        long cashAfterSell = sellEvent.getCurrentCash();
+        if (cashAfterSell <= 0) {
+            return false;
+        }
+        long minimumCash = cashAfterSell;
+        int lastTick = sellEvent.getGameTick() + 2;
+        for (int index = sellIndex + 1; index < behaviorContexts.size(); index++) {
+            BehaviorEvent event = behaviorContexts.get(index).getCurrentEvent();
+            if (event == null || event.getGameTick() == null) {
+                continue;
+            }
+            if (event.getGameTick() > lastTick) {
+                break;
+            }
+            minimumCash = Math.min(minimumCash, event.getCurrentCash());
+        }
+        return BigDecimal.valueOf(minimumCash)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(cashAfterSell), 4, RoundingMode.HALF_UP)
+                .compareTo(BigDecimal.valueOf(80)) >= 0;
+    }
+
+    private boolean isNormalSecuritySell(BehaviorContext context, BehaviorEvent event) {
+        return event != null
+                && event.getGameTick() != null
+                && event.getActionType() == BehaviorActionType.SELL
+                && event.getAssetType() == BehaviorAssetType.SECURITY
+                && event.getQuantity() != null
+                && event.getActionAmount() != null
+                && context.getMarketState() == MarketState.NORMAL;
+    }
+
+    private BigDecimal calculateSecuritySellRatio(BehaviorEvent event) {
+        long soldQuantity = event.getQuantity();
+        long preSellQuantity = Math.addExact(
+                soldQuantity,
+                event.getCurrentSecurityQuantity()
+        );
+        if (preSellQuantity <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(soldQuantity)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(preSellQuantity), 4, RoundingMode.HALF_UP);
+    }
+
+    private void validateAlignedBehaviorData(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+    }
+
     private boolean containsRule(
             BehaviorAnalysisResult analysisResult,
             BehaviorRuleCode ruleCode) {
@@ -1406,6 +1856,643 @@ public class GameBehaviorSimulator {
             }
         }
         return maintenanceEpisodeCount;
+    }
+
+    int calculateRiskBudgetMaintenanceEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int consecutiveTicks = 0;
+        int episodeCount = 0;
+        boolean episodeApplied = false;
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = groupActionsByTick(actions);
+
+        for (ScenarioTickDto scenarioTick : getDecisionTicks(scenario)) {
+            boolean securityTraded = false;
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                if (action.getAssetType() == BehaviorAssetType.SECURITY
+                        && (action.getActionType() == BehaviorActionType.BUY
+                        || action.getActionType() == BehaviorActionType.SELL)) {
+                    securityTraded = true;
+                }
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+            }
+            if (securityTraded) {
+                consecutiveTicks = 0;
+                episodeApplied = false;
+                continue;
+            }
+            BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            );
+            BigDecimal stockRatio = calculateAssetRatio(
+                    currentStockPrincipal,
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            );
+            boolean maintainsRiskBudget =
+                    stockRatio.compareTo(RISK_BUDGET_STOCK_MINIMUM_RATIO) >= 0
+                            && stockRatio.compareTo(RISK_BUDGET_STOCK_MAXIMUM_RATIO) < 0
+                            && cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0
+                            && cashRatio.compareTo(RISK_BUDGET_CASH_MAXIMUM_RATIO) < 0;
+            if (!maintainsRiskBudget) {
+                consecutiveTicks = 0;
+                episodeApplied = false;
+                continue;
+            }
+            consecutiveTicks++;
+            if (!episodeApplied && consecutiveTicks >= CANDIDATE_MAINTENANCE_TICKS) {
+                episodeCount++;
+                episodeApplied = true;
+            }
+        }
+        return episodeCount;
+    }
+
+    int calculatePassiveHighRiskHoldingEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int episodeCount = 0;
+        boolean crashEpisode = false;
+        boolean qualifiesAtStart = false;
+        boolean tradedDuringEpisode = false;
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = groupActionsByTick(actions);
+
+        for (ScenarioTickDto scenarioTick : getDecisionTicks(scenario)) {
+            MarketState marketState = marketStateCalculator.calculateMarketState(
+                    gamePriceRateCalculator.calculateTickPriceChangeRate(
+                            scenario,
+                            scenarioTick.getTick()
+                    ),
+                    null
+            );
+            if (marketState == MarketState.CRASH && !crashEpisode) {
+                crashEpisode = true;
+                qualifiesAtStart = hasHighRiskLowLiquidityAllocation(
+                        currentCash,
+                        currentStockPrincipal,
+                        currentDeposit
+                );
+                tradedDuringEpisode = false;
+            } else if (marketState != MarketState.CRASH && crashEpisode) {
+                if (qualifiesAtStart && !tradedDuringEpisode) {
+                    episodeCount++;
+                }
+                crashEpisode = false;
+            }
+
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                if (crashEpisode
+                        && action.getAssetType() == BehaviorAssetType.SECURITY
+                        && (action.getActionType() == BehaviorActionType.BUY
+                        || action.getActionType() == BehaviorActionType.SELL)) {
+                    tradedDuringEpisode = true;
+                }
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+            }
+        }
+        if (crashEpisode && qualifiesAtStart && !tradedDuringEpisode) {
+            episodeCount++;
+        }
+        return episodeCount;
+    }
+
+    int calculateLiquidityPreservingOpportunityCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+        Set<Integer> matchedSellTicks = new HashSet<>();
+        int opportunityCount = 0;
+        for (int buyIndex = 0; buyIndex < behaviorContexts.size(); buyIndex++) {
+            BehaviorContext buyContext = behaviorContexts.get(buyIndex);
+            BehaviorEvent buyEvent = buyContext.getCurrentEvent();
+            if (!isLiquidityPreservingPlannedBuy(
+                    buyContext,
+                    buyEvent,
+                    analysisResults.get(buyIndex)
+            )) {
+                continue;
+            }
+            int lastTick = buyEvent.getGameTick() + OPPORTUNITY_REALIZATION_TICKS;
+            for (int sellIndex = buyIndex + 1; sellIndex < behaviorContexts.size(); sellIndex++) {
+                BehaviorEvent sellEvent = behaviorContexts.get(sellIndex).getCurrentEvent();
+                if (sellEvent == null || sellEvent.getGameTick() == null) {
+                    continue;
+                }
+                if (sellEvent.getGameTick() > lastTick) {
+                    break;
+                }
+                if (isLiquidityPreservingProfitSell(sellEvent)
+                        && matchedSellTicks.add(sellEvent.getGameTick())) {
+                    opportunityCount++;
+                    break;
+                }
+            }
+        }
+        return opportunityCount;
+    }
+
+    int calculateRiskExposureNoChaseEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            int initialStockQuantity,
+            List<SimulatedGameAction> actions) {
+        return calculateRiskExposureNoChaseEpisodeCount(
+                scenario,
+                initialCash,
+                initialStockPrincipal,
+                initialDeposit,
+                initialStockQuantity,
+                actions,
+                false,
+                Set.of()
+        );
+    }
+
+    int calculateRiskExposureNoChaseEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            int initialStockQuantity,
+            List<SimulatedGameAction> actions,
+            boolean refinedAllocation,
+            Set<Integer> excludedOpportunityTicks) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int currentStockQuantity = initialStockQuantity;
+        int episodeStartQuantity = 0;
+        int episodeCount = 0;
+        boolean bullEpisode = false;
+        boolean qualifiesAtStart = false;
+        boolean boughtDuringEpisode = false;
+        boolean excludedByOpportunity = false;
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = groupActionsByTick(actions);
+
+        for (ScenarioTickDto scenarioTick : getDecisionTicks(scenario)) {
+            MarketState marketState = marketStateCalculator.calculateMarketState(
+                    gamePriceRateCalculator.calculateTickPriceChangeRate(
+                            scenario,
+                            scenarioTick.getTick()
+                    ),
+                    null
+            );
+            if (marketState == MarketState.BULL && !bullEpisode) {
+                bullEpisode = true;
+                qualifiesAtStart = refinedAllocation
+                        ? hasRefinedNoChaseAllocation(
+                                currentCash,
+                                currentStockPrincipal,
+                                currentDeposit
+                        )
+                        : calculateAssetRatio(
+                                currentStockPrincipal,
+                                currentCash,
+                                currentStockPrincipal,
+                                currentDeposit
+                        ).compareTo(RISK_BUDGET_STOCK_MINIMUM_RATIO) >= 0;
+                episodeStartQuantity = currentStockQuantity;
+                boughtDuringEpisode = false;
+                excludedByOpportunity = false;
+            } else if (marketState != MarketState.BULL && bullEpisode) {
+                if (qualifiesAtStart
+                        && !boughtDuringEpisode
+                        && !excludedByOpportunity
+                        && retainsBullExposure(episodeStartQuantity, currentStockQuantity)) {
+                    episodeCount++;
+                }
+                bullEpisode = false;
+            }
+
+            if (bullEpisode && excludedOpportunityTicks.contains(scenarioTick.getTick())) {
+                excludedByOpportunity = true;
+            }
+
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                if (bullEpisode
+                        && action.getAssetType() == BehaviorAssetType.SECURITY
+                        && action.getActionType() == BehaviorActionType.BUY) {
+                    boughtDuringEpisode = true;
+                }
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+                currentStockQuantity = action.getCurrentStockQuantity();
+            }
+        }
+        if (bullEpisode
+                && qualifiesAtStart
+                && !boughtDuringEpisode
+                && !excludedByOpportunity
+                && retainsBullExposure(episodeStartQuantity, currentStockQuantity)) {
+            episodeCount++;
+        }
+        return episodeCount;
+    }
+
+    Set<Integer> calculateLhhLiquidityOpportunityTicks(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+        Set<Integer> opportunityTicks = new HashSet<>();
+        for (int index = 0; index < behaviorContexts.size(); index++) {
+            BehaviorContext context = behaviorContexts.get(index);
+            BehaviorEvent event = context.getCurrentEvent();
+            if (event == null || event.getGameTick() == null) {
+                continue;
+            }
+            boolean plannedBuy = isLiquidityPreservingPlannedBuy(
+                    context,
+                    event,
+                    analysisResults.get(index)
+            );
+            boolean profitSell = isLiquidityPreservingProfitSell(event);
+            if ((plannedBuy || profitSell) && hasLhhLiquidityAllocation(event)) {
+                opportunityTicks.add(event.getGameTick());
+            }
+        }
+        return opportunityTicks;
+    }
+
+    int calculateHhlCompositeEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            int initialStockQuantity,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int currentStockQuantity = initialStockQuantity;
+        int consecutiveRiskBudgetTicks = 0;
+        int episodeStartQuantity = 0;
+        boolean riskBudgetEstablished = false;
+        boolean bullEpisode = false;
+        boolean qualifiesAtStart = false;
+        boolean boughtDuringEpisode = false;
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = groupActionsByTick(actions);
+
+        for (ScenarioTickDto scenarioTick : getDecisionTicks(scenario)) {
+            MarketState marketState = marketStateCalculator.calculateMarketState(
+                    gamePriceRateCalculator.calculateTickPriceChangeRate(
+                            scenario,
+                            scenarioTick.getTick()
+                    ),
+                    null
+            );
+            if (marketState == MarketState.BULL && !bullEpisode) {
+                bullEpisode = true;
+                qualifiesAtStart = riskBudgetEstablished && hasRiskBudgetAllocation(
+                        currentCash,
+                        currentStockPrincipal,
+                        currentDeposit
+                );
+                episodeStartQuantity = currentStockQuantity;
+                boughtDuringEpisode = false;
+            } else if (marketState != MarketState.BULL && bullEpisode) {
+                if (qualifiesAtStart
+                        && !boughtDuringEpisode
+                        && retainsBullExposure(episodeStartQuantity, currentStockQuantity)) {
+                    return 1;
+                }
+                bullEpisode = false;
+            }
+
+            boolean securityTraded = false;
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                if (action.getAssetType() == BehaviorAssetType.SECURITY
+                        && (action.getActionType() == BehaviorActionType.BUY
+                        || action.getActionType() == BehaviorActionType.SELL)) {
+                    securityTraded = true;
+                }
+                if (bullEpisode
+                        && action.getAssetType() == BehaviorAssetType.SECURITY
+                        && action.getActionType() == BehaviorActionType.BUY) {
+                    boughtDuringEpisode = true;
+                }
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+                currentStockQuantity = action.getCurrentStockQuantity();
+            }
+
+            if (securityTraded || !hasRiskBudgetAllocation(
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            )) {
+                consecutiveRiskBudgetTicks = 0;
+                riskBudgetEstablished = false;
+            } else {
+                consecutiveRiskBudgetTicks++;
+                riskBudgetEstablished =
+                        consecutiveRiskBudgetTicks >= CANDIDATE_MAINTENANCE_TICKS;
+            }
+        }
+        return bullEpisode
+                && qualifiesAtStart
+                && !boughtDuringEpisode
+                && retainsBullExposure(episodeStartQuantity, currentStockQuantity)
+                ? 1
+                : 0;
+    }
+
+    int calculateLhhCompletedOpportunityCount(
+            List<BehaviorContext> behaviorContexts,
+            List<BehaviorAnalysisResult> analysisResults) {
+        if (behaviorContexts.size() != analysisResults.size()) {
+            throw new IllegalArgumentException("행동 조건과 분석 결과의 개수가 일치해야 합니다.");
+        }
+        for (int buyIndex = 0; buyIndex < behaviorContexts.size(); buyIndex++) {
+            BehaviorContext buyContext = behaviorContexts.get(buyIndex);
+            BehaviorEvent buyEvent = buyContext.getCurrentEvent();
+            if (!isLiquidityPreservingPlannedBuy(
+                    buyContext,
+                    buyEvent,
+                    analysisResults.get(buyIndex)
+            ) || !hasTargetedLhhAllocation(buyEvent)) {
+                continue;
+            }
+            int lastTick = buyEvent.getGameTick() + OPPORTUNITY_REALIZATION_TICKS;
+            for (int sellIndex = buyIndex + 1; sellIndex < behaviorContexts.size(); sellIndex++) {
+                BehaviorEvent sellEvent = behaviorContexts.get(sellIndex).getCurrentEvent();
+                if (sellEvent == null || sellEvent.getGameTick() == null) {
+                    continue;
+                }
+                if (sellEvent.getGameTick() > lastTick) {
+                    break;
+                }
+                if (isLiquidityPreservingProfitSell(sellEvent)
+                        && hasTargetedLhhAllocation(sellEvent)) {
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
+    private boolean hasRiskBudgetAllocation(
+            long cash,
+            long stockPrincipal,
+            long deposit) {
+        BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        BigDecimal stockRatio = calculateAssetRatio(
+                stockPrincipal,
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        return stockRatio.compareTo(RISK_BUDGET_STOCK_MINIMUM_RATIO) >= 0
+                && stockRatio.compareTo(RISK_BUDGET_STOCK_MAXIMUM_RATIO) < 0
+                && cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0
+                && cashRatio.compareTo(RISK_BUDGET_CASH_MAXIMUM_RATIO) < 0;
+    }
+
+    private boolean hasTargetedLhhAllocation(BehaviorEvent event) {
+        long cash = event.getCurrentCash();
+        long stockPrincipal = event.getCurrentStockPrincipal();
+        long deposit = event.getCurrentDeposit();
+        BigDecimal liquidAssetRatio = calculateAssetRatio(
+                Math.addExact(cash, deposit),
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        BigDecimal stockRatio = calculateAssetRatio(
+                stockPrincipal,
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        return liquidAssetRatio.compareTo(TARGETED_LHH_LIQUID_ASSET_MINIMUM_RATIO) >= 0
+                && stockRatio.compareTo(TARGETED_LHH_STOCK_MAXIMUM_RATIO) <= 0;
+    }
+
+    private boolean hasRefinedNoChaseAllocation(
+            long cash,
+            long stockPrincipal,
+            long deposit) {
+        BigDecimal stockRatio = calculateAssetRatio(
+                stockPrincipal,
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        BigDecimal cashRatio = calculateAssetRatio(cash, cash, stockPrincipal, deposit);
+        BigDecimal depositRatio = calculateAssetRatio(deposit, cash, stockPrincipal, deposit);
+        return stockRatio.compareTo(REFINED_NO_CHASE_STOCK_MINIMUM_RATIO) >= 0
+                && cashRatio.compareTo(REFINED_NO_CHASE_LIQUID_ASSET_MAXIMUM_RATIO) < 0
+                && depositRatio.compareTo(REFINED_NO_CHASE_LIQUID_ASSET_MAXIMUM_RATIO) < 0;
+    }
+
+    private boolean hasLhhLiquidityAllocation(BehaviorEvent event) {
+        long cash = event.getCurrentCash();
+        long stockPrincipal = event.getCurrentStockPrincipal();
+        long deposit = event.getCurrentDeposit();
+        BigDecimal liquidAssetRatio = calculateAssetRatio(
+                Math.addExact(cash, deposit),
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        BigDecimal stockRatio = calculateAssetRatio(
+                stockPrincipal,
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        return liquidAssetRatio.compareTo(LHH_LIQUID_ASSET_MINIMUM_RATIO) >= 0
+                && stockRatio.compareTo(LHH_STOCK_MAXIMUM_RATIO) <= 0;
+    }
+
+    int calculateHighStockLowCashInactivityEpisodeCount(
+            ScenarioDto scenario,
+            long initialCash,
+            long initialStockPrincipal,
+            long initialDeposit,
+            List<SimulatedGameAction> actions) {
+        long currentCash = initialCash;
+        long currentStockPrincipal = initialStockPrincipal;
+        long currentDeposit = initialDeposit;
+        int consecutiveTicks = 0;
+        int episodeCount = 0;
+        boolean episodeApplied = false;
+        Map<Integer, List<SimulatedGameAction>> actionsByTick = groupActionsByTick(actions);
+
+        for (ScenarioTickDto scenarioTick : getDecisionTicks(scenario)) {
+            boolean securityTraded = false;
+            for (SimulatedGameAction action : actionsByTick.getOrDefault(
+                    scenarioTick.getTick(),
+                    List.of()
+            )) {
+                if (action.getAssetType() == BehaviorAssetType.SECURITY
+                        && (action.getActionType() == BehaviorActionType.BUY
+                        || action.getActionType() == BehaviorActionType.SELL)) {
+                    securityTraded = true;
+                }
+                currentCash = action.getCurrentCash();
+                currentStockPrincipal = action.getCurrentStockPrincipal();
+                currentDeposit = action.getCurrentDeposit();
+            }
+            if (securityTraded || !hasHighRiskLowLiquidityAllocation(
+                    currentCash,
+                    currentStockPrincipal,
+                    currentDeposit
+            )) {
+                consecutiveTicks = 0;
+                episodeApplied = false;
+                continue;
+            }
+            consecutiveTicks++;
+            if (!episodeApplied && consecutiveTicks >= HIGH_STOCK_INACTIVITY_TICKS) {
+                episodeCount++;
+                episodeApplied = true;
+            }
+        }
+        return episodeCount;
+    }
+
+    private boolean retainsBullExposure(int startQuantity, int endQuantity) {
+        if (startQuantity <= 0 || endQuantity <= 0) {
+            return false;
+        }
+        return BigDecimal.valueOf(endQuantity)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(startQuantity), 4, RoundingMode.HALF_UP)
+                .compareTo(BULL_EXPOSURE_RETENTION_RATIO) >= 0;
+    }
+
+    private boolean isLiquidityPreservingPlannedBuy(
+            BehaviorContext context,
+            BehaviorEvent event,
+            BehaviorAnalysisResult analysisResult) {
+        if (event == null
+                || event.getGameTick() == null
+                || event.getActionType() != BehaviorActionType.BUY
+                || event.getAssetType() != BehaviorAssetType.SECURITY
+                || context.getMarketState() != MarketState.NORMAL
+                || containsRule(analysisResult, BehaviorRuleCode.LOSS_AVERAGING_BUY)) {
+            return false;
+        }
+        BigDecimal buyRatio = calculateActionAmountRatio(event);
+        BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                event.getCurrentCash(),
+                event.getCurrentStockPrincipal(),
+                event.getCurrentDeposit()
+        );
+        return buyRatio.compareTo(NORMAL_BUY_MINIMUM_RATIO) >= 0
+                && buyRatio.compareTo(NORMAL_BUY_MAXIMUM_RATIO) < 0
+                && cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0;
+    }
+
+    private boolean isLiquidityPreservingProfitSell(BehaviorEvent event) {
+        if (event.getActionType() != BehaviorActionType.SELL
+                || event.getAssetType() != BehaviorAssetType.SECURITY
+                || event.getRealizedReturnRate() == null
+                || event.getRealizedReturnRate().signum() <= 0
+                || event.getCurrentSecurityQuantity() == null
+                || event.getCurrentSecurityQuantity() <= 0) {
+            return false;
+        }
+        BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                event.getCurrentCash(),
+                event.getCurrentStockPrincipal(),
+                event.getCurrentDeposit()
+        );
+        return cashRatio.compareTo(CASH_BUFFER_MINIMUM_RATIO) >= 0;
+    }
+
+    private boolean hasHighRiskLowLiquidityAllocation(
+            long cash,
+            long stockPrincipal,
+            long deposit) {
+        BigDecimal cashRatio = assetRatioCalculator.calculateCashRatio(
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        BigDecimal stockRatio = calculateAssetRatio(
+                stockPrincipal,
+                cash,
+                stockPrincipal,
+                deposit
+        );
+        return stockRatio.compareTo(PASSIVE_HIGH_RISK_STOCK_MINIMUM_RATIO) >= 0
+                && cashRatio.compareTo(PASSIVE_HIGH_RISK_CASH_MAXIMUM_RATIO) < 0;
+    }
+
+    private BigDecimal calculateAssetRatio(
+            long amount,
+            long cash,
+            long stockPrincipal,
+            long deposit) {
+        long totalPrincipal = Math.addExact(Math.addExact(cash, stockPrincipal), deposit);
+        if (amount <= 0 || totalPrincipal <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(amount)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(totalPrincipal), 4, RoundingMode.HALF_UP);
+    }
+
+    private Map<Integer, List<SimulatedGameAction>> groupActionsByTick(
+            List<SimulatedGameAction> actions) {
+        return actions.stream()
+                .filter(action -> action.getActionType() != BehaviorActionType.MATURITY)
+                .collect(java.util.stream.Collectors.groupingBy(
+                        SimulatedGameAction::getGameTick,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+    }
+
+    private List<ScenarioTickDto> getDecisionTicks(ScenarioDto scenario) {
+        return scenario.getTicks().stream()
+                .filter(tick -> tick.getTick() >= 0 && tick.getTick() < scenario.getTotalTicks())
+                .sorted(java.util.Comparator.comparingInt(ScenarioTickDto::getTick))
+                .toList();
     }
 
     private int countActions(

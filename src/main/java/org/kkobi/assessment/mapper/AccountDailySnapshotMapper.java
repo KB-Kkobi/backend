@@ -12,6 +12,11 @@ public interface AccountDailySnapshotMapper {
             @Param("snapshotDate") LocalDate snapshotDate
     );
 
+    List<AccountDailySnapshotDto> getUnsettledDailyAssessmentTargets(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
     int saveAccountDailySnapshot(AccountDailySnapshotDto accountDailySnapshot);
 
     List<AccountDailySnapshotDto> getAccountDailySnapshots(
@@ -25,6 +30,12 @@ public interface AccountDailySnapshotMapper {
     int getCompletedSecurityOrderCount(
             @Param("accountId") Long accountId,
             @Param("assessmentDate") LocalDate assessmentDate
+    );
+
+    int getCompletedSecurityOrderCountBetween(
+            @Param("accountId") Long accountId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
     );
 
 }
