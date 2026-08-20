@@ -94,6 +94,8 @@ class QuizServiceTest {
         assertTrue(response.isHasQuizToday());
         assertFalse(response.isHasParticipatedToday());
         assertFalse(response.isCanParticipate());
+        assertEquals(null, response.getAnswer());
+        assertEquals(null, response.getExplanation());
     }
 
     @Test
@@ -106,18 +108,22 @@ class QuizServiceTest {
         assertTrue(response.isHasQuizToday());
         assertFalse(response.isHasParticipatedToday());
         assertTrue(response.isCanParticipate());
+        assertEquals(null, response.getAnswer());
+        assertEquals(null, response.getExplanation());
     }
 
     @Test
-    @DisplayName("오늘 이미 참여했다면 참여 불가능하다")
+    @DisplayName("오늘 이미 참여했다면 참여 불가능하며 정답과 해설이 내려온다")
     void getTodayQuiz_alreadyParticipated_cannotParticipateAgain() {
         Long userId = createUserAndAccount(1_000_000L);
-        quizService.submitAnswer(userId, answerOf("O"), QUIZ_DATE, NOW);
+        quizService.submitAnswer(userId, answerOf("X"), QUIZ_DATE, NOW);
 
         TodayQuizResponseDto response = quizService.getTodayQuiz(userId, QUIZ_DATE);
 
         assertTrue(response.isHasParticipatedToday());
         assertFalse(response.isCanParticipate());
+        assertEquals("O", response.getAnswer());
+        assertFalse(response.getExplanation() == null || response.getExplanation().isBlank());
     }
 
     @Test
