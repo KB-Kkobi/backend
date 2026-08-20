@@ -270,6 +270,7 @@
             p.fin_prdt_nm AS productName,
             pt.amount,
             pt.status,
+            hp.applied_rate AS appliedRate,
             COALESCE(pt.terminated_at, pt.created_at) AS processedAt
         FROM holding_products hp
                  INNER JOIN accounts a

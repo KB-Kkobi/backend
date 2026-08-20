@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.securities.mapper.SecurityDailyPriceMapper">
+
+    <select id="findAllWithKisCode" resultType="org.kkobi.securities.dto.SecurityKisRow">
+        SELECT security_id, kis_code
+        FROM securities
+        WHERE kis_code IS NOT NULL
+    </select>
+
+    <insert id="upsertBatch">
+        INSERT INTO security_daily_prices
+            (security_id, trade_date, open_price, close_price, high_price, low_price, volume)
+        VALUES
+        <foreach collection="rows" item="r" separator=",">
+            (#{r.securityId}, #{r.tradeDate}, #{r.openPrice}, #{r.closePrice},
+             #{r.highPrice}, #{r.lowPrice}, #{r.volume})
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            open_price  = VALUES(open_price),
+            close_price = VALUES(close_price),
+            high_price  = VALUES(high_price),
+            low_price   = VALUES(low_price),
+            volume      = VALUES(volume)
+    </insert>
+
+</mapper>

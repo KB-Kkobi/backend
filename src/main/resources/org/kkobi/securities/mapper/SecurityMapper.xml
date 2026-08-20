@@ -43,11 +43,13 @@
             SELECT
                 security_id,
                 MAX(CASE WHEN rn = 1 THEN volume      END) AS latest_volume,
+                MAX(CASE WHEN rn = 1 THEN open_price  END) AS latest_open,
                 MAX(CASE WHEN rn = 1 THEN close_price END) AS latest_close,
                 MAX(CASE WHEN rn = 2 THEN close_price END) AS prev_close
             FROM (
                 SELECT
                     security_id,
+                    open_price,
                     close_price,
                     volume,
                     ROW_NUMBER() OVER (PARTITION BY security_id ORDER BY trade_date DESC) AS rn

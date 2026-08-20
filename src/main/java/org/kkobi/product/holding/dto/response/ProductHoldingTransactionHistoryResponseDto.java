@@ -17,6 +17,7 @@ public class ProductHoldingTransactionHistoryResponseDto {
     private String productName;
     private BigDecimal amount;
     private String status;
+    private BigDecimal appliedRate;
 
     @JsonFormat(
             shape = JsonFormat.Shape.STRING,
