@@ -13,4 +13,6 @@ public class TodayQuizResponseDto {
     private final boolean hasQuizToday;
     private final boolean hasParticipatedToday;
     private final boolean canParticipate;
+    private final String answer;
+    private final String explanation;
 }
