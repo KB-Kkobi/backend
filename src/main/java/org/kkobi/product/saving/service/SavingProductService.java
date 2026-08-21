@@ -220,6 +220,7 @@ public class SavingProductService {
                         SAVING_PRODUCT_TYPE,
                         keyword,
                         savingTerms,
+                        request.getPreferredSavingTerm(),
                         reserveTypes,
                         preferentailConditions,
                         sortCode,

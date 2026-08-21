@@ -216,6 +216,7 @@ public class DepositProductService {
                         DEPOSIT_PRODUCT_TYPE,
                         keyword,
                         savingTerms,
+                        request.getPreferredSavingTerm(),
                         null,
                         preferentialConditions,
                         sortCode,

@@ -18,6 +18,9 @@ public class ProductListRequestDto {
     // 복수 가입 기간
     private List<Integer> savingTerms;
 
+    // 목록 상단에 먼저 노출할 가입 기간
+    private Integer preferredSavingTerm;
+
     // 우대조건 유형
     private List<PreferentialConditionType> preferentialConditions;
 

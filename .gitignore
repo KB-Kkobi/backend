@@ -56,3 +56,6 @@ postman/globals/workspace.globals.yaml
 
 # claude
 .claude
+
+# Local-only development data and helper scripts
+.local/

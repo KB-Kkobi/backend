@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.kkobi.goal.mapper.FinancialGoalMapper">
+
+    <select id="findByUserId"
+            resultType="org.kkobi.goal.domain.FinancialGoal">
+        SELECT
+            financial_goal_id,
+            user_id,
+            goal_type,
+            custom_goal_name,
+            target_amount,
+            current_amount,
+            target_months,
+            created_at,
+            updated_at
+        FROM financial_goals
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO financial_goals (
+            user_id,
+            goal_type,
+            custom_goal_name,
+            target_amount,
+            current_amount,
+            target_months
+        )
+        VALUES (
+            #{userId},
+            #{goalType},
+            #{customGoalName},
+            #{targetAmount},
+            #{currentAmount},
+            #{targetMonths}
+        )
+        ON DUPLICATE KEY UPDATE
+            goal_type = VALUES(goal_type),
+            custom_goal_name = VALUES(custom_goal_name),
+            target_amount = VALUES(target_amount),
+            current_amount = VALUES(current_amount),
+            target_months = VALUES(target_months),
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <delete id="deleteByUserId">
+        DELETE FROM financial_goals
+        WHERE user_id = #{userId}
+    </delete>
+</mapper>

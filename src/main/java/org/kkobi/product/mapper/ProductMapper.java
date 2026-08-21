@@ -67,6 +67,7 @@ public interface ProductMapper {
             @Param("productType") String productType,
             @Param("keyword") String keyword,
             @Param("savingTerms") List<Integer> savingTerms,
+            @Param("preferredSavingTerm") Integer preferredSavingTerm,
             @Param("reserveTypes") List<String> reserveTypes,
             @Param("preferentialConditions")
             List<PreferentialConditionType> preferentialConditions,
@@ -83,6 +84,11 @@ public interface ProductMapper {
             @Param("reserveTypes") List<String> reserveTypes,
             @Param("preferentialConditions")
             List<PreferentialConditionType> preferentialConditions
+    );
+
+    // 상품 유형별 실제 가입 기간 목록 조회
+    List<Integer> getAvailableSavingTerms(
+            @Param("productType") String productType
     );
 
     // 상품에 저장된 기존 우대조건을 삭제

@@ -260,6 +260,9 @@
         ROW_NUMBER() OVER (
         PARTITION BY p.product_id
         ORDER BY
+        <if test="preferredSavingTerm != null">
+            CASE WHEN po.save_trm = #{preferredSavingTerm} THEN 0 ELSE 1 END ASC,
+        </if>
         COALESCE(po.intr_rate2, -1) DESC,
         COALESCE(po.intr_rate, -1) DESC,
         po.product_option_id ASC
@@ -318,10 +321,13 @@
         FROM ranked_options
         WHERE option_rank = 1
 
+        ORDER BY
+        <if test="preferredSavingTerm != null">
+            CASE WHEN saving_term = #{preferredSavingTerm} THEN 0 ELSE 1 END ASC,
+        </if>
         <choose>
             <!-- 최고우대금리 오름차순 -->
             <when test="sortCode == 2">
-                ORDER BY
                 maximum_interest_rate IS NULL ASC,
                 maximum_interest_rate ASC,
                 product_id ASC
@@ -329,7 +335,6 @@
 
             <!-- 기본금리 내림차순 -->
             <when test="sortCode == 3">
-                ORDER BY
                 interest_rate IS NULL ASC,
                 interest_rate DESC,
                 product_id ASC
@@ -337,7 +342,6 @@
 
             <!-- 기본금리 오름차순 -->
             <when test="sortCode == 4">
-                ORDER BY
                 interest_rate IS NULL ASC,
                 interest_rate ASC,
                 product_id ASC
@@ -345,21 +349,18 @@
 
             <!-- 상품명 오름차순 -->
             <when test="sortCode == 5">
-                ORDER BY
                 product_name ASC,
                 product_id ASC
             </when>
 
             <!-- 금융회사명 오름차순 -->
             <when test="sortCode == 6">
-                ORDER BY
                 financial_company_name ASC,
                 product_id ASC
             </when>
 
             <!-- 최고우대금리 내림차순 -->
             <otherwise>
-                ORDER BY
                 maximum_interest_rate IS NULL ASC,
                 maximum_interest_rate DESC,
                 product_id ASC
@@ -426,6 +427,17 @@
         SELECT COUNT(*)
         FROM ranked_options
         WHERE option_rank = 1
+    </select>
+
+    <!-- 저장된 상품 옵션에서 상품 유형별 실제 가입 기간을 조회 -->
+    <select id="getAvailableSavingTerms" resultType="java.lang.Integer">
+        SELECT DISTINCT po.save_trm
+        FROM product_options po
+        INNER JOIN products p
+            ON p.product_id = po.product_id
+        WHERE p.product_type = #{productType}
+          AND po.save_trm > 0
+        ORDER BY po.save_trm ASC
     </select>
 
     <!-- 상품의 모든 옵션에 저장된 기존 우대금리 조건 삭제 -->
