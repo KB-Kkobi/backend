@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -29,6 +30,14 @@ public class CommonExceptionAdvice {
         FieldError fieldError = ex.getBindingResult().getFieldError();
         String message = fieldError == null ? "요청 값을 확인해 주세요." : fieldError.getDefaultMessage();
         return ResponseEntity.badRequest().body(new MessageResponse(message));
+    }
+
+    // JSON 본문의 enum·숫자 타입 변환 실패를 400 응답으로 반환
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseBody
+    public ResponseEntity<MessageResponse> handleUnreadableMessage() {
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("요청 값의 형식을 확인해 주세요."));
     }
 
     @ExceptionHandler(UserNotFoundException.class)
