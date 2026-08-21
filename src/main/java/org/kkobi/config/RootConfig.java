@@ -45,6 +45,8 @@ import javax.sql.DataSource;
         "org.kkobi.trade.scheduler",
         "org.kkobi.leaderboard.service",
         "org.kkobi.quiz.service",
+        "org.kkobi.users.service",
+        "org.kkobi.securities.scheduler",
         "org.kkobi.notification.service",
         "org.kkobi.notification.listener"
 })
@@ -58,6 +60,7 @@ import javax.sql.DataSource;
         "org.kkobi.trade.mapper",
         "org.kkobi.leaderboard.mapper",
         "org.kkobi.quiz.mapper",
+        "org.kkobi.users.mapper"
         "org.kkobi.notification.mapper",
 })
 @Import(RedisConfig.class)
