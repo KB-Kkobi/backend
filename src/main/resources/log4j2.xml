@@ -21,7 +21,8 @@
         <Logger name="jdbc" level="WARN" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
-        <Logger name="jdbc.sqlonly" level="INFO" additivity="fasle">
+        <!-- 모든 실행 SQL을 매번 로깅해 고부하 시 CPU 오버헤드를 유발하므로 jdbc와 동일하게 WARN으로 낮춘다 -->
+        <Logger name="jdbc.sqlonly" level="WARN" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
     </Loggers>
