@@ -109,6 +109,29 @@ services:
         condition: service_completed_successfully
 
 
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: kkobi-datadog-agent
+    restart: unless-stopped
+    pid: host
+    # 인스턴스 메모리가 매우 빠듯해서(여유 <150MB) 컨테이너 자체에 상한을 걸어둔다.
+    # 한도를 넘으면 이 컨테이너만 재시작되고, 호스트 전체 OOM으로 다른 서비스가 죽는 걸 막는다.
+    mem_limit: 150m
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: ap1.datadoghq.com
+      DD_HOSTNAME: kkobi-ec2
+      # 리소스 여유가 없어 우선 컨테이너/호스트 지표만 수집하고, 무거운 기능은 꺼둔다.
+      DD_APM_ENABLED: "false"
+      DD_LOGS_ENABLED: "false"
+      DD_PROCESS_AGENT_ENABLED: "false"
+      DD_ENABLE_METADATA_COLLECTION: "false"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+
+
 volumes:
   mysql-data:
   redis-data:
