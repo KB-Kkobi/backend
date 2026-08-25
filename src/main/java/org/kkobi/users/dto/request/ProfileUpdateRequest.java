@@ -2,6 +2,7 @@ package org.kkobi.users.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+import org.kkobi.users.enums.ProfileImageType;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -20,4 +21,6 @@ public class ProfileUpdateRequest {
     @Past(message = "생년월일은 과거 날짜여야 합니다.")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
     private LocalDate birthDate;
+
+    private ProfileImageType profileImage;
 }

@@ -7,6 +7,7 @@ import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.dto.request.ProfileUpdateRequest;
 import org.kkobi.users.dto.request.SignupRequest;
 import org.kkobi.users.dto.response.UserInfoResponse;
+import org.kkobi.users.enums.ProfileImageType;
 import org.kkobi.users.mapper.UserMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -63,11 +64,15 @@ public class UserServiceImpl implements UserService {
     public UserInfoResponse updateProfile(String email, ProfileUpdateRequest request) {
         UserVO user = findUserByEmail(email);
         validateNicknameAvailable(request.getNickname(), user.getUserId());
+        ProfileImageType profileImage = request.getProfileImage() == null
+                ? currentProfileImage(user)
+                : request.getProfileImage();
 
         int updatedRows = userMapper.updateProfile(
                 user.getUserId(),
                 request.getNickname(),
-                request.getBirthDate()
+                request.getBirthDate(),
+                profileImage
         );
 
         if (updatedRows != 1) {
@@ -76,7 +81,14 @@ public class UserServiceImpl implements UserService {
 
         user.setNickname(request.getNickname());
         user.setBirthDate(request.getBirthDate());
+        user.setProfileImage(profileImage);
         return toUserInfoResponse(user);
+    }
+
+    private ProfileImageType currentProfileImage(UserVO user) {
+        return user.getProfileImage() == null
+                ? ProfileImageType.SLEEP_KKOBI
+                : user.getProfileImage();
     }
 
     private UserVO findUserByEmail(String email) {
