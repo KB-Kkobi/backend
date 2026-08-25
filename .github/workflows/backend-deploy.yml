@@ -109,6 +109,7 @@ jobs:
               "mkdir -p /tmp/kkobi-migration",
               "printf '%s' '$MIGRATION_BASE64' | base64 -d > /tmp/kkobi-migration/migration.tar.gz",
               "tar -xzf /tmp/kkobi-migration/migration.tar.gz -C /tmp/kkobi-migration",
+              "rm -rf /opt/kkobi/migration",
               "mkdir -p /opt/kkobi/migration",
               "cp -f /tmp/kkobi-migration/migration/*.sql /opt/kkobi/migration/",
               "rm -rf /tmp/kkobi-migration",
