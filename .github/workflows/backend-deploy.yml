@@ -6,6 +6,12 @@ on:
       - develop
 
   workflow_dispatch:
+    inputs:
+      run_flyway_repair:
+        description: "flyway repair를 먼저 실행할지 여부 (평소엔 false로 두세요. repair는 실제 SQL을 재실행하지 않고 체크섬/이력만 맞추므로, 이미 적용된 마이그레이션 파일을 수정한 뒤 그 변경을 '반영된 것으로 간주'하고 싶을 때만 사람이 의도적으로 켜야 합니다)"
+        required: false
+        default: "false"
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -78,6 +84,7 @@ jobs:
         env:
           EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
+          RUN_FLYWAY_REPAIR: ${{ github.event.inputs.run_flyway_repair || 'false' }}
         run: |
           set -euo pipefail
 
@@ -110,12 +117,11 @@ jobs:
 
               "echo 'Pulling deployment images...'",
               "docker compose -f compose.ec2.yaml pull flyway backend",
-          
-              "echo 'Repairing Flyway schema history...'",
-              "docker compose -f compose.ec2.yaml run --rm flyway-repair",
+
+              "if [ '$RUN_FLYWAY_REPAIR' = 'true' ]; then echo 'Repairing Flyway schema history (manually requested)...'; docker compose -f compose.ec2.yaml run --rm flyway-repair; else echo 'Skipping flyway repair (default). repair only realigns checksums/history without re-running SQL, so it must never run unconditionally before migrate - trigger it manually via workflow_dispatch when truly needed.'; fi",
 
               "echo 'Running Flyway migrations...'",
-          
+
               "docker compose -f compose.ec2.yaml run --rm flyway",
 
               "echo 'Deploying backend...'",
