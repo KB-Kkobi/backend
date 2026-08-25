@@ -2,6 +2,7 @@ package org.kkobi.users.mapper;
 
 import org.apache.ibatis.annotations.Param;
 import org.kkobi.users.domain.UserVO;
+import org.kkobi.users.enums.ProfileImageType;
 
 import java.time.LocalDate;
 
@@ -30,7 +31,8 @@ public interface UserMapper {
 
     int updateProfile(@Param("userId") Long userId,
                       @Param("nickname") String nickname,
-                      @Param("birthDate") LocalDate birthDate);
+                      @Param("birthDate") LocalDate birthDate,
+                      @Param("profileImage") ProfileImageType profileImage);
 
     // 사용자 비밀번호를 수정
     int updatePassword(UserVO user);

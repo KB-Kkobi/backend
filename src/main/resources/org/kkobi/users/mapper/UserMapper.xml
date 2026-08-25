@@ -9,6 +9,7 @@
         <result property="password" column="password" />
         <result property="nickname" column="nickname" />
         <result property="birthDate" column="birth_date" />
+        <result property="profileImage" column="profile_image" />
         <result property="postalCode" column="postal_code" />
         <result property="addressLine1" column="address_line1" />
         <result property="addressLine2" column="address_line2" />
@@ -46,6 +47,7 @@
                password,
                nickname,
                birth_date,
+               profile_image,
                postal_code,
                address_line1,
                address_line2,
@@ -63,6 +65,7 @@
                password,
                nickname,
                birth_date,
+               profile_image,
                postal_code,
                address_line1,
                address_line2,
@@ -80,6 +83,7 @@
                password,
                nickname,
                birth_date,
+               profile_image,
                postal_code,
                address_line1,
                address_line2,
@@ -126,6 +130,7 @@
         set
             nickname = #{nickname},
             birth_date = #{birthDate},
+            profile_image = #{profileImage},
             updated_at = current_timestamp
         where user_id = #{userId}
     </update>

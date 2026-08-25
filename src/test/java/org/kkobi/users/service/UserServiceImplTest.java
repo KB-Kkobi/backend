@@ -5,6 +5,7 @@ import org.kkobi.exception.DuplicateUserException;
 import org.kkobi.users.domain.UserVO;
 import org.kkobi.users.dto.request.ProfileUpdateRequest;
 import org.kkobi.users.dto.response.UserInfoResponse;
+import org.kkobi.users.enums.ProfileImageType;
 import org.kkobi.users.mapper.UserMapper;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ class UserServiceImplTest {
         assertEquals("member@example.com", response.getEmail());
         assertEquals("member", response.getNickname());
         assertEquals(LocalDate.of(2000, 1, 1), response.getBirthDate());
+        assertEquals(ProfileImageType.SLEEP_KKOBI, response.getProfileImage());
     }
 
     @Test
@@ -37,11 +39,27 @@ class UserServiceImplTest {
         ProfileUpdateRequest request = new ProfileUpdateRequest();
         request.setNickname("updated");
         request.setBirthDate(LocalDate.of(1999, 12, 31));
+        request.setProfileImage(ProfileImageType.PROFILE_KKOBI_5);
 
         UserInfoResponse response = service.updateProfile("member@example.com", request);
 
         assertEquals("updated", response.getNickname());
         assertEquals(LocalDate.of(1999, 12, 31), response.getBirthDate());
+        assertEquals(ProfileImageType.PROFILE_KKOBI_5, response.getProfileImage());
+    }
+
+    @Test
+    void updateProfileUsesDefaultImageWhenLegacyRequestOmitsIt() {
+        StubUserMapper mapper = new StubUserMapper();
+        mapper.add(user(1L, "member@example.com", "member", LocalDate.of(2000, 1, 1)));
+        UserService service = new UserServiceImpl(mapper, null);
+        ProfileUpdateRequest request = new ProfileUpdateRequest();
+        request.setNickname("updated");
+        request.setBirthDate(LocalDate.of(1999, 12, 31));
+
+        UserInfoResponse response = service.updateProfile("member@example.com", request);
+
+        assertEquals(ProfileImageType.SLEEP_KKOBI, response.getProfileImage());
     }
 
     @Test
@@ -90,7 +108,12 @@ class UserServiceImplTest {
         }
 
         @Override
-        public int updateProfile(Long userId, String nickname, LocalDate birthDate) {
+        public int updateProfile(
+                Long userId,
+                String nickname,
+                LocalDate birthDate,
+                ProfileImageType profileImage
+        ) {
             UserVO user = usersByEmail.values().stream()
                     .filter(candidate -> userId.equals(candidate.getUserId()))
                     .findFirst()
@@ -100,6 +123,7 @@ class UserServiceImplTest {
             }
             user.setNickname(nickname);
             user.setBirthDate(birthDate);
+            user.setProfileImage(profileImage);
             return 1;
         }
 
