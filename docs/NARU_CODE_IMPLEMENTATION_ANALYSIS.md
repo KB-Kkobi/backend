@@ -295,7 +295,7 @@ KIS WebSocket → Backend Tick/Subscription Manager → STOMP topic → Vue 실�
 | 주요 처리 내용 | URL query와 필터 상태 동기화, MyBatis 동적 SQL, 옵션/우대조건 조립 |
 | 처리 결과 | 페이지 목록과 상품 상세 |
 | 관련 화면 | `/products`, `/products/:productType/:productId` |
-| 관련 API | `GET /api/products/deposits|savings`, `/{id}` |
+| 관련 API | `GET /api/products/deposits\|savings`, `/{id}` |
 | Backend 주요 코드 | `DepositProductService`, `SavingProductService`, `ProductMapper.xml` |
 | Frontend 주요 코드 | `ProductListPanel.vue`, `ProductDetailView.vue`, `productApi.js` |
 | 관련 DB / Redis | `products`, `product_options`, preferential tables |
@@ -395,7 +395,7 @@ KIS WebSocket → Backend Tick/Subscription Manager → STOMP topic → Vue 실�
 | 주요 처리 내용 | 주문 가능액/수량 검사, 즉시 체결 또는 PENDING 잠금, 틱 매칭, 취소·장 마감 만료, 보유 평균단가 갱신 |
 | 처리 결과 | 주문/체결/취소, 현금·보유종목 변경 |
 | 관련 화면 | 종목 상세 하단 주문창, `/virtual/trade/:securityId`, 거래내역 |
-| 관련 API | `POST/GET/DELETE /api/orders`, `/api/securities/{id}/quote|orderable`, account holdings |
+| 관련 API | `POST/GET/DELETE /api/orders`, `/api/securities/{id}/quote\|orderable`, account holdings |
 | Backend 주요 코드 | `OrderService`, `OrderExecutionService`, `TickMatchingEngine`, `OrderMatchTransactionService`, `MarketCloseScheduler` |
 | Frontend 주요 코드 | `TradeBottomSheet.vue`, `TradeView.vue`, `useTradeOrder.js` |
 | 관련 DB / Redis | `security_orders`, `holding_securities`, `accounts`, `account_transactions`; 실시간 틱 메모리 map |
