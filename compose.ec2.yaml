@@ -33,9 +33,11 @@ services:
       - "-password=${MYSQL_PASSWORD}"
       - "-connectRetries=60"
       # 27~29는 이 저장소 밖에서 같은 DB에 직접 적용되고 있는 별도 마이그레이션(정체 확인 중).
-      # 우리 쪽 파일이 아니라 로컬에 없는 게 정상이라 이 세 버전만 콕 집어 무시한다.
-      # 새 버전이 또 추가되면 여기 목록도 늘려줘야 하며, 그 자체가 외부 변경 감지 신호가 된다.
-      - "-ignoreMigrationPatterns=27:missing,28:missing,29:missing"
+      # ignoreMigrationPatterns는 버전 단위 지정이 안 되고 <type>:<state> 형태만 지원해서
+      # (예: "27:missing"은 "27"을 type으로 오인해 에러남 - 실제로 로컬 검증해서 확인함),
+      # versioned 마이그레이션의 missing 상태 전체를 무시한다. checksum mismatch 등
+      # 다른 상태는 그대로 검증되므로, 우리 쪽 파일이 수정되는 경우는 계속 잡힌다.
+      - "-ignoreMigrationPatterns=versioned:missing"
       - "migrate"
 
     volumes:
